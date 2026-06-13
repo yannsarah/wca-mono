@@ -662,11 +662,10 @@ function materielModal(m, dup){
       <label class="field"><span>Nom du propriétaire</span><input id="f-propnom" list="people-dl" value="${esc(e.proprietaire_nom)}" placeholder="utilisateur ou partenaire…">${peopleDatalist('people-dl')}</label>
     </div>
     <label class="field"><span>Notes</span><textarea id="f-notes">${esc(e.notes)}</textarea></label>
-    <div class="field" style="border-top:1px dashed var(--line,#d9d9e3);padding-top:12px;margin-top:6px">
-      <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer"><input type="checkbox" id="f-vissite" ${e.visible_site===true?'checked':''}> 🌐 Visible sur le site internet (page « Nos Machines »)</label>
-      <span class="help">Décochée par défaut : l'inventaire reste privé. Cochez pour publier cette borne sur westcoastarcades.fr.</span>
+    <div class="row2">
+      <label class="field"><span>Visible sur le site public</span><select id="f-vissite"><option value="0" ${e.visible_site?'':'selected'}>Non</option><option value="1" ${e.visible_site?'selected':''}>✅ Oui — affichée sur westcoastarcades.fr</option></select></label>
+      <label class="field"><span>Description (site public)</span><input id="f-descsite" value="${esc(e.description_site||'')}" placeholder="texte court affiché sur le site"></label>
     </div>
-    <label class="field"><span>Description publique (affichée sur le site)</span><textarea id="f-descsite" placeholder="Texte présenté aux visiteurs pour cette borne…">${esc(e.description_site||'')}</textarea></label>
     <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button>${isEdit?`<button class="btn wipper" id="f-wip" type="button">${icon('calendar')} WIPPER</button>`:''}<button class="btn" id="f-save">Enregistrer</button></div>`);
   $('#f-wip')?.addEventListener('click',()=>wipperModal(m.id, m.denomination));
   $('#f-photo-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ photoData=data; $('#f-photo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
@@ -675,7 +674,7 @@ function materielModal(m, dup){
   quickAddSelect($('#f-etat'), $('#f-etat-add'), { placeholder:'Nouvel état…', create: async txt=>{ await api('/api/etats',{method:'POST',body:JSON.stringify({label:txt})}); if(!ETATS.some(x=>x.label===txt)) ETATS.push({label:txt,bloque:false}); return {value:txt,label:txt}; } });
   quickAddSelect($('#f-prop'), $('#f-prop-add'), { placeholder:'Nouveau propriétaire…', create: async txt=>{ await api('/api/proprietaires',{method:'POST',body:JSON.stringify({value:txt})}); if(!PROPRIETAIRES.includes(txt)) PROPRIETAIRES.push(txt); return {value:txt,label:txt}; } });
   $('#f-save').addEventListener('click',async()=>{
-    const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').checked, description_site:$('#f-descsite').value.trim() };
+    const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').value==='1', description_site:$('#f-descsite').value.trim() };
     if(!body.denomination){ toast('La dénomination est obligatoire.'); return; }
     try{ await api(isEdit?'/api/materiel/'+m.id:'/api/materiel',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast(dup?'Copie créée':'Enregistré'); loadMatList(); }catch(err){ toast(err.message); }
   });
