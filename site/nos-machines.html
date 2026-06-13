@@ -41,7 +41,7 @@
   <a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="West Coast Arcades"></a>
 </div></header>
 
-<main class="container">
+<main class="container" id="machMain">
 
   <div class="mrow">
     <div class="mtext">
@@ -142,6 +142,27 @@
 (function(){var ov=document.getElementById('sfmOverlay'),pn=document.getElementById('sfmPanel');
  document.getElementById('burger').onclick=function(){pn.classList.add('open');ov.classList.add('open');};
  document.getElementById('sfmClose').onclick=ov.onclick=function(){pn.classList.remove('open');ov.classList.remove('open');};})();
+</script>
+<script src="assets/js/wca-api.js"></script>
+<script>
+/* Machines publiées depuis la gestion (opt-in : materiel.visible_site === true).
+   Tant qu'aucune machine n'est publiée, on garde le contenu curé ci-dessus (repli). */
+(async function(){
+  var main=document.getElementById('machMain'); if(!main||!window.WCA) return;
+  try{
+    var list=await WCA.getJSON('machines');
+    if(!list.length) return; // aucune machine publiée → on conserve la vitrine actuelle
+    main.innerHTML=list.map(function(m,i){
+      var rev=i%2?' rev':'';
+      var img=m.photo?'<div class="mimg"><img src="'+WCA.esc(m.photo)+'" alt="'+WCA.esc(m.denomination)+'"></div>':'<div class="mimg"></div>';
+      var sub=m.categorie?'<div class="sub">'+WCA.esc(m.categorie)+'</div>':'';
+      var desc=m.description?'<p>'+WCA.esc(m.description)+'</p>':'';
+      var cta='<a class="btn btn-rent" href="contact.html">Louer cette borne</a>';
+      var block='<div class="mrow'+rev+'"><div class="mtext"><h2>'+WCA.esc(m.denomination)+'</h2>'+sub+desc+cta+'</div>'+img+'</div>';
+      return block+(i<list.length-1?'<hr class="mdiv">':'');
+    }).join('');
+  }catch(err){ /* API indisponible → on garde la vitrine curée, pas d'erreur visible */ }
+})();
 </script>
 </body>
 </html>
