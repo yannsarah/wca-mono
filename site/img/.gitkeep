@@ -1,0 +1,3 @@
+# Dossier des images locales du site.
+# Il se remplit automatiquement en lançant, depuis la racine du site :
+#     bash migrate-images.sh

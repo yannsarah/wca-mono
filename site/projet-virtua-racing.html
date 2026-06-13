@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projet Virtua Racing - West Coast Arcades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css">
+<style>
+.banner img{width:100%;display:block;}
+.intro{max-width:900px;margin:0 auto;padding:40px 16px;}
+.intro .tag{display:inline-block;background:#e7f7ee;color:#16794b;font-size:12px;font-weight:600;padding:5px 14px;border-radius:100px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;}
+.intro h1{font-family:var(--poppins);font-weight:700;font-size:40px;color:var(--navy);margin-bottom:8px;}
+.intro .q{font-family:var(--poppins);font-style:italic;color:var(--blue);margin-bottom:16px;}
+.intro p{margin-bottom:14px;}
+.gal{max-width:1100px;margin:0 auto;padding:0 16px 40px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.gal img{width:100%;height:180px;object-fit:cover;border-radius:3px;}
+@media(max-width:768px){.gal{grid-template-columns:repeat(2,1fr);}.intro h1{font-size:30px;}}
+</style>
+</head>
+<body>
+<div class="sfm-overlay" id="sfmOverlay"></div>
+<aside class="sfm-panel" id="sfmPanel"><button class="x" id="sfmClose">&times;</button>
+<img class="lg" src="img/Logo-WCA-intro-350px.png" alt="WCA">
+<nav><a href="index.html">Accueil</a><a href="nos-machines.html">Nos Machines</a><a href="nos-salons.html">Nos Salons</a><a href="nos-partenaires.html">Partenaires</a><a href="agenda.html">Agenda</a><a href="contact.html">Contacter l'Asso</a></nav></aside>
+<header class="site-header"><div class="bar"><button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+<a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="WCA"></a></div></header>
+
+<section class="intro">
+  <span class="tag">Projet terminé</span>
+  <h1>SEGA Virtua Racing</h1>
+  <div class="q">« Quand la passion rencontre le savoir-faire… »</div>
+  <p>Chez West Coast Arcades, on ne laisse pas les légendes tomber dans l'oubli ! Notre dernière fierté : une borne SEGA Virtua Racing entièrement restaurée, comme sortie d'usine. Châssis repeint, artworks refaits, électronique remise à neuf, volant et pédalier restaurés… Un travail de fourmi pour un résultat époustouflant !</p>
+  <p>Véritable prouesse technologique de SEGA, la borne Virtua Racing revient à la vie grâce à la passion et à l'expertise des techniciens de West Coast Arcades. Entièrement démontée, chaque élément — châssis, électronique, volant, pédales et système vidéo — a été inspecté, réparé ou remplacé avec soin. Comme toutes nos bornes, elle est disponible à la location pour vos événements, expositions ou espaces de jeu.</p>
+  <a class="btn btn-rent" href="contact.html">Louer cette borne</a>
+</section>
+<div class="gal">
+  <img src="img/sega-virtua-Racing-restauration-1-westcoastarcades.fr_.jpeg" alt="">
+  <img src="img/sega-virtua-Racing-restauration-2-westcoastarcades.fr_.jpeg" alt="">
+  <img src="img/sega-virtua-Racing-restauration-3-westcoastarcades.fr_.jpeg" alt="">
+  <img src="img/sega-virtua-Racing-restauration-4-westcoastarcades.fr_.jpeg" alt="">
+</div>
+
+<section class="need"><div class="container"><h2>Vous souhaitez organiser un évènement autour de l'arcade et des flippers ?</h2><a class="btn btn-orange" href="contact.html">Contactez-nous !</a></div></section>
+<div class="foot-copy">© 2026 Tous droits réservés</div>
+<div class="foot-legal"><a class="btn btn-legal" href="politique-de-confidentialite.html">Politique de confidentialité</a><a class="btn btn-legal" href="rgpd.html">RGPD</a></div>
+<script>(function(){var ov=document.getElementById('sfmOverlay'),pn=document.getElementById('sfmPanel');document.getElementById('burger').onclick=function(){pn.classList.add('open');ov.classList.add('open');};document.getElementById('sfmClose').onclick=ov.onclick=function(){pn.classList.remove('open');ov.classList.remove('open');};})();</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOS SALONS - West Coast Arcades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css">
+<style>
+.intro{max-width:1000px;margin:0 auto;padding:48px 16px 10px;}
+.intro h1{font-family:var(--poppins);font-weight:700;font-size:42px;color:var(--navy);text-align:center;margin-bottom:24px;text-transform:uppercase;}
+.intro p{margin-bottom:14px;}
+.tl{max-width:980px;margin:30px auto 0;position:relative;padding:20px 16px 40px;}
+.tl::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--blue);transform:translateX(-50%);}
+.ev{position:relative;width:50%;padding:18px 40px;box-sizing:border-box;margin-bottom:10px;}
+.ev:nth-child(odd){left:0;text-align:right;}
+.ev:nth-child(even){left:50%;}
+.ev .dot{position:absolute;top:26px;width:18px;height:18px;border-radius:50%;background:#fff;border:5px solid var(--blue);}
+.ev:nth-child(odd) .dot{right:-9px;}.ev:nth-child(even) .dot{left:-9px;}
+.ev img{width:100%;max-width:260px;border-radius:3px;display:inline-block;}
+.ev .yr{font-family:var(--poppins);font-weight:700;font-size:30px;color:var(--navy);}
+.ev h3{font-family:var(--poppins);font-weight:700;font-size:20px;color:var(--navy);text-transform:uppercase;margin:4px 0;}
+.ev p{font-size:15px;color:var(--text);margin-bottom:10px;}
+.ev .btn{font-size:14px;}
+@media(max-width:768px){
+ .tl::before{left:18px;}.ev,.ev:nth-child(odd),.ev:nth-child(even){width:100%;left:0;text-align:left;padding-left:44px;padding-right:6px;}
+ .ev:nth-child(odd) .dot,.ev:nth-child(even) .dot{left:9px;right:auto;}
+ .intro h1{font-size:30px;}
+}
+</style>
+</head>
+<body>
+<div class="sfm-overlay" id="sfmOverlay"></div>
+<aside class="sfm-panel" id="sfmPanel"><button class="x" id="sfmClose">&times;</button>
+<img class="lg" src="img/Logo-WCA-intro-350px.png" alt="WCA">
+<nav><a href="index.html">Accueil</a><a href="nos-machines.html">Nos Machines</a><a href="nos-salons.html">Nos Salons</a><a href="nos-partenaires.html">Partenaires</a><a href="agenda.html">Agenda</a><a href="contact.html">Contacter l'Asso</a></nav></aside>
+<header class="site-header"><div class="bar">
+<button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+<a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="WCA"></a></div></header>
+
+<section class="intro">
+  <h1>L'histoire West Coast Arcades</h1>
+  <p><b>West Coast Arcades</b> est une association qui a été créée en 2014 par Julien et Maxime sur une idée simple : rassembler les passionnés des jeux d'arcades. Rapidement l'association est rejointe par Cédric qui va apporter aux passionnés de bornes d'arcades les mordus de flippers. L'association s'agrandit pour compter 10 membres majeurs et organise son 1er salon le Freeplay qui se déroule à la Romagne dans une modeste salle de 190 m². Suivront 4 salons toujours à la Romagne jusqu'en 2018 pour accueillir 2000 visiteurs dans une salle de 400 m². L'année 2019 arrive et les évènements associatifs avec le public sont très compliqués à organiser, et l'asso passe en veille.</p>
+  <p>Sortie de cette période de confinement, la présidence de l'asso change, mais l'envie de partager, de faire et de transmettre cette passion est plus grande que jamais. L'association se concentre sur ses valeurs : jouer, partager et prendre du plaisir autour du jeu, bornes d'arcades, flippers et rétrogaming. La machine est relancée en 2023 en collaboration avec le parc des expositions de Cholet. Le Games in Cholet voit le jour pour sa première édition en 2023 sur 2500 m² et accueille plus de 4000 visiteurs. Fort de ce succès, le Games in Cholet revient à la Meilleraie les 3 et 4 mai 2025, cette fois sur plus de 5000 m², pour encore plus de jeux et de fun.</p>
+</section>
+
+<div class="tl">
+  <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>Salon du Livre et du Jeu de Briançon</h3><p>Édition les 22 et 23 Novembre 2025</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/salon-du-livre-et-du-jeux-2025-chateau-de-briancon-westcoastarcades.fr_.webp" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>La BIF</h3><p>Édition les 3, 4 et 5 Octobre 2025</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/la-bif-2025-westcoastarcades.fr_.jpg" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>Boc and Geek</h3><p>Édition les 20 et 21 Septembre 2025</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/boc_n_geek___2025.webp" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>Mazé-Millon</h3><p>Première participation, 19 et 20 Juillet 2025. Jeux rétro et d'arcade pour petits et grands.</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/west-coast-arcades-Maze-Millon-2025-westcoastarcades.fr_.jpg" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>Games in Cholet</h3><p>Seconde édition les 3 et 4 Mai 2025 — 5 500 m² d'animation !</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/West_Coast-games-in-cholet-2024-intro.jpeg" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>La Fête du Jeu — Chemillé</h3><p>Édition 2025</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/la-fete-du-jeu-chemille-2025-westcoastarcades.fr_.jpg" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2023</div><h3>Games in Cholet</h3><p>Première édition les 23 et 24 Septembre 2023</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/West-coast-Arcades-GamesInCholet-2023.jpg" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2018</div><h3>Freeplay</h3><p>La Romagne — salle de 400 m², 2000 visiteurs</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/salon-Freeplay-2018-westcoastarcades.fr_-scaled.jpeg" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2017</div><h3>Freeplay — 4e édition</h3><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/salon-freeplay-2017-WESTCOASTARCADES.FR_.jpeg" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2016</div><h3>Freeplay — 3e édition</h3><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/salon-freeplay-2016-westcoastarcades.fr_.jpg" alt=""></div>
+  <div class="ev"><span class="dot"></span><div class="yr">2014</div><h3>Freeplay — 1ère édition</h3><p>Le tout premier salon, à la Romagne (190 m²)</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/salon-FREEPLAY-2014-westcoastarcades.fr_.png" alt=""></div>
+</div>
+
+<section class="need"><div class="container"><h2>Vous souhaitez organiser un évènement autour de l'arcade et des flippers ?</h2><a class="btn btn-orange" href="contact.html">Contactez-nous !</a></div></section>
+<div class="foot-copy">© 2026 Tous droits réservés</div>
+<div class="foot-legal"><a class="btn btn-legal" href="politique-de-confidentialite.html">Politique de confidentialité</a><a class="btn btn-legal" href="rgpd.html">RGPD</a></div>
+<script>(function(){var ov=document.getElementById('sfmOverlay'),pn=document.getElementById('sfmPanel');document.getElementById('burger').onclick=function(){pn.classList.add('open');ov.classList.add('open');};document.getElementById('sfmClose').onclick=ov.onclick=function(){pn.classList.remove('open');ov.classList.remove('open');};})();</script>
+</body>
+</html>

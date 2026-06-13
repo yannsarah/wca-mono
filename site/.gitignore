@@ -1,0 +1,18 @@
+# Fichiers système macOS
+.DS_Store
+._*
+
+# Clés / secrets de déploiement (ne JAMAIS versionner)
+.deploy/
+*.pem
+deploy.config*
+
+# Archives
+*.zip
+
+# Export WordPress (source, pas à publier)
+*.xml
+!sitemap.xml
+
+# Fichier temporaire généré par migrate-images.sh
+img/_urls.txt

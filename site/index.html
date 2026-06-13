@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bienvenue sur le site de l'association West Coast Arcades - West Coast Arcades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   WEST COAST ARCADES — reproduction fidèle (thème digitala / Heebo)
+   Valeurs issues de DESIGN_REFERENCE.md §15 (mesures du site rendu).
+   ===================================================================== */
+:root{
+  --heebo:'Heebo',sans-serif;
+  --poppins:'Poppins',sans-serif;
+  --text:#17252A;            /* couleur de texte courante mesurée */
+  --blue:#467FF7;            /* bleu signature (boutons, footer) */
+  --blue-hero:#4057F7;       /* bouton "Projet en cours" */
+  --deepblue:#1A2A83;        /* boutons rectangulaires pages internes */
+  --navy:#1C244B;            /* titres navy (pages internes) */
+  --orange:#E2590F;          /* CTA orange */
+  --petrol:#122E35;          /* bande "besoin de nous" */
+  --red:#F10000;             /* divider / accents */
+  --black:#000000;
+  --container:1140px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--heebo);font-size:16px;line-height:24px;color:var(--text);background:#fff;}
+img{display:block;max-width:100%;height:auto;}
+a{color:inherit;text-decoration:none;}
+.container{max-width:var(--container);margin:0 auto;padding:0 10px;}
+h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
+
+/* ---- Boutons (styles mesurés, volontairement hétérogènes) ---- */
+.btn{display:inline-block;font-family:var(--heebo);font-size:15px;font-weight:400;color:#fff;
+  padding:12px 24px;border:0;cursor:pointer;line-height:1.4;}
+.btn-hero{background:var(--blue-hero);border-radius:30px;}
+.btn-orange{background:var(--orange);border-radius:22px;}
+.btn-blue-pill{background:var(--blue);border-radius:100px;font-family:var(--poppins);font-size:16px;padding:16px 55px;}
+.btn-legal{background:var(--blue);border-radius:3px;}
+
+/* ---- Header (noir, logo centré, hamburger Superfly) ---- */
+.site-header{background:var(--black);position:relative;z-index:20;}
+.site-header .bar{display:flex;align-items:center;justify-content:center;position:relative;min-height:170px;padding:10px;}
+.burger{position:absolute;left:24px;top:50%;transform:translateY(-50%);background:transparent;border:0;
+  width:46px;height:46px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:6px;}
+.burger span{display:block;width:100%;height:3px;background:#fff;border-radius:2px;}
+.logo-link img{width:150px;height:150px;}
+
+/* off-canvas Superfly-like */
+.sfm-overlay{position:fixed;inset:0;background:rgba(8,8,12,.6);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:.3s;z-index:90;}
+.sfm-overlay.open{opacity:1;visibility:visible;}
+.sfm-panel{position:fixed;top:0;left:0;height:100%;width:340px;max-width:86vw;background:#0b0b0b;
+  transform:translateX(-100%);transition:.32s cubic-bezier(.4,0,.2,1);z-index:100;padding:34px 0;display:flex;flex-direction:column;}
+.sfm-panel.open{transform:none;}
+.sfm-panel .x{align-self:flex-end;margin-right:22px;background:transparent;border:0;color:#fff;font-size:30px;cursor:pointer;line-height:1;}
+.sfm-panel img.lg{width:110px;height:110px;margin:6px auto 22px;}
+.sfm-panel nav{display:flex;flex-direction:column;}
+.sfm-panel nav a{color:#fff;font-family:var(--heebo);font-weight:500;font-size:20px;text-transform:uppercase;
+  letter-spacing:.02em;padding:14px 34px;transition:.15s;}
+.sfm-panel nav a:hover{background:rgba(255,255,255,.07);color:var(--blue);}
+
+/* ---- Hero ---- */
+.hero{background:var(--black);color:#fff;position:relative;}
+.hero-inner{position:relative;overflow:hidden;background:#000 url('img/flippers-expo-westcoastarcades.fr_.jpg') center/cover no-repeat;}
+.hero-video{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+.hero-video iframe{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100vw;height:56.25vw;min-height:100%;min-width:177.78vh;border:0;}
+.hero-overlay{position:absolute;inset:0;z-index:1;background:rgba(0,0,0,.5);}
+.hero-grid{position:relative;z-index:2;max-width:var(--container);margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:30px;
+  align-items:center;padding:60px 10px 90px;}
+.hero h1{font-size:65px;font-weight:700;color:#fff;line-height:1.05;}
+.hero p{font-size:16px;line-height:24px;color:#fff;margin-top:22px;max-width:52ch;}
+.hero-cab{display:flex;justify-content:center;}
+.hero-cab img{max-height:520px;width:auto;}
+.hero-pill{display:flex;justify-content:center;margin-top:-26px;position:relative;z-index:3;padding-bottom:34px;background:var(--black);}
+
+/* ---- Accès rapides (icon-boxes) ---- */
+.quick{background:#fff;padding:46px 0;}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center;}
+.qbox .ic{width:64px;height:64px;margin:0 auto 14px;color:var(--blue);}
+.qbox .ic svg{width:100%;height:100%;}
+.qbox h3{font-family:Tahoma,sans-serif;font-weight:500;font-size:22px;line-height:27.5px;color:var(--text);}
+
+/* ---- Bande "besoin de nous" ---- */
+.need{background:var(--petrol);color:#fff;text-align:center;padding:54px 10px;}
+.need h2{font-size:17px;font-weight:700;color:#fff;margin-bottom:22px;letter-spacing:.01em;}
+
+/* ---- Sections génériques ---- */
+.block{padding:56px 0;}
+.block-title{text-align:center;font-size:32px;font-weight:500;color:var(--text);text-transform:uppercase;margin-bottom:34px;}
+
+/* ---- Salons ---- */
+.salons{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.salons img{width:100%;height:auto;border-radius:2px;}
+
+/* ---- Galerie ---- */
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
+.gallery img{width:100%;height:260px;object-fit:cover;}
+
+/* ---- Divider LA FINE ÉQUIPE ---- */
+.fine{display:flex;align-items:center;justify-content:center;gap:18px;padding:50px 10px 30px;}
+.fine .wave{flex:0 0 120px;height:14px;background:no-repeat center/contain
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 14'%3E%3Cpath d='M2 7 q 10 -7 20 0 t 20 0 t 20 0 t 20 0 t 20 0' stroke='%23F10000' stroke-width='3' fill='none'/%3E%3C/svg%3E");}
+.fine h2{font-size:34px;font-weight:700;color:var(--text);text-transform:uppercase;}
+
+/* ---- Équipe ---- */
+.team{display:grid;grid-template-columns:repeat(3,1fr);gap:30px 24px;padding-bottom:20px;}
+.member{text-align:center;}
+.member img{width:100%;aspect-ratio:1/1;object-fit:cover;}
+.member h3{font-size:30px;font-weight:600;color:var(--text);margin:16px 0 8px;}
+.member p{font-size:16px;line-height:24px;color:var(--text);padding:0 8px;}
+
+/* ---- Objectif ---- */
+.goal{text-align:center;padding:60px 10px 30px;}
+.goal h2{font-size:34px;font-weight:700;color:var(--text);margin-bottom:16px;}
+.goal p{font-size:18px;line-height:1.7;color:var(--text);max-width:880px;margin:0 auto;}
+.goal-band{position:relative;background:#f4f4f4;overflow:hidden;margin-top:30px;}
+.goal-band::before{content:"";position:absolute;top:0;bottom:0;left:50%;right:0;background:var(--blue);transform:skewX(-11deg);transform-origin:top;}
+.goal-band .gi{position:relative;max-width:var(--container);margin:0 auto;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:30px;padding:34px 10px;}
+.goal-band img{width:100%;border-radius:2px;}
+.goal-cta{position:relative;color:#fff;text-align:center;}
+.goal-cta p{font-size:18px;margin-bottom:20px;}
+
+/* ---- Footer ---- */
+.foot-copy{background:var(--blue);color:#fff;text-align:center;font-size:16px;padding:12px 37px;}
+.foot-legal{background:var(--blue);text-align:center;padding:0 10px 26px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+
+/* ---- Responsive (breakpoints 768 / 1025) ---- */
+@media(max-width:1024px){
+  .hero h1{font-size:48px;}
+  .quick-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:768px){
+  .hero-grid{grid-template-columns:1fr;}.hero-cab{display:none;}
+  .hero h1{font-size:38px;}
+  .salons,.team,.gallery{grid-template-columns:1fr;}
+  .gallery{grid-template-columns:1fr 1fr;}
+  .goal-band .gi{grid-template-columns:1fr;}.goal-band::before{display:none;}
+  .goal-cta{background:var(--blue);padding:24px;border-radius:4px;}
+  .logo-link img{width:120px;height:120px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Menu off-canvas (Superfly-like) ===== -->
+<div class="sfm-overlay" id="sfmOverlay"></div>
+<aside class="sfm-panel" id="sfmPanel">
+  <button class="x" id="sfmClose" aria-label="Fermer">&times;</button>
+  <img class="lg" src="img/Logo-WCA-intro-350px.png" alt="West Coast Arcades">
+  <nav>
+    <a href="index.html">Accueil</a>
+    <a href="nos-machines.html">Nos Machines</a>
+    <a href="nos-salons.html">Nos Salons</a>
+    <a href="nos-partenaires.html">Partenaires</a>
+    <a href="agenda.html">Agenda</a><!-- TODO: libellé exact de l'entrée "catégorie 14" (Agenda/Blog) à confirmer -->
+    <a href="contact.html">Contacter l'Asso</a>
+  </nav>
+</aside>
+
+<!-- ===== Header ===== -->
+<header class="site-header">
+  <div class="bar">
+    <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    <a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="West Coast Arcades"></a>
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-video"><iframe src="https://www.youtube.com/embed/W3NuWfFUITM?autoplay=1&mute=1&loop=1&playlist=W3NuWfFUITM&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&disablekb=1" allow="autoplay; encrypted-media" allowfullscreen title="West Coast Arcades"></iframe></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-grid">
+      <div>
+        <h1>Association Arcades, Flippers, Retrogaming, Makers…</h1>
+        <p>Bienvenue sur notre site associatif, dédié aux passionnés de retrogaming, flippers et arcades ! Plongez dans l'univers des jeux rétro, revivez les classiques des années 80 et 90, et redécouvrez l'âme des salles d'arcade d'antan. Que vous soyez un collectionneur, un joueur nostalgique ou simplement curieux, notre plateforme vous propose une sélection de jeux, de flippers et d'arcades restaurés, prêts à être redécouverts. Rejoignez-nous pour revivre l'âge d'or du gaming !</p>
+      </div>
+      <div class="hero-cab">
+        <img src="img/borne-virtua-fighter-2-westcoastarcades.fr_.png" alt="Borne Virtua Fighter 2">
+      </div>
+    </div>
+  </div>
+  <div class="hero-pill">
+    <a class="btn btn-hero" href="projet-virtua-fighter-2.html">Projet en cours - VIRTUA FIGHTER 2</a>
+  </div>
+</section>
+
+<!-- ===== Accès rapides ===== -->
+<section class="quick">
+  <div class="container">
+    <div class="quick-grid">
+      <a class="qbox" href="nos-machines.html">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="20" height="11" rx="3"/><circle cx="8" cy="12.5" r="1.4" fill="currentColor"/><path d="M16 11v3M14.5 12.5h3"/></svg></div>
+        <h3>NOS MACHINES</h3>
+      </a>
+      <a class="qbox" href="agenda.html">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+        <h3>CALENDRIER</h3>
+      </a>
+      <a class="qbox" href="les-projets.html">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 7l3 3-8 8-3 1 1-3 7-9z"/><path d="M13 8l3 3"/></svg></div>
+        <h3>NOS PROJETS</h3>
+      </a>
+      <a class="qbox" href="https://www.youtube.com/@westcoastarcades49" target="_blank" rel="noopener">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg></div>
+        <h3>LA CHAÎNE</h3>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Besoin de nous ===== -->
+<section class="need">
+  <div class="container">
+    <h2>Vous avez besoin de nous ?</h2>
+    <a class="btn btn-orange" href="contact.html">&#9742; CONTACTEZ-NOUS DÈS MAINTENANT</a>
+  </div>
+</section>
+
+<!-- ===== 2 Derniers Salons ===== -->
+<section class="block">
+  <div class="container">
+    <h2 class="block-title">Prochains salons</h2>
+    <div class="salons" id="homeSalons"><p style="grid-column:1/-1;text-align:center;color:#5d6b85">Chargement…</p></div>
+  </div>
+</section>
+
+<!-- ===== Galerie ===== -->
+<section class="block" style="padding-top:0">
+  <div class="container">
+    <h2 class="block-title" style="text-transform:none">L'association en quelques images…</h2>
+    <div class="gallery">
+      <img src="img/gachette-flipper-westcoastarcades.fr_.jpg" alt="">
+      <img src="img/membres-jouant-au-flipper-westcoastarcades.fr_.jpg" alt="">
+      <img src="img/flippers-expo-westcoastarcades.fr_.jpg" alt="">
+      <img src="img/carte-electronique-usb-arcade-wip-westcoastarcades.fr-.jpeg" alt="">
+      <img src="img/Dance-dance-revolution-westcoastarcades.fr_.jpg" alt="">
+      <img src="img/sega-manxx-tt-westcoastarcades.fr_.jpg" alt="">
+      <img src="img/cablage-flipper-wip-westcoastarcades.fr-.jpeg" alt="">
+      <img src="img/jouer-flipper-wip-westcoastarcades.fr-.jpeg" alt="">
+      <img src="img/daytona-USA-Upright-westcoastarcades.fr_.jpg" alt="">
+    </div>
+  </div>
+</section>
+
+<!-- ===== LA FINE ÉQUIPE ===== -->
+<div class="fine"><span class="wave"></span><h2>LA FINE ÉQUIPE</h2><span class="wave"></span></div>
+
+<section class="block" style="padding-top:0">
+  <div class="container">
+    <div class="team">
+      <div class="member"><img src="img/cedric-westcoastarcades.fr-Moyenne.jpeg" alt="Cédric"><h3>Cédric</h3><p>Boss à plein temps, il aimerait se réincarner en Dark Vador.</p></div>
+      <div class="member"><img src="img/denis-westcoastarcades.fr-Moyenne.jpeg" alt="Denis"><h3>Denis</h3><p>Trésorier et Pipelette ++</p></div>
+      <div class="member"><img src="img/papa-pixel-2-Moyenne.jpeg" alt="Christophe"><h3>Christophe</h3><p>Amoureux des pixels depuis l'âge de 5 ans, j'ai amassé les jeux vidéo sans relâche.</p></div>
+      <div class="member"><img src="img/stephane-westcoastarcades.fr-Moyenne.jpeg" alt="Stéphane"><h3>Stéphane</h3><p>Alias « La Bricole ».</p></div>
+      <div class="member"><img src="https://www.westcoastarcades.fr/wp-content/uploads/2025/10/Retro-Cornichon-trombino-westcoastarcades.fr_-1.webp" alt="Christophe"><h3>Christophe</h3><p>Fan de Rétrogaming et PRO sur une DDR.</p></div>
+      <div class="member"><img src="img/yannnou-westcoastarcades.f.jpg" alt="Yannou"><h3>Yannou</h3><p>Yannou allergique aux consoles nextgen.</p></div>
+      <div class="member"><img src="img/marine-westcoastarcades.fr_.jpeg" alt="Marine"><h3>Marine</h3><p>Gameuse, rôliste et complètement accros aux séries, films et animés.</p></div>
+      <div class="member"><img src="img/alexis1-westcoastarcades.fr-Moyenne.jpeg" alt="Alexis"><h3>Alexis</h3><p>Est tombé dans la marmite du jeu à la naissance.</p></div>
+      <div class="member"><img src="img/quentinAlone-westcoastarcades.fr_.jpg" alt="Quentin"><h3>Quentin</h3><p>Grand fan de Star Wars, ancien pratiquant de sabre laser et toujours là pour aider !</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Objectif ===== -->
+<section class="goal">
+  <div class="container">
+    <h2>Quel est notre objectif ?</h2>
+    <p>l'Association West Coast Arcades c'est avant tout une aventure humaine, autour d'une passion commune, qui a pour mission la préservation du patrimoine de vos jeux d'antan, mais aussi une volonté profonde de partager au public ces magnifiques trésors !</p>
+  </div>
+  <div class="goal-band">
+    <div class="gi">
+      <img src="img/team-westcoastarcades.fr_-e1759837811624.jpg" alt="L'équipe West Coast Arcades">
+      <div class="goal-cta">
+        <p>Vous souhaitez organiser un évènement autour de l'arcade et des flippers ? contactez-nous !</p>
+        <a class="btn btn-blue-pill" href="contact.html">Contactez-nous !</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<div class="foot-copy">© 2026 Tous droits réservés</div>
+<div class="foot-legal">
+  <a class="btn btn-legal" href="politique-de-confidentialite.html">Politique de confidentialité</a>
+  <a class="btn btn-legal" href="rgpd.html">RGPD</a>
+</div>
+
+<script>
+(function(){
+  var ov=document.getElementById('sfmOverlay'),pn=document.getElementById('sfmPanel');
+  function open(){pn.classList.add('open');ov.classList.add('open');}
+  function close(){pn.classList.remove('open');ov.classList.remove('open');}
+  document.getElementById('burger').addEventListener('click',open);
+  document.getElementById('sfmClose').addEventListener('click',close);
+  ov.addEventListener('click',close);
+})();
+</script>
+<script src="assets/js/wca-api.js"></script>
+<script>
+(async function(){
+  var box=document.getElementById('homeSalons'); if(!box) return;
+  try{
+    var evs=(await WCA.getJSON('evenements')).slice(0,4);
+    if(!evs.length){ box.innerHTML='<p style="grid-column:1/-1;text-align:center;color:#5d6b85">Bientôt nos prochains salons.</p>'; return; }
+    box.innerHTML=evs.map(function(e){
+      var img=e.affiche?'<img src="'+e.affiche+'" alt="" style="width:100%;height:180px;object-fit:cover">':'<div style="height:120px;background:linear-gradient(135deg,#1c244b,#467ff7)"></div>';
+      return '<a href="nos-salons.html" style="display:block;background:#fff;border:1px solid #ebebeb;border-radius:12px;overflow:hidden;color:inherit">'+img+
+        '<div style="padding:14px 16px"><div style="font-weight:700;font-size:13px;color:#467ff7">'+WCA.dateRange(e.date_debut,e.date_fin)+'</div>'+
+        '<div style="font-family:var(--heebo);font-weight:700;font-size:19px;color:#1c244b;margin:2px 0 4px">'+WCA.esc(e.nom)+'</div>'+
+        '<div style="font-size:14px;color:#5d6b85">📍 '+WCA.esc(e.lieu||'')+'</div></div></a>';
+    }).join('');
+  }catch(err){ box.innerHTML='<p style="grid-column:1/-1;text-align:center;color:#a32d2d">Salons momentanément indisponibles.</p>'; }
+})();
+</script>
+</body>
+</html>

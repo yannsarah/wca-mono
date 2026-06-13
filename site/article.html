@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Article - West Coast Arcades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/blog.css">
+</head>
+<body>
+<div class="sfm-overlay" id="sfmOverlay"></div>
+<aside class="sfm-panel" id="sfmPanel"><button class="x" id="sfmClose">&times;</button>
+<img class="lg" src="img/Logo-WCA-intro-350px.png" alt="WCA">
+<nav><a href="index.html">Accueil</a><a href="nos-machines.html">Nos Machines</a><a href="nos-salons.html">Nos Salons</a><a href="nos-partenaires.html">Partenaires</a><a href="agenda.html">Agenda</a><a href="blog.html">Blog</a><a href="contact.html">Contacter l'Asso</a></nav></aside>
+<header class="site-header"><div class="bar"><button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+<a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="WCA"></a></div></header>
+
+<div class="article-hero"><div class="date" id="aDate"></div><h1 id="aTitre">Chargement…</h1></div>
+<div class="feat" id="aFeat"></div>
+<article class="article">
+  <a class="article-back" href="blog.html">&#8592; Tous les articles</a>
+  <div class="article-body" id="aBody"><p style="color:#5d6b85">Chargement de l'article…</p></div>
+</article>
+
+<section class="need" style="background:var(--petrol,#122e35);color:#fff;text-align:center;padding:50px 16px">
+  <h2 style="font-family:var(--poppins);margin-bottom:16px">Une question, un projet ?</h2>
+  <a class="btn btn-orange" href="contact.html" style="background:#E2590F;color:#fff;padding:13px 24px;border-radius:22px;text-decoration:none;font-weight:600">Contactez-nous</a>
+</section>
+<div class="foot-copy">© 2026 Tous droits réservés</div>
+<div class="foot-legal"><a class="btn btn-legal" href="politique-de-confidentialite.html">Politique de confidentialité</a><a class="btn btn-legal" href="rgpd.html">RGPD</a></div>
+
+<script>(function(){var ov=document.getElementById('sfmOverlay'),pn=document.getElementById('sfmPanel');document.getElementById('burger').onclick=function(){pn.classList.add('open');ov.classList.add('open');};document.getElementById('sfmClose').onclick=ov.onclick=function(){pn.classList.remove('open');ov.classList.remove('open');};})();</script>
+<script src="assets/js/wca-api.js"></script>
+<script>
+(async function(){
+  var q=new URLSearchParams(location.search), slug=q.get('slug'), id=q.get('id');
+  var param = slug?('slug='+encodeURIComponent(slug)):('id='+encodeURIComponent(id||''));
+  try{
+    var a=await WCA.getJSON('article?'+param);
+    document.title=a.titre+' - West Coast Arcades';
+    document.getElementById('aTitre').textContent=a.titre;
+    document.getElementById('aDate').textContent=WCA.dateRange(a.date)+(a.auteur?(' · '+a.auteur):'');
+    if(a.image) document.getElementById('aFeat').innerHTML='<img src="'+a.image+'" alt="">';
+    document.getElementById('aBody').innerHTML=a.contenu||('<p>'+WCA.esc(a.extrait||'')+'</p>');
+  }catch(err){
+    document.getElementById('aTitre').textContent='Article introuvable';
+    document.getElementById('aBody').innerHTML='<p style="color:#a32d2d">Cet article n\'est pas disponible. <a href="blog.html">Retour au blog</a>.</p>';
+  }
+})();
+</script>
+</body>
+</html>

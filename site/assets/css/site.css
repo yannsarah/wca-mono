@@ -1,0 +1,75 @@
+/* =====================================================================
+   WEST COAST ARCADES — feuille de style partagée
+   Reproduction fidèle (thème digitala). Valeurs : DESIGN_REFERENCE.md §15.
+   ===================================================================== */
+:root{
+  --heebo:'Heebo',sans-serif;
+  --poppins:'Poppins',sans-serif;
+  --text:#17252A;          /* texte courant mesuré */
+  --blue:#467FF7;          /* bleu signature (boutons, footer) */
+  --blue-hero:#4057F7;     /* bouton "Projet en cours" */
+  --deepblue:#1A2A83;      /* boutons rectangulaires pages internes */
+  --navy:#1C244B;          /* titres navy (pages internes) */
+  --orange:#E2590F;        /* CTA orange */
+  --petrol:#122E35;        /* bande "besoin de nous" */
+  --red:#F10000;           /* divider / accents */
+  --black:#000000;
+  --container:1140px;      /* accueil ; pages internes : surcharger à 1280px */
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--heebo);font-size:16px;line-height:24px;color:var(--text);background:#fff;}
+img{display:block;max-width:100%;height:auto;}
+a{color:inherit;text-decoration:none;}
+h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
+.container{max-width:var(--container);margin:0 auto;padding:0 10px;}
+
+/* ---- Boutons (styles mesurés, volontairement hétérogènes) ---- */
+.btn{display:inline-block;font-family:var(--heebo);font-size:15px;font-weight:400;color:#fff;
+  padding:12px 24px;border:0;cursor:pointer;line-height:1.4;}
+.btn-hero{background:var(--blue-hero);border-radius:30px;}
+.btn-orange{background:var(--orange);border-radius:22px;}
+.btn-blue-pill{background:var(--blue);border-radius:100px;font-family:var(--poppins);font-size:16px;padding:16px 55px;}
+.btn-legal{background:var(--blue);border-radius:3px;}
+.btn-rent{background:var(--deepblue);border-radius:3px;}      /* "Louer cette borne" */
+
+/* ---- Header (noir, logo centré, hamburger Superfly) ---- */
+.site-header{background:var(--black);position:relative;z-index:20;}
+.site-header .bar{display:flex;align-items:center;justify-content:center;position:relative;min-height:170px;padding:10px;}
+.burger{position:absolute;left:24px;top:50%;transform:translateY(-50%);background:transparent;border:0;
+  width:46px;height:46px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:6px;}
+.burger span{display:block;width:100%;height:3px;background:#fff;border-radius:2px;}
+.logo-link img{width:150px;height:150px;}
+
+/* off-canvas Superfly-like */
+.sfm-overlay{position:fixed;inset:0;background:rgba(8,8,12,.6);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:.3s;z-index:90;}
+.sfm-overlay.open{opacity:1;visibility:visible;}
+.sfm-panel{position:fixed;top:0;left:0;height:100%;width:340px;max-width:86vw;background:#0b0b0b;
+  transform:translateX(-100%);transition:.32s cubic-bezier(.4,0,.2,1);z-index:100;padding:34px 0;display:flex;flex-direction:column;}
+.sfm-panel.open{transform:none;}
+.sfm-panel .x{align-self:flex-end;margin-right:22px;background:transparent;border:0;color:#fff;font-size:30px;cursor:pointer;line-height:1;}
+.sfm-panel img.lg{width:110px;height:110px;margin:6px auto 22px;}
+.sfm-panel nav{display:flex;flex-direction:column;}
+.sfm-panel nav a{color:#fff;font-family:var(--heebo);font-weight:500;font-size:20px;text-transform:uppercase;
+  letter-spacing:.02em;padding:14px 34px;transition:.15s;}
+.sfm-panel nav a:hover{background:rgba(255,255,255,.07);color:var(--blue);}
+
+/* ---- Bandeau CTA pétrole "besoin de nous" ---- */
+.need{background:var(--petrol);color:#fff;text-align:center;padding:54px 10px;}
+.need h2{font-size:17px;font-weight:700;color:#fff;margin-bottom:22px;}
+
+/* ---- Footer ---- */
+.foot-copy{background:var(--blue);color:#fff;text-align:center;font-size:16px;padding:12px 37px;}
+.foot-legal{background:var(--blue);text-align:center;padding:0 10px 26px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+
+/* ---- Bandeau de titre des pages internes (sous le header noir) ---- */
+.page-hero{background:var(--black);color:#fff;text-align:center;padding:30px 10px 50px;}
+.page-hero h1{font-family:var(--poppins);font-weight:700;font-size:42px;color:#fff;}
+
+/* ---- Titres de section pages internes (Poppins navy) ---- */
+.h-navy{font-family:var(--poppins);font-weight:700;color:var(--navy);}
+
+@media(max-width:1024px){.logo-link img{width:130px;height:130px;}}
+@media(max-width:768px){
+  .logo-link img{width:120px;height:120px;}
+  .page-hero h1{font-size:30px;}
+}

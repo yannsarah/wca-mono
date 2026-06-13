@@ -1,17 +1,29 @@
-# Dépendances
+# === Général ===
 node_modules/
-
-# Fichiers système macOS
 .DS_Store
-
-# Données vivantes (contiennent le secret de session + données réelles)
-# Sauvegardées séparément, pas dans Git. Voir gestion/data.example.json
-gestion/data.json
-**/data.json
-
-# Logs & temporaires
+._*
 *.log
 npm-debug.log*
 
-# Anciennes versions (déjà conservées hors Git comme archive)
+# Anciennes versions (conservées hors Git comme archive)
 _ARCHIVE/
+
+# === gestion/ : données vivantes (secret de session + données réelles) ===
+# Sauvegardées séparément. Structure vide versionnée : gestion/data.example.json
+gestion/data.json
+**/data.json
+
+# === site/ : secrets & sources à ne jamais publier ===
+.deploy/
+**/.deploy/
+*.pem
+deploy.config*
+o2switch_deploy*
+
+# Archives & export WordPress (source, pas à versionner)
+*.zip
+*.xml
+!site/sitemap.xml
+
+# Temporaire généré par migrate-images.sh
+site/img/_urls.txt

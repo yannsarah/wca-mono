@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — Administration · West Coast Arcades Gestion</title>
+<style>
+:root{--bg:#0e1730;--card:#16224a;--line:rgba(255,255,255,.12);--txt:#eaf0ff;--muted:#9aa6c8;--blue:#3b7bff;--yellow:#FDC500;--green:#2ecf6f;--red:#ff5252;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);line-height:1.5;padding:24px;}
+.wrap{max-width:1000px;margin:0 auto;}
+h1{font-size:24px;margin-bottom:4px;}
+.sub{color:var(--muted);margin-bottom:22px;font-size:14px;}
+.grid{display:grid;grid-template-columns:1fr 1.2fr;gap:24px;align-items:start;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;}
+.card h2{font-size:16px;margin-bottom:14px;}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px;}
+input,textarea{width:100%;background:#0b1430;border:1px solid var(--line);border-radius:8px;color:#fff;padding:10px 12px;font:inherit;}
+textarea{min-height:160px;resize:vertical;}
+.row{display:flex;gap:12px;}.row>*{flex:1;}
+.chk{display:flex;align-items:center;gap:8px;margin-top:14px;}.chk input{width:auto;}
+button{cursor:pointer;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;}
+.btn-y{background:var(--yellow);color:#1a1400;}.btn-g{background:transparent;border:1px solid var(--line);color:#fff;}
+.btn-d{background:transparent;border:1px solid var(--red);color:var(--red);}
+.list{display:flex;flex-direction:column;gap:10px;}
+.item{display:flex;gap:12px;align-items:center;background:#0b1430;border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+.item img{width:54px;height:54px;object-fit:cover;border-radius:6px;background:#000;}
+.item .t{flex:1;}.item .t b{display:block;}.item .t span{font-size:12px;color:var(--muted);}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;}
+.badge.on{background:rgba(46,207,111,.2);color:var(--green);}.badge.off{background:rgba(255,82,82,.18);color:var(--red);}
+.msg{padding:10px 14px;border-radius:8px;margin-bottom:14px;display:none;}
+.toolbar{display:flex;gap:10px;margin-top:16px;}
+a{color:var(--yellow);}
+@media(max-width:800px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📝 Blog — Administration</h1>
+  <p class="sub">Crée et gère les articles publiés sur westcoastarcades.fr. <span id="who"></span></p>
+  <div id="msg" class="msg"></div>
+  <div class="grid">
+    <div class="card">
+      <h2 id="formTitle">Nouvel article</h2>
+      <input type="hidden" id="a-id">
+      <label>Titre *</label><input id="a-titre" placeholder="Titre de l'article">
+      <div class="row">
+        <div><label>Date</label><input id="a-date" type="date"></div>
+        <div><label>Auteur</label><input id="a-auteur" placeholder="(optionnel)"></div>
+      </div>
+      <label>Image (à la une)</label><input id="a-imgfile" type="file" accept="image/*">
+      <div id="a-imgprev" style="margin-top:8px"></div>
+      <label>Extrait (résumé court)</label><textarea id="a-extrait" style="min-height:60px" placeholder="Phrase d'accroche affichée dans la liste"></textarea>
+      <label>Contenu (HTML simple autorisé : &lt;p&gt;, &lt;h2&gt;, &lt;img&gt;, &lt;a&gt;…)</label><textarea id="a-contenu"></textarea>
+      <div class="chk"><input type="checkbox" id="a-visible" checked><label style="margin:0">Publié sur le site</label></div>
+      <div class="toolbar"><button class="btn-y" id="save">Enregistrer</button><button class="btn-g" id="reset">Nouveau</button></div>
+    </div>
+    <div class="card">
+      <h2>Articles existants</h2>
+      <div class="list" id="list"><p style="color:var(--muted)">Chargement…</p></div>
+    </div>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+let IMG='';
+function msg(t,ok){const m=$('#msg');m.textContent=t;m.style.display='block';m.style.background=ok?'rgba(46,207,111,.18)':'rgba(255,82,82,.18)';m.style.color=ok?'#2ecf6f':'#ff5252';setTimeout(()=>m.style.display='none',4000);}
+async function api(url,opt){const r=await fetch(url,Object.assign({headers:{'Content-Type':'application/json'}},opt));if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||('HTTP '+r.status));return r.json();}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+$('#a-imgfile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{IMG=rd.result;$('#a-imgprev').innerHTML='<img src="'+IMG+'" style="max-height:90px;border-radius:6px">';};rd.readAsDataURL(f);});
+function resetForm(){$('#a-id').value='';$('#a-titre').value='';$('#a-date').value=new Date().toISOString().slice(0,10);$('#a-auteur').value='';$('#a-extrait').value='';$('#a-contenu').value='';$('#a-visible').checked=true;IMG='';$('#a-imgprev').innerHTML='';$('#formTitle').textContent='Nouvel article';}
+$('#reset').onclick=resetForm;
+
+async function load(){
+  try{ const s=await api('/api/session'); $('#who').textContent='Connecté : '+(s.user?s.user.login:''); }
+  catch{ $('#who').innerHTML='⚠️ Non connecté — <a href="/">connecte-toi à l\'app gestion</a> puis recharge.'; }
+  try{
+    const arts=await api('/api/articles');
+    $('#list').innerHTML = arts.length? arts.map(a=>`<div class="item"><img src="${a.image||''}" alt=""><div class="t"><b>${esc(a.titre)}</b><span>${esc(a.date||'')} · <span class="badge ${a.visible_site!==false?'on':'off'}">${a.visible_site!==false?'Publié':'Masqué'}</span></span></div><button class="btn-g" data-edit="${a.id}">Éditer</button><button class="btn-d" data-del="${a.id}">✕</button></div>`).join('') : '<p style="color:var(--muted)">Aucun article. Crée le premier !</p>';
+    document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(+b.dataset.edit,arts));
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>del(+b.dataset.del));
+  }catch(e){ $('#list').innerHTML='<p style="color:var(--red)">Erreur : '+e.message+'</p>'; }
+}
+function edit(id,arts){const a=arts.find(x=>x.id===id);if(!a)return;$('#a-id').value=a.id;$('#a-titre').value=a.titre||'';$('#a-date').value=(a.date||'').slice(0,10);$('#a-auteur').value=a.auteur||'';$('#a-extrait').value=a.extrait||'';$('#a-contenu').value=a.contenu||'';$('#a-visible').checked=a.visible_site!==false;IMG=a.image||'';$('#a-imgprev').innerHTML=IMG?'<img src="'+IMG+'" style="max-height:90px;border-radius:6px">':'';$('#formTitle').textContent='Éditer l\'article #'+a.id;window.scrollTo(0,0);}
+async function del(id){if(!confirm('Supprimer cet article ?'))return;try{await api('/api/articles/'+id,{method:'DELETE'});msg('Supprimé',true);load();}catch(e){msg(e.message,false);}}
+$('#save').onclick=async()=>{
+  const id=$('#a-id').value;
+  const body={titre:$('#a-titre').value.trim(),date:$('#a-date').value,auteur:$('#a-auteur').value.trim(),extrait:$('#a-extrait').value.trim(),contenu:$('#a-contenu').value,image:IMG,visible_site:$('#a-visible').checked};
+  if(!body.titre){msg('Le titre est obligatoire.',false);return;}
+  try{ await api(id?'/api/articles/'+id:'/api/articles',{method:id?'PUT':'POST',body:JSON.stringify(body)}); msg('Enregistré ✔',true); resetForm(); load(); }
+  catch(e){ msg('Erreur : '+e.message,false); }
+};
+resetForm(); load();
+</script>
+</body>
+</html>

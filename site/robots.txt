@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://www.westcoastarcades.fr/sitemap.xml

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact avec l'association WCA - West Coast Arcades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css">
+<style>
+.intro{text-align:center;max-width:760px;margin:0 auto;padding:46px 16px 24px;}
+.intro h1{font-family:var(--poppins);font-weight:700;font-size:38px;color:var(--navy);margin-bottom:12px;}
+.form{max-width:680px;margin:0 auto 50px;padding:0 16px;}
+.form .row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;border:1px solid #d8dde6;border-radius:4px;font:inherit;font-size:15px;background:#f7f9fc;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);background:#fff;}
+.field textarea{min-height:140px;resize:vertical;}
+.send{background:var(--deepblue);color:#fff;border:0;border-radius:3px;padding:13px 30px;font:inherit;font-size:15px;cursor:pointer;}
+@media(max-width:768px){.form .row{grid-template-columns:1fr;}.intro h1{font-size:28px;}}
+</style>
+</head>
+<body>
+<div class="sfm-overlay" id="sfmOverlay"></div>
+<aside class="sfm-panel" id="sfmPanel"><button class="x" id="sfmClose">&times;</button>
+<img class="lg" src="img/Logo-WCA-intro-350px.png" alt="WCA">
+<nav><a href="index.html">Accueil</a><a href="nos-machines.html">Nos Machines</a><a href="nos-salons.html">Nos Salons</a><a href="nos-partenaires.html">Partenaires</a><a href="agenda.html">Agenda</a><a href="contact.html">Contacter l'Asso</a></nav></aside>
+<header class="site-header"><div class="bar"><button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+<a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="WCA"></a></div></header>
+
+<section class="intro">
+  <h1>Contact avec l'association WCA</h1>
+  <p>Pour nous contacter, merci de passer par ce formulaire, nous vous répondrons aussitôt que possible. N'oubliez pas d'être le plus précis possible !</p>
+</section>
+
+<div class="form">
+  <div id="formMsg" style="display:none;border-radius:6px;padding:14px 16px;margin-bottom:18px;font-size:15px;"></div>
+  <form action="contact.php" method="post">
+    <!-- champ piège anti-spam (ne pas remplir / masqué) -->
+    <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true">
+    <div class="row">
+      <div class="field"><label>Nom</label><input type="text" name="nom" required></div>
+      <div class="field"><label>Email</label><input type="email" name="email" required></div>
+    </div>
+    <div class="field"><label>Sujet</label><input type="text" name="sujet"></div>
+    <div class="field"><label>Message</label><textarea name="message" required></textarea></div>
+    <button class="send" type="submit">Envoyer</button>
+  </form>
+</div>
+<script>
+(function(){
+  var p=new URLSearchParams(location.search).get('sent');
+  if(p===null)return;
+  var box=document.getElementById('formMsg');box.style.display='block';
+  if(p==='1'){box.style.background='#e7f7ee';box.style.color='#16794b';box.textContent='Merci, votre message a bien été envoyé ! Nous vous répondrons au plus vite.';}
+  else{box.style.background='#fcebeb';box.style.color='#a32d2d';box.textContent='Une erreur est survenue. Vérifiez les champs et réessayez, ou écrivez à westcoastarcades.fr@gmail.com.';}
+  box.scrollIntoView({behavior:'smooth',block:'center'});
+})();
+</script>
+
+<div class="foot-copy">© 2026 Tous droits réservés</div>
+<div class="foot-legal"><a class="btn btn-legal" href="politique-de-confidentialite.html">Politique de confidentialité</a><a class="btn btn-legal" href="rgpd.html">RGPD</a></div>
+<script>(function(){var ov=document.getElementById('sfmOverlay'),pn=document.getElementById('sfmPanel');document.getElementById('burger').onclick=function(){pn.classList.add('open');ov.classList.add('open');};document.getElementById('sfmClose').onclick=ov.onclick=function(){pn.classList.remove('open');ov.classList.remove('open');};})();</script>
+</body>
+</html>

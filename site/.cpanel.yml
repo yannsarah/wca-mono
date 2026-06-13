@@ -1,0 +1,29 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=$HOME/westcoastarcades.fr
+    - /bin/cp -f index.html $DEPLOYPATH/
+    - /bin/cp -f nos-machines.html $DEPLOYPATH/
+    - /bin/cp -f nos-salons.html $DEPLOYPATH/
+    - /bin/cp -f les-projets.html $DEPLOYPATH/
+    - /bin/cp -f projet-virtua-racing.html $DEPLOYPATH/
+    - /bin/cp -f projet-virtua-fighter-2.html $DEPLOYPATH/
+    - /bin/cp -f nos-partenaires.html $DEPLOYPATH/
+    - /bin/cp -f wip.html $DEPLOYPATH/
+    - /bin/cp -f contact.html $DEPLOYPATH/
+    - /bin/cp -f agenda.html $DEPLOYPATH/
+    - /bin/cp -f blog.html $DEPLOYPATH/
+    - /bin/cp -f article.html $DEPLOYPATH/
+    - /bin/cp -f rgpd.html $DEPLOYPATH/
+    - /bin/cp -f politique-de-confidentialite.html $DEPLOYPATH/
+    - /bin/cp -f contact.php $DEPLOYPATH/
+    - /bin/cp -f robots.txt $DEPLOYPATH/
+    - /bin/cp -f sitemap.xml $DEPLOYPATH/
+    - /bin/cp -Rf assets $DEPLOYPATH/
+    - /bin/cp -Rf blog $DEPLOYPATH/
+    - /bin/cp -Rf img $DEPLOYPATH/
+    - find $DEPLOYPATH/assets $DEPLOYPATH/blog $DEPLOYPATH/img -type d -exec chmod 755 {} \;
+    - find $DEPLOYPATH/assets $DEPLOYPATH/blog $DEPLOYPATH/img -type f -exec chmod 644 {} \;
+    - chmod 755 $DEPLOYPATH/assets $DEPLOYPATH/blog $DEPLOYPATH/img
+    - chmod 644 $DEPLOYPATH/*.html
+    - chmod 644 $DEPLOYPATH/contact.php

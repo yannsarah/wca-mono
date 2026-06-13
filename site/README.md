@@ -1,21 +1,22 @@
-# site/ — Site public & affichage
+# site/ — Site public & affichage West Coast Arcades
 
-Ce dossier est **réservé au site public / à l'affichage**, actuellement dans
-l'autre projet Claude.
+Site rapatrié depuis l'ancien projet Claude « REFONTE SITE WCA » le 13 juin 2026.
+Il vit désormais dans le **dépôt unique**, à côté de `gestion/`.
 
-## Pour le rapatrier ici (à faire une fois)
+## Contenu
 
-Copie le contenu de l'autre projet dans ce dossier `site/`. Tu peux :
+- Pages HTML statiques (`index.html`, `nos-machines.html`, `contact.html`, `blog/`…)
+- `assets/` (css, js) et `img/` (95 images)
+- `_gestion-connecteur/` → le **pont avec la gestion** (`public-api.js`) : c'est par là
+  que le site lit les données de la gestion. À terme, à factoriser dans `../partage/`.
+- Docs du projet : `MIGRATION_PLAN.md`, `DESIGN_REFERENCE.md`, `CONNECTEURS_PLAN.md`, `SETUP.md`
 
-- soit glisser les fichiers de l'autre projet dans ce dossier depuis le Finder,
-- soit me demander : « rapatrie le site depuis l'autre projet » une fois que
-  tu as connecté ce dossier-là, et je m'en occupe.
+## Ce qui n'a PAS été copié (resté dans le dossier d'origine sur le SSD)
 
-Une fois le site ici, les deux interfaces partagent le même dépôt Git : plus
-aucune copie manuelle de `.js`, et mes modifications dans `gestion/` ne
-peuvent plus écraser tes modifications dans `site/`.
+- `.git/` du site (son ancien historique, 403 Mo) → l'historique repart proprement
+  ici, dans le dépôt unique.
+- `.deploy/` et les clés SSH o2switch → **secrets, jamais versionnés**. Si tu veux
+  déployer depuis ici, recopie-les à la main (ils restent gitignorés).
 
-## Données partagées
-
-Si le site doit afficher des données de la gestion (bornes dispo, prix, etc.),
-il les lira via le **code commun de `partage/`** — pas en dupliquant la logique.
+L'export WordPress (`*.xml`) et les archives (`*.zip`) sont présents sur le disque
+mais exclus de Git (ce sont des sources, pas du code à publier).
