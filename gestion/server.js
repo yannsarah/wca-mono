@@ -6,6 +6,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { db, save, nextId, setData } from './store.js';
+import { handlePublic } from './MODULES/public-api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(__dirname, 'public');
@@ -1253,6 +1254,8 @@ http.createServer((req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     const pathname = url.pathname;
+    // API publique (lecture seule, CORS) pour le site — AVANT l'authentification.
+    if (pathname.startsWith('/api/public/') || pathname === '/api/public') return handlePublic(req, res, pathname, url.searchParams);
     if (!pathname.startsWith('/api/')) return serveStatic(req, res, pathname);
     const query = {};
     for (const [k, v] of url.searchParams) query[k] = v;
