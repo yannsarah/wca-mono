@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.4'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '1.5'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -433,6 +433,7 @@ function compressSquare(file, cb, maxBytes=60*1024){
   img.src=url;
 }
 let PARTNERS_CACHE=[];
+let PT_INTAB=false; // true = partenaires affichés dans l'onglet Utilisateurs (pas en popup)
 async function loadPartners(){ try{ PARTNERS_CACHE = await api('/api/partenaires'); }catch{ PARTNERS_CACHE=[]; } return PARTNERS_CACHE; }
 async function renderPartnersStrip(){
   const strip=$('#partners-strip'); if(!strip) return;
@@ -450,6 +451,7 @@ async function renderPartnersStrip(){
   $('#pt-manage')?.addEventListener('click',partenairesModal);
 }
 async function partenairesModal(){
+  PT_INTAB=false;
   await loadPartners();
   openModal(`<div id="pt-body"></div>`);
   renderPartenaires();
@@ -474,7 +476,7 @@ function renderPartenaires(){
         <button class="iconbtn ghost js-pt-del" data-id="${p.id}">${icon('trash')}</button>
       </div>`).join(''):'<p class="mini">Aucun partenaire pour le moment.</p>'}</div>
     <button class="btn light small" id="pt-add" style="margin-top:4px">${icon('plus')} Ajouter un partenaire</button>
-    <div class="buttons" style="margin-top:14px"><button class="btn" onclick="closeModal()">Fermer</button></div>`;
+    ${PT_INTAB?'':'<div class="buttons" style="margin-top:14px"><button class="btn" onclick="closeModal()">Fermer</button></div>'}`;
   const setMode=async m=>{ try{ await api('/api/config',{method:'PUT',body:JSON.stringify({partenaires_mode:m})}); PARTENAIRES_MODE=m; renderPartenaires(); renderPartnersStrip(); }catch(e){ toast(e.message); } };
   $('#pm-fixe').addEventListener('click',()=>setMode('fixe'));
   $('#pm-alea').addEventListener('click',()=>setMode('aleatoire'));
@@ -2041,13 +2043,15 @@ async function renderUsers(){
   await loadConfig();
   const canComptes = isAdminUser() || isReadonly();
   const dispoOn = moduleOn('disponibilites');
+  const partOn = moduleOn('partenaires') && canComptes;
   if(USR_TAB===null) USR_TAB = isAdminUser()||!dispoOn ? 'comptes' : 'dispo';
   if(USR_TAB==='comptes' && !canComptes) USR_TAB = dispoOn?'dispo':'comptes';
   if(USR_TAB==='dispo' && !dispoOn) USR_TAB='comptes';
+  if(USR_TAB==='partenaires' && !partOn) USR_TAB = canComptes?'comptes':'dispo';
   if(!canComptes && !dispoOn){ setView('accueil'); return; }
   const action = USR_TAB==='comptes'
     ? (isAdminUser()?`<button class="btn" id="add-u">${icon('userplus')} Nouvel utilisateur</button><button class="btn grey" id="roles-btn">${icon('edit')} Gérer les rôles</button>`:'')
-    : `<button class="btn" id="add-abs">${icon('plus')} Ajouter une absence</button>`;
+    : USR_TAB==='dispo' ? `<button class="btn" id="add-abs">${icon('plus')} Ajouter une absence</button>` : '';
   setTopbar('Utilisateurs', action);
   $('#add-u')?.addEventListener('click',()=>userModal());
   $('#roles-btn')?.addEventListener('click',gererRolesModal);
@@ -2055,10 +2059,13 @@ async function renderUsers(){
   view().innerHTML = `<div class="tabs-row">
       ${dispoOn?`<button class="${USR_TAB==='dispo'?'active':''}" id="ut-dispo">${icon('calendar')} Disponibilités</button>`:''}
       ${canComptes?`<button class="${USR_TAB==='comptes'?'active':''}" id="ut-comptes">${icon('users')} Comptes</button>`:''}
+      ${partOn?`<button class="${USR_TAB==='partenaires'?'active':''}" id="ut-part">${icon('share')} Partenaires</button>`:''}
     </div><div id="usr-body"></div>`;
   $('#ut-dispo')?.addEventListener('click',()=>{ USR_TAB='dispo'; renderUsers(); });
   $('#ut-comptes')?.addEventListener('click',()=>{ USR_TAB='comptes'; renderUsers(); });
+  $('#ut-part')?.addEventListener('click',()=>{ USR_TAB='partenaires'; renderUsers(); });
   if(USR_TAB==='comptes'){ $('#usr-body').innerHTML=`<div id="u-pills" class="cat-pills"></div><div id="u-list"></div>`; loadUsers(); }
+  else if(USR_TAB==='partenaires'){ PT_INTAB=true; $('#usr-body').innerHTML='<div id="pt-body"></div>'; loadPartners().then(()=>renderPartenaires()); }
   else { renderDispo(); }
 }
 

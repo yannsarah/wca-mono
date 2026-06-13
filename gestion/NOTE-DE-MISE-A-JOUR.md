@@ -2,6 +2,12 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 1.5 — 13 juin 2026**
+## Partenaires dans la page Utilisateurs
+- La gestion des **partenaires** est désormais un **onglet** dans la page **Utilisateurs** (à côté de « Comptes » et « Disponibilités »), au lieu d'une fenêtre popup. Liste, ajout, modification, suppression et réglages de l'encart au même endroit.
+
+---
+
 **Version 1.4 — 13 juin 2026**
 ## Page d'accueil pilotable (Site internet → Modules accueil)
 - Nouvel onglet **« Modules accueil »** dans Site internet, avec 3 modules éditables :
