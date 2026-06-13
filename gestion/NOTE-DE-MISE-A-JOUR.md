@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 1.2 — 13 juin 2026**
+## Fiche événement enrichie
+- Au clic sur un événement : la fiche affiche désormais le **matériel présent en visuel** (vignettes photo + nom + catégorie), cliquable pour ouvrir la fiche du matériel.
+- Nouveau bloc **« Site internet »** dans la fiche : interrupteur **Affiché / Masqué** pour publier ou retirer l'événement de l'agenda du site, directement depuis la fiche.
+
+---
+
 **Version 1.1 — 13 juin 2026**
 ## Dépôt unique + Site internet
 - Tout le projet (gestion + site) est désormais dans **un seul dépôt Git**, compartimenté. Fini les copies de dossiers et les fichiers `.js` recopiés à la main.

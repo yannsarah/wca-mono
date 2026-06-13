@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.1'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '1.2'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1186,7 +1186,8 @@ function evenementFiche(ev){
     ${ev.cree_par_nom?`<div class="mini" style="margin-top:2px">Créé par ${esc(ev.cree_par_nom)}${ev.date_creation?' · '+dateTimeShort(ev.date_creation):''}</div>`:''}
     ${ev.description?`<div class="ef-section"><h4>Descriptif</h4><p class="ef-text">${nl2br(ev.description)}</p></div>`:''}
     ${ev.consignes?`<div class="ef-section"><h4>Consignes</h4><p class="ef-text">${nl2br(ev.consignes)}</p></div>`:''}
-    <div class="ef-section"><h4>Machines réservées${ids.length?` (${ids.length})`:''}</h4>${ids.length?`<div class="blocks-list">${ids.map(id=>`<span class="tag gray">${esc(matName(id))}</span>`).join('')}</div>`:'<p class="mini">Aucune machine réservée.</p>'}</div>
+    <div class="ef-section"><h4>Matériel présent${ids.length?` (${ids.length})`:''}</h4>${ids.length?`<div style="display:flex;flex-wrap:wrap;gap:10px">${ids.map(id=>{const m=MAT_CACHE.find(x=>x.id===+id)||{};return `<div class="js-ef-mat" data-id="${id}" title="Voir la fiche du matériel" style="cursor:pointer;width:110px;text-align:center"><div style="width:110px;height:90px;border-radius:8px;background:#0b0b0d;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff">${m.photo?`<img src="${esc(m.photo)}" alt="" style="width:100%;height:100%;object-fit:cover">`:icon(CAT_ICONS[m.categorie]||'box','ic')}</div><div style="font-size:12.5px;font-weight:600;color:var(--navy);margin-top:4px;line-height:1.2">${esc(m.denomination||matName(id))}</div>${m.categorie?`<div class="mini">${esc(m.categorie)}</div>`:''}</div>`;}).join('')}</div>`:'<p class="mini">Aucun matériel rattaché à cet événement.</p>'}</div>
+    <div class="ef-section"><h4>Site internet</h4><p class="mini" style="margin-bottom:6px">Contrôle l'affichage de cet événement sur l'agenda du site public.</p><span class="toggle-oui-non ${ev.visible_site!==false?'on':'off'} js-ef-vis" data-id="${ev.id}" style="cursor:pointer"><span class="t-oui">${icon('check')} Affiché sur le site</span><span class="t-non">Masqué</span></span></div>
     ${champs.length?`<div class="ef-section"><h4>Informations</h4><table class="ef-champs">${champs.map(c=>`<tr><td>${esc(c.label||'—')}</td><td>${esc(c.valeur||'')}</td></tr>`).join('')}</table></div>`:''}
     <div class="ef-section"><h4>Devis ${ev.devis_signe?'<span class="tag green">Signé &amp; approuvé</span>':''}</h4>${devisHtml}</div>
     ${ev.notes?`<div class="ef-section"><h4>Notes internes</h4><p class="ef-text">${nl2br(ev.notes)}</p></div>`:''}
@@ -1200,6 +1201,8 @@ function evenementFiche(ev){
   $('#ef-newdevis')?.addEventListener('click',()=>devisModal(null, evtPrefill(ev)));
   $('#ef-dispo')?.addEventListener('click',()=>{ closeModal(); const f=$('#dispo-from'), t=$('#dispo-to'); if(f&&t){ f.value=ev.date_debut; t.value=ev.date_fin; checkDispo(); window.scrollTo(0,0); } });
   $$('.js-ef-devis').forEach(b=>b.addEventListener('click',async()=>{ try{ const dv=await api('/api/devis/'+b.dataset.id); devisModal(dv); }catch(err){ toast(err.message); } }));
+  $$('.js-ef-mat').forEach(c=>c.addEventListener('click',()=>{ const m=MAT_CACHE.find(x=>x.id===+c.dataset.id); if(m) materielModal(m); }));
+  const efv=$('.js-ef-vis'); if(efv && !isReadonly()) efv.addEventListener('click',async()=>{ const next=!efv.classList.contains('on'); try{ await api('/api/evenements/'+efv.dataset.id,{method:'PUT',body:JSON.stringify({visible_site:next})}); efv.classList.toggle('on',next); efv.classList.toggle('off',!next); ev.visible_site=next; toast(next?'Affiché sur le site':'Masqué du site'); }catch(e){ toast(e.message); } });
 }
 
 /* ============================== RÉPARATIONS ============================== */
