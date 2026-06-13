@@ -110,7 +110,10 @@ export function handlePublic(req, res, pathname, searchParams) {
       .map(m => ({
         id: m.id, denomination: m.denomination, categorie: m.categorie || '',
         photo: m.photo || '', fonctionnel: !!m.fonctionnel,
+        titre: m.titre_site || m.denomination || '',
+        sous_titre: m.sous_titre_site || '',
         description: m.description_site || '',
+        sens: m.sens_site || 'auto', // 'auto' | 'image-texte' | 'texte-image'
       }));
     return sendJSON(res, 200, list), true;
   }

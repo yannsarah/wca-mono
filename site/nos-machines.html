@@ -153,12 +153,15 @@
     var list=await WCA.getJSON('machines');
     if(!list.length) return; // aucune machine publiée → on conserve la vitrine actuelle
     main.innerHTML=list.map(function(m,i){
-      var rev=i%2?' rev':'';
-      var img=m.photo?'<div class="mimg"><img src="'+WCA.esc(m.photo)+'" alt="'+WCA.esc(m.denomination)+'"></div>':'<div class="mimg"></div>';
-      var sub=m.categorie?'<div class="sub">'+WCA.esc(m.categorie)+'</div>':'';
+      var sens=m.sens||'auto';
+      // .mrow.rev = image à gauche ; sinon texte à gauche. auto = zigzag (image à gauche d'abord).
+      var rev = sens==='image-texte' ? true : sens==='texte-image' ? false : (i%2===0);
+      var titre=m.titre||m.denomination||'';
+      var img=m.photo?'<div class="mimg"><img src="'+WCA.esc(m.photo)+'" alt="'+WCA.esc(titre)+'"></div>':'<div class="mimg"></div>';
+      var sub=m.sous_titre?'<div class="sub">'+WCA.esc(m.sous_titre)+'</div>':(m.categorie?'<div class="sub">'+WCA.esc(m.categorie)+'</div>':'');
       var desc=m.description?'<p>'+WCA.esc(m.description)+'</p>':'';
       var cta='<a class="btn btn-rent" href="contact.html">Louer cette borne</a>';
-      var block='<div class="mrow'+rev+'"><div class="mtext"><h2>'+WCA.esc(m.denomination)+'</h2>'+sub+desc+cta+'</div>'+img+'</div>';
+      var block='<div class="mrow'+(rev?' rev':'')+'"><div class="mtext"><h2>'+WCA.esc(titre)+'</h2>'+sub+desc+cta+'</div>'+img+'</div>';
       return block+(i<list.length-1?'<hr class="mdiv">':'');
     }).join('');
   }catch(err){ /* API indisponible → on garde la vitrine curée, pas d'erreur visible */ }

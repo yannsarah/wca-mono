@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.2'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '1.3'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1897,7 +1897,8 @@ async function renderAffichageTab(){
   function section(title, list, coll, nameKey, optIn){
     const rows=(list||[]).map(x=>{
       const on = optIn ? (x.visible_site===true) : (x.visible_site!==false);
-      return `<tr><td>${esc(x[nameKey]||'(sans nom)')}</td><td class="actions"><span class="toggle-oui-non ${on?'on':'off'} js-vis" data-coll="${coll}" data-id="${x.id}" style="cursor:pointer"><span class="t-oui">${icon('check')} Publié</span><span class="t-non">Masqué</span></span></td></tr>`;
+      const vit = optIn ? `<button class="btn small light js-vitrine" data-id="${x.id}" style="margin-right:10px">${icon('edit')} Fiche vitrine</button>` : '';
+      return `<tr><td>${esc(x[nameKey]||'(sans nom)')}</td><td class="actions" style="white-space:nowrap;text-align:right">${vit}<span class="toggle-oui-non ${on?'on':'off'} js-vis" data-coll="${coll}" data-id="${x.id}" style="cursor:pointer"><span class="t-oui">${icon('check')} Publié</span><span class="t-non">Masqué</span></span></td></tr>`;
     }).join('') || `<tr><td colspan="2" class="help" style="padding:10px">Aucun élément.</td></tr>`;
     return `<h4 style="margin:20px 0 8px;color:var(--navy)">${title}</h4><div class="tablecard"><table class="grid"><tbody>${rows}</tbody></table></div>`;
   }
@@ -1910,6 +1911,41 @@ async function renderAffichageTab(){
     const next=!t.classList.contains('on');
     try{ await api('/api/'+t.dataset.coll+'/'+t.dataset.id,{method:'PUT',body:JSON.stringify({visible_site:next})}); t.classList.toggle('on',next); t.classList.toggle('off',!next); toast(next?'Publié sur le site':'Masqué'); }catch(e){ toast(e.message); }
   }));
+  $$('.js-vitrine').forEach(b=>b.addEventListener('click',()=>{ const m=(mats||[]).find(x=>x.id===+b.dataset.id); if(m) vitrineModal(m); }));
+}
+
+// Fiche vitrine d'une machine : présentation publique (photo + titre + sous-titre + description + sens).
+function vitrineModal(m){
+  let photo = m.photo||'';
+  const sensVal = m.sens_site||'auto';
+  openModal(`<h3>Fiche vitrine — ${esc(m.denomination)}</h3>
+    <p class="help" style="margin:-4px 0 10px">Présentation publique de cette borne sur la page « Nos Machines » (grande photo + texte).</p>
+    <div class="field"><span>Photo</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <div id="vit-prev" style="width:150px;height:104px;border-radius:8px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${photo?`background-image:url('${photo}')`:''}"></div>
+        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="vit-photo" accept="image/*" style="display:none"></label>
+        <button type="button" class="btn small red" id="vit-photo-clear">${icon('trash')} Retirer</button>
+      </div>
+    </div>
+    <label class="field"><span>Grand titre</span><input id="vit-titre" value="${esc(m.titre_site||m.denomination||'')}" placeholder="ex. La Virtua Fighter 2"></label>
+    <label class="field"><span>Sous-titre</span><input id="vit-sous" value="${esc(m.sous_titre_site||'')}" placeholder="ex. le jeu de combat par SEGA"></label>
+    <label class="field"><span>Description</span><textarea id="vit-desc" rows="4" placeholder="Présentation de la borne pour les visiteurs…">${esc(m.description_site||'')}</textarea></label>
+    <div class="row2">
+      <label class="field"><span>Sens d'affichage</span><select id="vit-sens">
+        <option value="auto" ${sensVal==='auto'?'selected':''}>Auto (zigzag)</option>
+        <option value="image-texte" ${sensVal==='image-texte'?'selected':''}>Image à gauche / texte à droite</option>
+        <option value="texte-image" ${sensVal==='texte-image'?'selected':''}>Texte à gauche / image à droite</option>
+      </select></label>
+      <label class="field"><span>Publié sur le site</span><select id="vit-vis"><option value="0" ${m.visible_site?'':'selected'}>Non</option><option value="1" ${m.visible_site?'selected':''}>✅ Oui — affichée sur westcoastarcades.fr</option></select></label>
+    </div>
+    <div class="buttons" style="margin-top:12px;flex-wrap:wrap"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn light" id="vit-del" type="button">${icon('trash')} Vider la fiche</button><button class="btn" id="vit-save">Enregistrer</button></div>`);
+  $('#vit-photo').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ photo=data; $('#vit-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
+  $('#vit-photo-clear').addEventListener('click',()=>{ photo=''; $('#vit-prev').style.backgroundImage=''; });
+  const put = body => api('/api/materiel/'+m.id,{method:'PUT',body:JSON.stringify(body)});
+  $('#vit-save').addEventListener('click',async()=>{
+    try{ await put({ photo, titre_site:$('#vit-titre').value.trim(), sous_titre_site:$('#vit-sous').value.trim(), description_site:$('#vit-desc').value.trim(), sens_site:$('#vit-sens').value, visible_site:$('#vit-vis').value==='1' }); closeModal(); toast('Fiche vitrine enregistrée'); renderAffichageTab(); }catch(e){ toast(e.message); }
+  });
+  $('#vit-del').addEventListener('click',()=>{ confirmModal('Vider la fiche vitrine de cette borne et la retirer du site ? (la photo de l’inventaire est conservée)', async()=>{ try{ await put({ titre_site:'', sous_titre_site:'', description_site:'', sens_site:'auto', visible_site:false }); closeModal(); toast('Fiche vitrine vidée'); renderAffichageTab(); }catch(e){ toast(e.message); } }); });
 }
 
 async function renderUsers(){

@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 1.3 — 13 juin 2026**
+## Fiches vitrine des machines
+- Dans **Site internet → Affichage**, chaque machine a un bouton **« Fiche vitrine »** : photo, grand titre, sous-titre, description, **sens d'affichage** (auto zigzag / image à gauche / texte à gauche) et publié o/n.
+- La page **« Nos Machines »** du site affiche chaque borne publiée au format **grande photo + titre + sous-titre + description + bouton « Louer cette borne »**, dans le sens choisi.
+- Bouton **« Vider la fiche »** pour retirer une borne du site (la photo d'inventaire est conservée).
+
+---
+
 **Version 1.2 — 13 juin 2026**
 ## Fiche événement enrichie
 - Au clic sur un événement : la fiche affiche désormais le **matériel présent en visuel** (vignettes photo + nom + catégorie), cliquable pour ouvrir la fiche du matériel.

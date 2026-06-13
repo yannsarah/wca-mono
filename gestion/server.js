@@ -261,7 +261,7 @@ function dispoPour(materielId, from, to, excludeDevis, excludeEvent) {
 }
 
 /* =============================== MATÉRIEL (inventaire) =============================== */
-const MF = ['denomination', 'categorie', 'numero_serie', 'emplacement', 'valeur', 'notes', 'photo', 'etat', 'proprietaire', 'proprietaire_nom', 'tarifs', 'visible_site', 'description_site'];
+const MF = ['denomination', 'categorie', 'numero_serie', 'emplacement', 'valeur', 'notes', 'photo', 'etat', 'proprietaire', 'proprietaire_nom', 'tarifs', 'visible_site', 'description_site', 'titre_site', 'sous_titre_site', 'sens_site'];
 // Vrai si le matériel est dans un projet WIP actif (non terminé, non archivé).
 function inActiveWip(id) {
   return (db().wip || []).some(w => !w.archive && w.statut !== 'termine' && (w.equipes || []).some(e => (e.materiel_ids || []).map(Number).includes(+id)));
