@@ -2,6 +2,16 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 1.4 — 13 juin 2026**
+## Page d'accueil pilotable (Site internet → Modules accueil)
+- Nouvel onglet **« Modules accueil »** dans Site internet, avec 3 modules éditables :
+  - **🎬 Hero** : grand titre, texte d'accroche, image, bouton (texte + lien), vidéo de fond YouTube.
+  - **🖼 Photos asso** : la galerie « L'association en quelques images… » (ajout/retrait de photos).
+  - **👥 L'équipe** : « La fine équipe » (photo, nom, description par membre).
+- La **page d'accueil du site devient dynamique** : ces 3 sections se remplissent depuis la gestion. Tant qu'un module n'est pas configuré, le site garde son contenu actuel (aucun risque de page vide).
+
+---
+
 **Version 1.3 — 13 juin 2026**
 ## Fiches vitrine des machines
 - Dans **Site internet → Affichage**, chaque machine a un bouton **« Fiche vitrine »** : photo, grand titre, sous-titre, description, **sens d'affichage** (auto zigzag / image à gauche / texte à gauche) et publié o/n.

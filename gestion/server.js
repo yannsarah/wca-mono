@@ -875,6 +875,17 @@ add('DELETE', '/api/articles/:id', (req, res, p, body, query, user) => {
   logActivity(user, 'delete', 'articles', gone ? gone.titre : ''); save(); send(res, 200, { ok: true });
 });
 
+/* =============================== CONTENU SITE (page d'accueil : hero, photos, équipe) =============================== */
+// Stocké dans settings.site = { hero:{...}, photos:[...], equipe:[...] }.
+add('GET', '/api/site', (req, res) => {
+  send(res, 200, (db().settings && db().settings.site) || {});
+});
+add('PUT', '/api/site', (req, res, p, body, query, user) => {
+  const s = db().settings; if (!s.site || typeof s.site !== 'object') s.site = {};
+  for (const k of ['hero', 'photos', 'equipe']) if (body[k] !== undefined) s.site[k] = body[k];
+  logActivity(user, 'update', 'site', ''); save(); send(res, 200, s.site);
+});
+
 /* =============================== PROJETS WIP =============================== */
 const WIP_STATUTS = ['a_venir', 'a_faire', 'en_cours', 'incomplet', 'termine'];
 function manquantArr(v) { return Array.isArray(v) ? v.map(x => String(x).trim()).filter(Boolean) : (v ? [String(v).trim()].filter(Boolean) : []); }

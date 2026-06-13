@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.3'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '1.4'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1810,18 +1810,22 @@ let USR_TAB = null;
 /* ============================ SITE INTERNET (blog + affichage) ============================ */
 let SITE_TAB = 'blog';
 let ARTICLES = [];
+let SITE_CONTENT = {};
 
 async function renderSiteInternet(){
   const tabs = `<div class="tabs-row" id="si-tabs">
       <button class="${SITE_TAB==='blog'?'active':''}" data-t="blog">${icon('doc')} Blog</button>
       <button class="${SITE_TAB==='affichage'?'active':''}" data-t="affichage">${icon('globe')} Affichage du site</button>
+      <button class="${SITE_TAB==='modules'?'active':''}" data-t="modules">${icon('box')} Modules accueil</button>
     </div>`;
   const action = SITE_TAB==='blog' ? `<button class="btn" id="si-new">${icon('plus')} Nouvel article</button>` : '';
   setTopbar('Site internet', action);
   $('#view').innerHTML = tabs + `<div id="si-body"><p class="help" style="padding:20px">Chargement…</p></div>`;
   $$('#si-tabs button').forEach(b=>b.addEventListener('click',()=>{ SITE_TAB=b.dataset.t; renderSiteInternet(); }));
   $('#si-new')?.addEventListener('click',()=>articleModal(null));
-  if(SITE_TAB==='blog') await renderBlogTab(); else await renderAffichageTab();
+  if(SITE_TAB==='blog') await renderBlogTab();
+  else if(SITE_TAB==='affichage') await renderAffichageTab();
+  else await renderModulesTab();
 }
 
 async function renderBlogTab(){
@@ -1946,6 +1950,91 @@ function vitrineModal(m){
     try{ await put({ photo, titre_site:$('#vit-titre').value.trim(), sous_titre_site:$('#vit-sous').value.trim(), description_site:$('#vit-desc').value.trim(), sens_site:$('#vit-sens').value, visible_site:$('#vit-vis').value==='1' }); closeModal(); toast('Fiche vitrine enregistrée'); renderAffichageTab(); }catch(e){ toast(e.message); }
   });
   $('#vit-del').addEventListener('click',()=>{ confirmModal('Vider la fiche vitrine de cette borne et la retirer du site ? (la photo de l’inventaire est conservée)', async()=>{ try{ await put({ titre_site:'', sous_titre_site:'', description_site:'', sens_site:'auto', visible_site:false }); closeModal(); toast('Fiche vitrine vidée'); renderAffichageTab(); }catch(e){ toast(e.message); } }); });
+}
+
+/* ---- Onglet MODULES : sections de la page d'accueil (hero, photos, équipe) ---- */
+async function renderModulesTab(){
+  const body=$('#si-body');
+  try{ SITE_CONTENT = await api('/api/site'); }catch(e){ SITE_CONTENT={}; }
+  const h=SITE_CONTENT.hero||{}; const ph=SITE_CONTENT.photos||[]; const eq=SITE_CONTENT.equipe||[];
+  const card=(key,titre,desc,resume)=>`<div class="tablecard" style="padding:16px 18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:16px">
+    <div><div style="font-weight:800;color:var(--navy);font-size:16px">${titre}</div><div class="help" style="margin-top:2px">${desc}</div><div class="mini" style="margin-top:4px">${resume}</div></div>
+    <button class="btn js-mod-edit" data-k="${key}" style="white-space:nowrap">${icon('edit')} Éditer</button></div>`;
+  body.innerHTML = `<p class="help" style="margin-bottom:10px">Chaque module est une section de la page d'accueil du site. Tu modifies le contenu ici ; tant qu'un module n'est pas configuré, le site garde son contenu actuel (aucun risque).</p>`
+    + card('hero','🎬 Hero (haut de page)','Grand titre, texte d’accroche, image, bouton.', h.titre?('Titre : '+esc(h.titre)):'Non configuré.')
+    + card('photos','🖼 Photos asso',"La galerie « L’association en quelques images… ».", ph.length?(ph.length+' photo(s)'):'Aucune photo.')
+    + card('equipe','👥 L’équipe',"La section « La fine équipe » (photo, nom, description).", eq.length?(eq.length+' membre(s)'):'Aucun membre.');
+  $$('.js-mod-edit').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.k; if(k==='hero') heroModal(); else if(k==='photos') photosModal(); else equipeModal(); }));
+}
+
+function heroModal(){
+  const h=SITE_CONTENT.hero||{}; let img=h.image||'';
+  openModal(`<h3>Module Hero — page d'accueil</h3>
+    <label class="field"><span>Grand titre</span><input id="h-titre" value="${esc(h.titre||'')}" placeholder="Association Arcades, Flippers, Retrogaming…"></label>
+    <label class="field"><span>Texte d'accroche</span><textarea id="h-texte" rows="5" placeholder="Bienvenue sur notre site associatif…">${esc(h.texte||'')}</textarea></label>
+    <div class="field"><span>Image (visuel à droite)</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <div id="h-prev" style="width:96px;height:120px;border-radius:8px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${img?`background-image:url('${img}')`:''}"></div>
+        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="h-img" accept="image/*" style="display:none"></label>
+        <button type="button" class="btn small red" id="h-img-clear">${icon('trash')} Retirer</button>
+      </div>
+    </div>
+    <div class="row2">
+      <label class="field"><span>Texte du bouton</span><input id="h-cta" value="${esc(h.cta_label||'')}" placeholder="ex. Projet en cours - VIRTUA FIGHTER 2"></label>
+      <label class="field"><span>Lien du bouton</span><input id="h-ctaurl" value="${esc(h.cta_url||'')}" placeholder="ex. projet-virtua-fighter-2.html"></label>
+    </div>
+    <label class="field"><span>Vidéo de fond YouTube — ID ou lien (optionnel)</span><input id="h-video" value="${esc(h.video_url||'')}" placeholder="ex. W3NuWfFUITM"></label>
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="h-save">Enregistrer</button></div>`);
+  $('#h-img').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ img=data; $('#h-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
+  $('#h-img-clear').addEventListener('click',()=>{ img=''; $('#h-prev').style.backgroundImage=''; });
+  $('#h-save').addEventListener('click',async()=>{
+    const hero={ titre:$('#h-titre').value.trim(), texte:$('#h-texte').value.trim(), image:img, cta_label:$('#h-cta').value.trim(), cta_url:$('#h-ctaurl').value.trim(), video_url:$('#h-video').value.trim() };
+    try{ await api('/api/site',{method:'PUT',body:JSON.stringify({hero})}); closeModal(); toast('Hero enregistré'); renderModulesTab(); }catch(e){ toast(e.message); }
+  });
+}
+
+function photosModal(){
+  let photos=(SITE_CONTENT.photos||[]).map(p=>({image:p.image||p}));
+  function draw(){
+    const grid=$('#ph-grid');
+    grid.innerHTML = photos.length ? photos.map((p,i)=>`<div style="position:relative;width:104px;height:80px;border-radius:6px;overflow:hidden;background:#0b0b0d"><img src="${esc(p.image)}" style="width:100%;height:100%;object-fit:cover"><button type="button" class="js-ph-del" data-i="${i}" title="Retirer" style="position:absolute;top:2px;right:2px;background:#e23b3b;color:#fff;border:none;border-radius:4px;width:20px;height:20px;cursor:pointer;line-height:1">×</button></div>`).join('') : '<p class="mini">Aucune photo. Ajoutez-en ci-dessous.</p>';
+    $$('.js-ph-del').forEach(b=>b.addEventListener('click',()=>{ photos.splice(+b.dataset.i,1); draw(); }));
+  }
+  openModal(`<h3>Module Photos asso</h3>
+    <p class="help" style="margin-bottom:8px">La galerie « L'association en quelques images… ». Ajoute autant de photos que tu veux.</p>
+    <div id="ph-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+    <label class="btn light" style="cursor:pointer">${icon('plus')} Ajouter des photos<input type="file" id="ph-add" accept="image/*" multiple style="display:none"></label>
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="ph-save">Enregistrer</button></div>`);
+  draw();
+  $('#ph-add').addEventListener('change',ev=>{ [...ev.target.files].forEach(f=>compressSquare(f,data=>{ photos.push({image:data}); draw(); },120*1024)); ev.target.value=''; });
+  $('#ph-save').addEventListener('click',async()=>{ try{ await api('/api/site',{method:'PUT',body:JSON.stringify({photos})}); closeModal(); toast('Photos enregistrées'); renderModulesTab(); }catch(e){ toast(e.message); } });
+}
+
+function equipeModal(){
+  let team=(SITE_CONTENT.equipe||[]).map(m=>({nom:m.nom||'',description:m.description||'',photo:m.photo||''}));
+  function draw(){
+    const box=$('#eq-list');
+    box.innerHTML = team.length ? team.map((m,i)=>`<div class="tablecard" style="padding:10px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+      <div class="js-eq-photo" data-i="${i}" title="Changer la photo" style="width:64px;height:64px;flex:0 0 auto;border-radius:8px;background:#0b0b0d;background-size:cover;background-position:center;cursor:pointer;${m.photo?`background-image:url('${m.photo}')`:''}"></div>
+      <div style="flex:1;min-width:0">
+        <input class="js-eq-nom" data-i="${i}" value="${esc(m.nom)}" placeholder="Nom" style="width:100%;margin-bottom:4px">
+        <textarea class="js-eq-desc" data-i="${i}" rows="2" placeholder="Description" style="width:100%">${esc(m.description)}</textarea>
+      </div>
+      <button type="button" class="iconbtn ghost js-eq-del" data-i="${i}" title="Supprimer">${icon('trash')}</button>
+    </div>`).join('') : '<p class="mini">Aucun membre.</p>';
+    $$('.js-eq-nom').forEach(inp=>inp.addEventListener('input',()=>{ team[+inp.dataset.i].nom=inp.value; }));
+    $$('.js-eq-desc').forEach(inp=>inp.addEventListener('input',()=>{ team[+inp.dataset.i].description=inp.value; }));
+    $$('.js-eq-del').forEach(b=>b.addEventListener('click',()=>{ team.splice(+b.dataset.i,1); draw(); }));
+    $$('.js-eq-photo').forEach(d=>d.addEventListener('click',()=>{ const i=+d.dataset.i; const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.onchange=ev=>{ const f=ev.target.files[0]; if(f) compressSquare(f,data=>{ team[i].photo=data; draw(); },120*1024); }; inp.click(); }));
+  }
+  openModal(`<h3>Module L'équipe</h3>
+    <p class="help" style="margin-bottom:8px">La section « La fine équipe ». Clique sur une photo pour la changer.</p>
+    <div id="eq-list"></div>
+    <button type="button" class="btn light" id="eq-add">${icon('plus')} Ajouter un membre</button>
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="eq-save">Enregistrer</button></div>`);
+  draw();
+  $('#eq-add').addEventListener('click',()=>{ team.push({nom:'',description:'',photo:''}); draw(); });
+  $('#eq-save').addEventListener('click',async()=>{ try{ await api('/api/site',{method:'PUT',body:JSON.stringify({equipe:team})}); closeModal(); toast('Équipe enregistrée'); renderModulesTab(); }catch(e){ toast(e.message); } });
 }
 
 async function renderUsers(){

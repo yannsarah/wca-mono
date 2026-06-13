@@ -140,10 +140,20 @@ export function handlePublic(req, res, pathname, searchParams) {
     }), true;
   }
 
+  // ----- Contenu de la page d'accueil (hero, photos asso, équipe) -----
+  if (pathname === '/api/public/home') {
+    const s = (d.settings && d.settings.site) || {};
+    return sendJSON(res, 200, {
+      hero: s.hero || null,
+      photos: Array.isArray(s.photos) ? s.photos : [],
+      equipe: Array.isArray(s.equipe) ? s.equipe : [],
+    }), true;
+  }
+
   // ----- Index des routes publiques -----
   if (pathname === '/api/public' || pathname === '/api/public/') {
     return sendJSON(res, 200, {
-      routes: ['/api/public/evenements', '/api/public/projets', '/api/public/wip', '/api/public/partenaires', '/api/public/machines', '/api/public/articles', '/api/public/article?id='],
+      routes: ['/api/public/evenements', '/api/public/projets', '/api/public/wip', '/api/public/partenaires', '/api/public/machines', '/api/public/articles', '/api/public/article?id=', '/api/public/home'],
     }), true;
   }
 

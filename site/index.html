@@ -171,20 +171,20 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
 <!-- ===== Hero ===== -->
 <section class="hero">
   <div class="hero-inner">
-    <div class="hero-video"><iframe src="https://www.youtube.com/embed/W3NuWfFUITM?autoplay=1&mute=1&loop=1&playlist=W3NuWfFUITM&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&disablekb=1" allow="autoplay; encrypted-media" allowfullscreen title="West Coast Arcades"></iframe></div>
+    <div class="hero-video" id="heroVideo"><iframe src="https://www.youtube.com/embed/W3NuWfFUITM?autoplay=1&mute=1&loop=1&playlist=W3NuWfFUITM&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&disablekb=1" allow="autoplay; encrypted-media" allowfullscreen title="West Coast Arcades"></iframe></div>
     <div class="hero-overlay"></div>
     <div class="hero-grid">
       <div>
-        <h1>Association Arcades, Flippers, Retrogaming, Makers…</h1>
-        <p>Bienvenue sur notre site associatif, dédié aux passionnés de retrogaming, flippers et arcades ! Plongez dans l'univers des jeux rétro, revivez les classiques des années 80 et 90, et redécouvrez l'âme des salles d'arcade d'antan. Que vous soyez un collectionneur, un joueur nostalgique ou simplement curieux, notre plateforme vous propose une sélection de jeux, de flippers et d'arcades restaurés, prêts à être redécouverts. Rejoignez-nous pour revivre l'âge d'or du gaming !</p>
+        <h1 id="heroTitre">Association Arcades, Flippers, Retrogaming, Makers…</h1>
+        <p id="heroTexte">Bienvenue sur notre site associatif, dédié aux passionnés de retrogaming, flippers et arcades ! Plongez dans l'univers des jeux rétro, revivez les classiques des années 80 et 90, et redécouvrez l'âme des salles d'arcade d'antan. Que vous soyez un collectionneur, un joueur nostalgique ou simplement curieux, notre plateforme vous propose une sélection de jeux, de flippers et d'arcades restaurés, prêts à être redécouverts. Rejoignez-nous pour revivre l'âge d'or du gaming !</p>
       </div>
       <div class="hero-cab">
-        <img src="img/borne-virtua-fighter-2-westcoastarcades.fr_.png" alt="Borne Virtua Fighter 2">
+        <img id="heroImg" src="img/borne-virtua-fighter-2-westcoastarcades.fr_.png" alt="Borne Virtua Fighter 2">
       </div>
     </div>
   </div>
   <div class="hero-pill">
-    <a class="btn btn-hero" href="projet-virtua-fighter-2.html">Projet en cours - VIRTUA FIGHTER 2</a>
+    <a class="btn btn-hero" id="heroCta" href="projet-virtua-fighter-2.html">Projet en cours - VIRTUA FIGHTER 2</a>
   </div>
 </section>
 
@@ -232,7 +232,7 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
 <section class="block" style="padding-top:0">
   <div class="container">
     <h2 class="block-title" style="text-transform:none">L'association en quelques images…</h2>
-    <div class="gallery">
+    <div class="gallery" id="homeGallery">
       <img src="img/gachette-flipper-westcoastarcades.fr_.jpg" alt="">
       <img src="img/membres-jouant-au-flipper-westcoastarcades.fr_.jpg" alt="">
       <img src="img/flippers-expo-westcoastarcades.fr_.jpg" alt="">
@@ -251,7 +251,7 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
 
 <section class="block" style="padding-top:0">
   <div class="container">
-    <div class="team">
+    <div class="team" id="homeTeam">
       <div class="member"><img src="img/cedric-westcoastarcades.fr-Moyenne.jpeg" alt="Cédric"><h3>Cédric</h3><p>Boss à plein temps, il aimerait se réincarner en Dark Vador.</p></div>
       <div class="member"><img src="img/denis-westcoastarcades.fr-Moyenne.jpeg" alt="Denis"><h3>Denis</h3><p>Trésorier et Pipelette ++</p></div>
       <div class="member"><img src="img/papa-pixel-2-Moyenne.jpeg" alt="Christophe"><h3>Christophe</h3><p>Amoureux des pixels depuis l'âge de 5 ans, j'ai amassé les jeux vidéo sans relâche.</p></div>
@@ -314,6 +314,27 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
         '<div style="font-size:14px;color:#5d6b85">📍 '+WCA.esc(e.lieu||'')+'</div></div></a>';
     }).join('');
   }catch(err){ box.innerHTML='<p style="grid-column:1/-1;text-align:center;color:#a32d2d">Salons momentanément indisponibles.</p>'; }
+})();
+</script>
+<script>
+/* Contenu de la page d'accueil piloté depuis la gestion (Site internet → Modules).
+   Si un module n'est pas configuré, on garde le contenu statique de cette page. */
+(async function(){
+  function ytId(v){ if(!v) return ''; var m=String(v).match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/); return m?m[1]:(/^[\w-]{11}$/.test(String(v))?v:''); }
+  try{
+    var h=await WCA.getJSON('home');
+    if(h && h.hero){
+      var he=h.hero, el;
+      if(he.titre && (el=document.getElementById('heroTitre'))) el.textContent=he.titre;
+      if(he.texte && (el=document.getElementById('heroTexte'))) el.textContent=he.texte;
+      if(he.image && (el=document.getElementById('heroImg'))) el.src=he.image;
+      if(el=document.getElementById('heroCta')){ if(he.cta_label) el.textContent=he.cta_label; if(he.cta_url) el.href=he.cta_url; }
+      var id=ytId(he.video_url), hv=document.getElementById('heroVideo');
+      if(id && hv) hv.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&mute=1&loop=1&playlist='+id+'&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&disablekb=1" allow="autoplay; encrypted-media" allowfullscreen title="West Coast Arcades"></iframe>';
+    }
+    if(h && h.photos && h.photos.length){ var g=document.getElementById('homeGallery'); if(g) g.innerHTML=h.photos.map(function(p){ return '<img src="'+WCA.esc(p.image||p)+'" alt="">'; }).join(''); }
+    if(h && h.equipe && h.equipe.length){ var tm=document.getElementById('homeTeam'); if(tm) tm.innerHTML=h.equipe.map(function(m){ return '<div class="member"><img src="'+WCA.esc(m.photo||'')+'" alt="'+WCA.esc(m.nom||'')+'"><h3>'+WCA.esc(m.nom||'')+'</h3><p>'+WCA.esc(m.description||'')+'</p></div>'; }).join(''); }
+  }catch(err){}
 })();
 </script>
 </body>
