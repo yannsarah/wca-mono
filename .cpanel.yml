@@ -1,0 +1,46 @@
+---
+# Déploiement automatique o2switch (cPanel Git Version Control).
+# Un seul `git push` déploie LE SITE et LA GESTION, et redémarre Node.
+# ⚠️ data.json n'est JAMAIS copié : les données réelles du serveur sont préservées.
+deployment:
+  tasks:
+    # ============== SITE PUBLIC  ->  westcoastarcades.fr ==============
+    - export SITEPATH=$HOME/westcoastarcades.fr
+    - /bin/cp -f site/index.html $SITEPATH/
+    - /bin/cp -f site/nos-machines.html $SITEPATH/
+    - /bin/cp -f site/nos-salons.html $SITEPATH/
+    - /bin/cp -f site/les-projets.html $SITEPATH/
+    - /bin/cp -f site/projet-virtua-racing.html $SITEPATH/
+    - /bin/cp -f site/projet-virtua-fighter-2.html $SITEPATH/
+    - /bin/cp -f site/nos-partenaires.html $SITEPATH/
+    - /bin/cp -f site/wip.html $SITEPATH/
+    - /bin/cp -f site/contact.html $SITEPATH/
+    - /bin/cp -f site/agenda.html $SITEPATH/
+    - /bin/cp -f site/blog.html $SITEPATH/
+    - /bin/cp -f site/article.html $SITEPATH/
+    - /bin/cp -f site/accueil-v2.html $SITEPATH/
+    - /bin/cp -f site/rgpd.html $SITEPATH/
+    - /bin/cp -f site/politique-de-confidentialite.html $SITEPATH/
+    - /bin/cp -f site/contact.php $SITEPATH/
+    - /bin/cp -f site/robots.txt $SITEPATH/
+    - /bin/cp -f site/sitemap.xml $SITEPATH/
+    - /bin/cp -Rf site/assets $SITEPATH/
+    - /bin/cp -Rf site/blog $SITEPATH/
+    - /bin/cp -Rf site/img $SITEPATH/
+    - find $SITEPATH/assets $SITEPATH/blog $SITEPATH/img -type d -exec chmod 755 {} \;
+    - find $SITEPATH/assets $SITEPATH/blog $SITEPATH/img -type f -exec chmod 644 {} \;
+    - chmod 644 $SITEPATH/*.html $SITEPATH/contact.php
+
+    # ============== GESTION (Node)  ->  gestion.westcoastarcades.fr ==============
+    # ⚠️ Si le dossier du sous-domaine gestion porte un autre nom, change GESTPATH ci-dessous.
+    - export GESTPATH=$HOME/gestion.westcoastarcades.fr
+    - /bin/cp -f gestion/server.js $GESTPATH/
+    - /bin/cp -f gestion/store.js $GESTPATH/
+    - /bin/cp -f gestion/seed.js $GESTPATH/
+    - /bin/cp -f gestion/package.json $GESTPATH/
+    - /bin/cp -f gestion/logo.png $GESTPATH/
+    - /bin/cp -Rf gestion/public $GESTPATH/
+    - /bin/cp -Rf gestion/MODULES $GESTPATH/
+    # Redémarrage automatique de l'application Node (Passenger)
+    - mkdir -p $GESTPATH/tmp
+    - touch $GESTPATH/tmp/restart.txt
