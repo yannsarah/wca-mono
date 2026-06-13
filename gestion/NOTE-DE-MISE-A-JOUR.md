@@ -1,6 +1,17 @@
 # Note de mise à jour — West Coast Arcades Gestion
 
-**Version 3.3 — 9 juin 2026, 20:00**
+> Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
+
+**Version 1.1 — 13 juin 2026**
+## Dépôt unique + Site internet
+- Tout le projet (gestion + site) est désormais dans **un seul dépôt Git**, compartimenté. Fini les copies de dossiers et les fichiers `.js` recopiés à la main.
+- Nouvelle section **« Site internet »** : éditeur de **blog** (visuel/WYSIWYG) + **tableau de bord d'affichage** (publier/masquer événements, machines, projets, partenaires en un clic).
+- **API publique** (`/api/public/*`) branchée : le site westcoastarcades.fr lit les données publiées sans accès aux données internes.
+- Fiche **matériel** : « Visible sur le site public » + « Description (site public) » (Phase 1bis intégrée).
+
+---
+
+**Version 3.3 — 9 juin 2026, 20:00** *(ancien versionnage, avant dépôt unique)*
 
 ## Bouton WIPPER
 - Sur chaque **réparation** (onglet Interventions) et dans la fiche **Modifier le matériel** (entre Annuler et Enregistrer) : un bouton **WIPPER** (cyan/bleu clair).
