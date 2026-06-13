@@ -21,6 +21,7 @@ const DEFAULT_MODULES = [
   { key: 'projets', label: 'Projets', desc: 'Projets, tâches, sessions', nav: ['projets'], default: true },
   { key: 'ventes', label: 'Ventes', desc: 'Suivi des ventes', nav: ['ventes'], default: true },
   { key: 'prets', label: 'Prêts', desc: 'Prêts de matériel', nav: ['prets'], default: true },
+  { key: 'site', label: 'Site internet', desc: 'Blog + pilotage affichage du site', nav: ['site'], default: true },
   { key: 'disponibilites', label: 'Disponibilités', desc: 'Frise des absences/présences', nav: [], default: true },
   { key: 'idees', label: 'Boîte à idées', desc: 'Suggestions & forum d\'entraide', nav: [], default: true },
   { key: 'activite', label: 'Activité & surveillance', desc: "Journal d'actions, en ligne", nav: [], default: true },
@@ -825,6 +826,53 @@ add('DELETE', '/api/partenaires/:id', (req, res, p) => {
   const d = db(); d.partenaires = d.partenaires.filter(x => x.id !== +p.id);
   d.evenements.forEach(e => { if (+e.partenaire_id === +p.id) e.partenaire_id = null; });
   save(); send(res, 200, { ok: true });
+});
+
+/* =============================== BLOG / ARTICLES =============================== */
+const ARTF = ['titre', 'slug', 'date', 'image', 'extrait', 'contenu', 'auteur', 'visible_site', 'archive'];
+function slugify(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+}
+function uniqueSlug(base, exceptId) {
+  let s = base || ('article-' + Date.now()); let n = 2;
+  const taken = () => (db().articles || []).some(a => a.slug === s && a.id !== exceptId);
+  while (taken()) { s = (base || 'article') + '-' + n; n++; }
+  return s;
+}
+add('GET', '/api/articles', (req, res) => {
+  send(res, 200, [...(db().articles || [])].sort((a, b) => (b.date || '').localeCompare(a.date || '')));
+});
+add('GET', '/api/articles/:id', (req, res, p) => {
+  const row = (db().articles || []).find(x => x.id === +p.id);
+  if (!row) return send(res, 404, { error: 'Article introuvable.' });
+  send(res, 200, row);
+});
+add('POST', '/api/articles', (req, res, p, body, query, user) => {
+  if (!body.titre) return send(res, 400, { error: 'Le titre est obligatoire.' });
+  const row = { id: nextId('articles') };
+  ARTF.forEach(f => { if (body[f] !== undefined) row[f] = body[f]; });
+  row.visible_site = body.visible_site !== false;
+  row.archive = body.archive === true;
+  row.slug = uniqueSlug(slugify(body.slug || body.titre), row.id);
+  if (!row.date) row.date = new Date().toISOString().slice(0, 10);
+  db().articles.push(row); logActivity(user, 'create', 'articles', row.titre); save();
+  send(res, 200, row);
+});
+add('PUT', '/api/articles/:id', (req, res, p, body, query, user) => {
+  const row = (db().articles || []).find(x => x.id === +p.id);
+  if (!row) return send(res, 404, { error: 'Article introuvable.' });
+  ARTF.forEach(f => { if (body[f] !== undefined) row[f] = body[f]; });
+  if (body.visible_site !== undefined) row.visible_site = !!body.visible_site;
+  if (body.archive !== undefined) row.archive = !!body.archive;
+  if (body.slug !== undefined || body.titre !== undefined)
+    row.slug = uniqueSlug(slugify(body.slug || row.slug || body.titre || row.titre), row.id);
+  logActivity(user, 'update', 'articles', row.titre); save(); send(res, 200, row);
+});
+add('DELETE', '/api/articles/:id', (req, res, p, body, query, user) => {
+  const d = db(); const gone = (d.articles || []).find(x => x.id === +p.id);
+  d.articles = (d.articles || []).filter(x => x.id !== +p.id);
+  logActivity(user, 'delete', 'articles', gone ? gone.titre : ''); save(); send(res, 200, { ok: true });
 });
 
 /* =============================== PROJETS WIP =============================== */

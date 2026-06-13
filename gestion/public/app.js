@@ -4,6 +4,7 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
 /* ------------------------------- Icônes SVG ------------------------------- */
 const ICONS = {
+  globe:'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
   home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
   box:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/>',
   doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>',
@@ -93,6 +94,7 @@ const NAV = [
   { id:'projets', label:'Projets', icon:'pin', mod:'projets' },
   { id:'ventes', label:'Ventes', icon:'tag', mod:'ventes' },
   { id:'prets', label:'Prêts', icon:'share', mod:'prets' },
+  { id:'site', label:'Site internet', icon:'globe', mod:'site' },
   { id:'users', label:'Utilisateurs', icon:'users' },
   { id:'reglages', label:'Paramètres', icon:'settings' },
 ];
@@ -220,7 +222,7 @@ function render(){
   const nv=NAV.find(n=>n.id===state.view);
   if(nv && nv.mod && !moduleOn(nv.mod)){ state.view='accueil'; }
   const map={ accueil:renderAccueil, inventaire:renderInventaire, devis:renderDevis, evenements:renderEvenements,
-    projets:renderProjets, reparations:renderReparations, ventes:renderVentes, prets:renderPrets, users:renderUsers, reglages:renderReglages };
+    projets:renderProjets, reparations:renderReparations, ventes:renderVentes, prets:renderPrets, site:renderSiteInternet, users:renderUsers, reglages:renderReglages };
   (map[state.view]||renderAccueil)();
 }
 
@@ -1803,6 +1805,111 @@ async function pretModal(p){
 /* ============================== UTILISATEURS ============================== */
 let USR_ALL = []; const USR = { role:'' };
 let USR_TAB = null;
+/* ============================ SITE INTERNET (blog + affichage) ============================ */
+let SITE_TAB = 'blog';
+let ARTICLES = [];
+
+async function renderSiteInternet(){
+  const tabs = `<div class="tabs-row" id="si-tabs">
+      <button class="${SITE_TAB==='blog'?'active':''}" data-t="blog">${icon('doc')} Blog</button>
+      <button class="${SITE_TAB==='affichage'?'active':''}" data-t="affichage">${icon('globe')} Affichage du site</button>
+    </div>`;
+  const action = SITE_TAB==='blog' ? `<button class="btn" id="si-new">${icon('plus')} Nouvel article</button>` : '';
+  setTopbar('Site internet', action);
+  $('#view').innerHTML = tabs + `<div id="si-body"><p class="help" style="padding:20px">Chargement…</p></div>`;
+  $$('#si-tabs button').forEach(b=>b.addEventListener('click',()=>{ SITE_TAB=b.dataset.t; renderSiteInternet(); }));
+  $('#si-new')?.addEventListener('click',()=>articleModal(null));
+  if(SITE_TAB==='blog') await renderBlogTab(); else await renderAffichageTab();
+}
+
+async function renderBlogTab(){
+  const body=$('#si-body');
+  try{ ARTICLES = await api('/api/articles'); }catch(e){ body.innerHTML=`<p class="help" style="padding:20px">${esc(e.message)}</p>`; return; }
+  if(!ARTICLES.length){ body.innerHTML=`<div style="text-align:center;padding:48px 16px;color:var(--muted)">Aucun article pour l'instant.<br>Cliquez sur « Nouvel article » pour rédiger le premier.</div>`; return; }
+  body.innerHTML = `<div class="tablecard"><table class="grid"><thead><tr><th>Titre</th><th>Date</th><th>État</th><th></th></tr></thead><tbody>${
+    ARTICLES.map(a=>`<tr>
+      <td data-label="Titre"><strong class="js-art-open" data-id="${a.id}" style="cursor:pointer;color:var(--teal-d)">${esc(a.titre||'(sans titre)')}</strong>${a.extrait?`<div class="sub">${esc((a.extrait||'').slice(0,90))}</div>`:''}</td>
+      <td data-label="Date">${esc(a.date||'')}</td>
+      <td data-label="État">${a.archive?'<span class="statut hs">Archivé</span>':(a.visible_site===false?'<span class="statut">Masqué</span>':'<span class="statut dispo">Publié</span>')}</td>
+      <td class="actions"><button class="icon-btn js-art-open" data-id="${a.id}" title="Modifier">${icon('edit')}</button><button class="icon-btn js-art-del" data-id="${a.id}" title="Supprimer">${icon('trash')}</button></td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  $$('.js-art-open').forEach(b=>b.addEventListener('click',()=>{ const a=ARTICLES.find(x=>x.id===+b.dataset.id); articleModal(a); }));
+  $$('.js-art-del').forEach(b=>b.addEventListener('click',()=>{ const a=ARTICLES.find(x=>x.id===+b.dataset.id); confirmModal(`Supprimer l'article « ${esc(a.titre||'')} » ? Cette action est définitive.`, async()=>{ try{ await api('/api/articles/'+a.id,{method:'DELETE'}); toast('Supprimé'); renderBlogTab(); }catch(e){ toast(e.message); } }); }));
+}
+
+function articleModal(a){
+  const isEdit=!!(a&&a.id); a=a||{};
+  let cover = a.image||'';
+  openModal(`<h3>${isEdit?'Modifier l’article':'Nouvel article'}</h3>
+    <label class="field"><span>Titre *</span><input id="art-titre" value="${esc(a.titre||'')}" placeholder="Titre de l'article"></label>
+    <div class="row2">
+      <label class="field"><span>Date</span><input id="art-date" type="date" value="${esc(a.date||new Date().toISOString().slice(0,10))}"></label>
+      <label class="field"><span>Auteur</span><input id="art-auteur" value="${esc(a.auteur||'')}" placeholder="ex. West Coast Arcades"></label>
+    </div>
+    <label class="field"><span>Extrait (résumé affiché dans la liste du blog)</span><textarea id="art-extrait" rows="2">${esc(a.extrait||'')}</textarea></label>
+    <div class="field"><span>Image à la une</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <div id="art-cover-prev" style="width:96px;height:96px;border-radius:8px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${cover?`background-image:url('${cover}')`:''}"></div>
+        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="art-cover-file" accept="image/*" style="display:none"></label>
+        <button type="button" class="btn small red" id="art-cover-clear">${icon('trash')} Retirer</button>
+      </div>
+    </div>
+    <div class="field"><span>Contenu</span>
+      <div class="wysi-toolbar" style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px">
+        <button type="button" class="btn small grey" data-cmd="bold" title="Gras"><b>G</b></button>
+        <button type="button" class="btn small grey" data-cmd="italic" title="Italique"><i>I</i></button>
+        <button type="button" class="btn small grey" data-block="h2" title="Titre">Titre</button>
+        <button type="button" class="btn small grey" data-block="h3" title="Sous-titre">Sous-titre</button>
+        <button type="button" class="btn small grey" data-block="p" title="Paragraphe">¶</button>
+        <button type="button" class="btn small grey" data-cmd="insertUnorderedList" title="Liste à puces">• Liste</button>
+        <button type="button" class="btn small grey" data-cmd="insertOrderedList" title="Liste numérotée">1. Liste</button>
+        <button type="button" class="btn small grey" id="art-link" title="Insérer un lien">${icon('share')} Lien</button>
+        <label class="btn small grey" style="cursor:pointer" title="Insérer une image">${icon('plus')} Image<input type="file" id="art-img-file" accept="image/*" style="display:none"></label>
+        <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')} Format</button>
+      </div>
+      <div id="art-contenu" contenteditable="true" style="min-height:220px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#fff;color:var(--navy);overflow:auto;line-height:1.5">${a.contenu||''}</div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:12px;cursor:pointer"><input type="checkbox" id="art-vis" ${a.visible_site!==false?'checked':''}> 🌐 Publié sur le site (visible dans le blog)</label>
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="art-save">Enregistrer</button></div>`);
+  const ed=$('#art-contenu');
+  $$('.wysi-toolbar [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); }));
+  $$('.wysi-toolbar [data-block]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand('formatBlock',false,b.dataset.block); }));
+  $('#art-link').addEventListener('click',()=>{ const url=prompt('Adresse du lien (https://…)'); if(url){ ed.focus(); document.execCommand('createLink',false,url); } });
+  $('#art-img-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ ed.focus(); document.execCommand('insertImage',false,data); },120*1024); });
+  $('#art-cover-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ cover=data; $('#art-cover-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
+  $('#art-cover-clear').addEventListener('click',()=>{ cover=''; $('#art-cover-prev').style.backgroundImage=''; });
+  $('#art-save').addEventListener('click',async()=>{
+    const body={ titre:$('#art-titre').value.trim(), date:$('#art-date').value, auteur:$('#art-auteur').value.trim(), extrait:$('#art-extrait').value.trim(), contenu:$('#art-contenu').innerHTML.trim(), image:cover, visible_site:$('#art-vis').checked };
+    if(!body.titre){ toast('Le titre est obligatoire.'); return; }
+    try{ await api(isEdit?'/api/articles/'+a.id:'/api/articles',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast('Enregistré'); renderBlogTab(); }catch(e){ toast(e.message); }
+  });
+}
+
+async function renderAffichageTab(){
+  const body=$('#si-body');
+  const [evs,mats,projs,parts]=await Promise.all([
+    api('/api/evenements').catch(()=>[]), api('/api/materiel').catch(()=>[]),
+    api('/api/projets').catch(()=>[]), api('/api/partenaires').catch(()=>[])
+  ]);
+  function section(title, list, coll, nameKey, optIn){
+    const rows=(list||[]).map(x=>{
+      const on = optIn ? (x.visible_site===true) : (x.visible_site!==false);
+      return `<tr><td>${esc(x[nameKey]||'(sans nom)')}</td><td class="actions"><span class="toggle-oui-non ${on?'on':'off'} js-vis" data-coll="${coll}" data-id="${x.id}" style="cursor:pointer"><span class="t-oui">${icon('check')} Publié</span><span class="t-non">Masqué</span></span></td></tr>`;
+    }).join('') || `<tr><td colspan="2" class="help" style="padding:10px">Aucun élément.</td></tr>`;
+    return `<h4 style="margin:20px 0 8px;color:var(--navy)">${title}</h4><div class="tablecard"><table class="grid"><tbody>${rows}</tbody></table></div>`;
+  }
+  body.innerHTML = `<p class="help" style="margin-bottom:6px">Choisissez ce qui apparaît sur westcoastarcades.fr. Les <strong>machines</strong> sont masquées par défaut (l'inventaire reste privé) ; événements, projets et partenaires sont visibles sauf si vous les masquez.</p>`
+    + section('📅 Événements', evs, 'evenements','nom',false)
+    + section('🕹 Machines (inventaire)', mats, 'materiel','denomination',true)
+    + section('📌 Projets', projs, 'projets','nom',false)
+    + section('🤝 Partenaires', parts, 'partenaires','nom',false);
+  $$('.js-vis').forEach(t=>t.addEventListener('click',async()=>{
+    const next=!t.classList.contains('on');
+    try{ await api('/api/'+t.dataset.coll+'/'+t.dataset.id,{method:'PUT',body:JSON.stringify({visible_site:next})}); t.classList.toggle('on',next); t.classList.toggle('off',!next); toast(next?'Publié sur le site':'Masqué'); }catch(e){ toast(e.message); }
+  }));
+}
+
 async function renderUsers(){
   await loadConfig();
   const canComptes = isAdminUser() || isReadonly();

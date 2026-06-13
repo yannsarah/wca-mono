@@ -8,6 +8,7 @@
     { "key": "projets",        "label": "Projets",               "desc": "Projets, tâches, sessions de travail",             "nav": ["projets"],      "default": true },
     { "key": "ventes",         "label": "Ventes",                "desc": "Suivi des ventes",                                 "nav": ["ventes"],       "default": true },
     { "key": "prets",          "label": "Prêts",                 "desc": "Prêts de matériel & retours",                      "nav": ["prets"],        "default": true },
+    { "key": "site",           "label": "Site internet",         "desc": "Blog + pilotage de l'affichage du site public",    "nav": ["site"],         "default": true },
     { "key": "disponibilites", "label": "Disponibilités",        "desc": "Frise des absences / présences des membres",       "nav": [],               "default": true },
     { "key": "idees",          "label": "Boîte à idées",         "desc": "Bouton flottant accueil : suggestions, questions, bugs (forum)", "nav": [], "default": true },
     { "key": "activite",       "label": "Activité & surveillance","desc": "Journal d'actions, en ligne, contributions",      "nav": [],               "default": true },
