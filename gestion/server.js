@@ -260,7 +260,7 @@ function dispoPour(materielId, from, to, excludeDevis, excludeEvent) {
 }
 
 /* =============================== MATÉRIEL (inventaire) =============================== */
-const MF = ['denomination', 'categorie', 'numero_serie', 'emplacement', 'valeur', 'notes', 'photo', 'etat', 'proprietaire', 'proprietaire_nom', 'tarifs'];
+const MF = ['denomination', 'categorie', 'numero_serie', 'emplacement', 'valeur', 'notes', 'photo', 'etat', 'proprietaire', 'proprietaire_nom', 'tarifs', 'visible_site', 'description_site'];
 // Vrai si le matériel est dans un projet WIP actif (non terminé, non archivé).
 function inActiveWip(id) {
   return (db().wip || []).some(w => !w.archive && w.statut !== 'termine' && (w.equipes || []).some(e => (e.materiel_ids || []).map(Number).includes(+id)));
@@ -287,6 +287,7 @@ add('POST', '/api/materiel', (req, res, p, body, query, user) => {
   if (!body.denomination) return send(res, 400, { error: 'La dénomination est obligatoire.' });
   const row = { id: nextId('materiel'), fonctionnel: body.fonctionnel !== false };
   MF.forEach(f => row[f] = body[f] ?? '');
+  row.visible_site = body.visible_site === true; // publié sur le site : booléen strict (opt-in)
   db().materiel.push(row); logActivity(user, 'create', 'materiel', row.denomination); save();
   send(res, 200, row);
 });
@@ -296,6 +297,7 @@ add('PUT', '/api/materiel/:id', (req, res, p, body, query, user) => {
   if (!row) return send(res, 404, { error: 'Matériel introuvable.' });
   MF.forEach(f => { if (body[f] !== undefined) row[f] = body[f]; });
   if (body.fonctionnel !== undefined) row.fonctionnel = !!body.fonctionnel;
+  if (body.visible_site !== undefined) row.visible_site = !!body.visible_site;
   logActivity(user, 'update', 'materiel', row.denomination); save(); send(res, 200, row);
 });
 
@@ -563,7 +565,7 @@ add('GET', '/api/evenements', (req, res) => {
   const list = [...db().evenements].sort((a, b) => (a.date_debut || '').localeCompare(b.date_debut || ''));
   send(res, 200, list.map(enrichEvent));
 });
-const EF = ['nom', 'lieu', 'partenaire', 'contact', 'date_debut', 'date_fin', 'notes', 'description', 'consignes', 'photo'];
+const EF = ['nom', 'lieu', 'partenaire', 'contact', 'date_debut', 'date_fin', 'notes', 'description', 'consignes', 'photo', 'affiche', 'visible_site'];
 function cleanChamps(arr) { return Array.isArray(arr) ? arr.map(c => ({ label: String(c.label || ''), valeur: String(c.valeur || '') })).filter(c => c.label || c.valeur) : []; }
 add('POST', '/api/evenements', (req, res, p, body, query, user) => {
   if (!body.nom) return send(res, 400, { error: 'Le nom de l\'événement est obligatoire.' });
@@ -806,7 +808,7 @@ add('GET', '/api/partenaires', (req, res) => {
   const list = [...(db().partenaires || [])].sort((a, b) => (a.ordre || 0) - (b.ordre || 0) || (a.nom || '').localeCompare(b.nom || ''));
   send(res, 200, list.map(enrichPartner));
 });
-const PTF = ['nom', 'adresse', 'logo', 'notes', 'ordre'];
+const PTF = ['nom', 'adresse', 'logo', 'notes', 'ordre', 'visible_site'];
 add('POST', '/api/partenaires', (req, res, p, body) => {
   if (!body.nom) return send(res, 400, { error: 'Le nom du partenaire est obligatoire.' });
   const row = { id: nextId('partenaires') };
@@ -905,7 +907,7 @@ add('GET', '/api/projets', (req, res) => {
   const list = [...(db().projets || [])].sort((a, b) => (a.date_debut || '').localeCompare(b.date_debut || ''));
   send(res, 200, list.map(enrichProjet));
 });
-const PJF = ['nom', 'date_debut', 'budget', 'notes', 'description', 'consignes', 'photo'];
+const PJF = ['nom', 'date_debut', 'budget', 'notes', 'description', 'consignes', 'photo', 'visible_site'];
 add('POST', '/api/projets', (req, res, p, body, query, user) => {
   if (!body.nom) return send(res, 400, { error: 'Le nom du projet est obligatoire.' });
   const row = {

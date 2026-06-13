@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FILE = process.env.DATA_FILE || path.join(__dirname, 'data.json');
 
 // Toutes les collections gérées par l'application.
-const ALL = ['materiel', 'devis', 'evenements', 'reparations', 'ventes', 'prets', 'users', 'achats', 'partenaires', 'wip', 'projets', 'absences', 'idees'];
+const ALL = ['materiel', 'devis', 'evenements', 'reparations', 'ventes', 'prets', 'users', 'achats', 'partenaires', 'wip', 'projets', 'absences', 'idees', 'articles'];
 
 let data = { seq: {}, settings: {} };
 for (const k of ALL) { data[k] = []; data.seq[k] = 0; }
