@@ -1,0 +1,17 @@
+# Dépendances
+node_modules/
+
+# Fichiers système macOS
+.DS_Store
+
+# Données vivantes (contiennent le secret de session + données réelles)
+# Sauvegardées séparément, pas dans Git. Voir gestion/data.example.json
+gestion/data.json
+**/data.json
+
+# Logs & temporaires
+*.log
+npm-debug.log*
+
+# Anciennes versions (déjà conservées hors Git comme archive)
+_ARCHIVE/

@@ -1,0 +1,6 @@
+{
+  "seq": { "materiel": 0, "devis": 0, "evenements": 0, "reparations": 0, "ventes": 0, "prets": 0, "users": 0, "achats": 0, "partenaires": 0, "wip": 0, "projets": 0, "absences": 0, "idees": 0 },
+  "settings": {},
+  "materiel": [], "devis": [], "evenements": [], "reparations": [], "ventes": [], "prets": [], "users": [], "achats": [], "partenaires": [], "wip": [], "projets": [], "absences": [], "idees": [],
+  "logins": [], "presence": {}, "activity": []
+}

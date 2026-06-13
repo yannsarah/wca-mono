@@ -1,0 +1,16 @@
+{
+  "_comment": "Registre des modules activables. Ajoutez ici un nouveau module développé, puis activez-le dans Paramètres → Modules. Les modules 'core:true' ne sont pas désactivables.",
+  "modules": [
+    { "key": "devis",          "label": "Devis & tarifs",        "desc": "Devis, onglets Tarifs et Calculatrice",            "nav": ["devis"],        "default": true },
+    { "key": "evenements",     "label": "Événements",            "desc": "Événements, vérif. de disponibilité, hero",        "nav": ["evenements"],   "default": true },
+    { "key": "partenaires",    "label": "Partenaires",           "desc": "Encart partenaires + fiches",                      "nav": [],               "default": true },
+    { "key": "reparations",    "label": "Réparations & WIP",     "desc": "Interventions, projets WIP, pièces à acheter",     "nav": ["reparations"],  "default": true },
+    { "key": "projets",        "label": "Projets",               "desc": "Projets, tâches, sessions de travail",             "nav": ["projets"],      "default": true },
+    { "key": "ventes",         "label": "Ventes",                "desc": "Suivi des ventes",                                 "nav": ["ventes"],       "default": true },
+    { "key": "prets",          "label": "Prêts",                 "desc": "Prêts de matériel & retours",                      "nav": ["prets"],        "default": true },
+    { "key": "disponibilites", "label": "Disponibilités",        "desc": "Frise des absences / présences des membres",       "nav": [],               "default": true },
+    { "key": "idees",          "label": "Boîte à idées",         "desc": "Bouton flottant accueil : suggestions, questions, bugs (forum)", "nav": [], "default": true },
+    { "key": "activite",       "label": "Activité & surveillance","desc": "Journal d'actions, en ligne, contributions",      "nav": [],               "default": true },
+    { "key": "email_reset",    "label": "Réinitialisation par email", "desc": "Envoi du code de réinitialisation par email (nécessite un serveur SMTP) — à venir", "nav": [], "default": false }
+  ]
+}

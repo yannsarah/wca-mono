@@ -1,0 +1,301 @@
+# Note de mise à jour — West Coast Arcades Gestion
+
+**Version 3.3 — 9 juin 2026, 20:00**
+
+## Bouton WIPPER
+- Sur chaque **réparation** (onglet Interventions) et dans la fiche **Modifier le matériel** (entre Annuler et Enregistrer) : un bouton **WIPPER** (cyan/bleu clair).
+- Au clic : choisir un **projet WIP existant** (le matériel y est ajouté comme équipe « Réparation »), ou **créer un nouveau projet WIP** pré-rempli avec ce matériel.
+
+## Inventaire — fiche en un clic
+- La **photo** et le **titre** de chaque ligne d'inventaire sont **cliquables** et ouvrent la fiche en popup (comme sur l'accueil). Les boutons d'action restent à part.
+
+---
+
+**Version 3.2 — 9 juin 2026, 19:30**
+
+## Mot de passe oublié (écran de connexion)
+- Lien **« Mot de passe oublié ? »** : on entre identifiant + **code de réinitialisation** + nouveau mot de passe.
+- Les administrateurs **génèrent un code** (usage unique, 24h) depuis Utilisateurs (icône cadenas) à communiquer au membre. Fonctionne **sans email**.
+- L'envoi par **email** est prévu en **module** activable (SMTP requis) — voir Modules.
+
+## Système de modules (options du site)
+- Nouveau dossier **MODULES/** (registre `modules.json`) et section **Paramètres → Modules** (admin) pour **activer/désactiver** : Devis, Événements, Partenaires, Réparations & WIP, Projets, Ventes, Prêts, Disponibilités, Activité, et « Réinitialisation par email » (à venir).
+- Un module désactivé **masque sa page et ses fonctions**. Idéal pour un site **vitrine** avec options.
+- Architecture extensible : déposez un module dans `modules.json` pour qu'il apparaisse dans Paramètres.
+
+## Mise à jour des autres sites
+- **Kit de mise à jour** fourni (script + paquet de code) pour mettre à jour vos autres sites de même structure **sans toucher à leurs données**.
+
+---
+
+**Version 3.1 — 9 juin 2026, 18:55**
+
+## Accueil — encarts entièrement cliquables
+- Dans tous les encarts personnalisés, **chaque ligne est cliquable** et ouvre directement la fiche de l'élément (ex. cliquer « Arcade Electronic » dans l'encart Inventaire ouvre sa fiche).
+- Généralisé à : Inventaire, Réparations, Pièces à acheter, Événements, Projets WIP, Projets, Devis, Prêts.
+
+---
+
+**Version 3.0 — 9 juin 2026, 18:35**
+
+## Accueil — homogénéité & sections
+- Les bulles **À TRAITER EN URGENCE** et **PROCHAIN WIP** ont désormais la **même hauteur** (boutons alignés en bas).
+- Le bouton **Personnaliser** gère maintenant aussi l'**affichage des sections** de l'accueil (OUI/NON) : Bandeau de bienvenue, Alertes, Statistiques (bulles), **Accès rapides (les cartes)**. Chacun masque/affiche à volonté, mémorisé par compte.
+
+---
+
+**Version 2.9 — 9 juin 2026, 18:15**
+
+## Accueil — métriques cliquables
+- Les bulles (Matériel total, Disponibles, Bloqués, Hors service, Devis actifs, Réparations, Prêts en cours, Événements) sont **cliquables** et ouvrent la page concernée (Hors service ouvre l'inventaire filtré HS).
+- Disposition **4 par ligne** (2 sur mobile). Une bulle à **0 n'est plus affichée**.
+
+## Accueil personnalisable par utilisateur
+- Bouton **Personnaliser** : chaque utilisateur compose son accueil avec des **encarts** au choix, activables/désactivables, **ordonnables** (↑/↓), mémorisés pour son compte.
+- Encarts disponibles : **Inventaire** (nombre d'articles + filtre catégorie + non fonctionnels), Réparations en cours, Pièces à acheter urgentes, Prochains événements, Projets WIP à venir, Projets en cours, Derniers devis, Prêts en cours.
+- Chaque encart affiche un aperçu cliquable qui mène à la page complète.
+
+---
+
+**Version 2.8 — 9 juin 2026, 17:40**
+
+## Encart partenaires (bas de page)
+- Vignettes **réduites (~−40 %)** et **ligne centrée**.
+- **Nombre réglable** (4 par défaut, de 1 à 12) dans « Gérer » (page Événements → Partenaires).
+- Choix **Fixe / Aléatoire** conservé.
+- Nouvel interrupteur **OUI/NON** pour **afficher ou masquer** l'encart en bas de toutes les pages.
+- (Rappel : thème « Papier & pierre » — boutons verts remplacés par terracotta, V2.7.)
+
+---
+
+**Version 2.7 — 9 juin 2026, 17:10**
+
+## Nouveau thème : Papier & pierre
+- Thème **clair et chaleureux** : fonds crème/pierre, cartes papier, encre près du noir, plusieurs niveaux de **gris chauds** (taupe), menu en **ardoise foncée** pour contraster.
+- **Boutons pastel** : vert sauge (actions principales / valider) et rouge terracotta (supprimer).
+- **Nouvelles polices** sur ce thème : titres en **Fraunces** (serif élégante), texte en **Inter**.
+- Cinq thèmes au total : Classique, Liquid Glass, Sombre (Discord), Nuit profonde, Papier & pierre.
+
+---
+
+**Version 2.6 — 9 juin 2026, 16:45**
+
+## Nouveau thème : Nuit profonde (façon Divi / Elegant Themes)
+- 2ᵉ thème sombre au choix : **noir bleuté profond**, cartes navy avec halo, **dégradé d'accent bleu→violet** (boutons et menu actif), accents colorés (turquoise, vert, ambre, rose).
+- Quatre thèmes disponibles : Classique, Liquid Glass, Sombre (Discord), Nuit profonde.
+
+---
+
+**Version 2.5 — 9 juin 2026, 16:20**
+
+## Thème Sombre (Discord) — corrections de contraste
+- Badges **Hors service**, **Vendu**, **Bloqué** : fonds clairs remplacés par des teintes sombres lisibles.
+- Badges **propriétaire** (Perso / Asso) et autres tags : texte éclairci.
+- **Pièces à acheter** : l'encart d'une pièce urgente n'est plus blanc (fond rouge sombre), le sélecteur **« À acheter »** et les sélecteurs de statut (devis) deviennent gris sombre lisibles.
+- **Bandeaux d'info** (Ventes, Devis) repris dans les teintes sombres.
+- Le tout s'aligne sur le rendu des cartes **Projets** pris comme modèle.
+
+---
+
+**Version 2.4 — 9 juin 2026, 15:50**
+
+## Nouveau thème : Sombre (Discord)
+- Troisième thème dans Paramètres → Apparence : **Sombre façon Discord** — fonds gris-anthracite, menu noir, accent **blurple (#5865F2)**, textes clairs, badges et bulles assombris.
+- Trois thèmes disponibles : Classique, Liquid Glass, Sombre (Discord). Chacun choisit le sien, mémorisé sur son appareil.
+
+---
+
+**Version 2.3 — 9 juin 2026, 15:30**
+
+## Thèmes (Apparence)
+- Nouveau module **Apparence** dans Paramètres : choix du thème, mémorisé par utilisateur sur son appareil (effet immédiat, aucune connexion requise).
+- Deux thèmes :
+  - **Classique** — le thème par défaut, clair et net.
+  - **Liquid Glass** — variante translucide façon Apple : fond dégradé coloré, panneaux en **verre dépoli** (flou + vibrance), bordures lumineuses, ombres douces. S'applique partout (cartes, barre du haut, menu, modales, frise…).
+- Architecture extensible : on peut ajouter d'autres thèmes facilement.
+
+---
+
+**Version 2.2 — 9 juin 2026, 14:55**
+
+## Disponibilités des membres (frise type planning)
+- Nouvel onglet **Disponibilités** dans **Utilisateurs**, accessible à **tout le monde** (l'onglet « Comptes » reste réservé aux admins).
+- **Frise horizontale** à la manière d'un planning : photo + nom à gauche, barres colorées par type sur les jours, **aujourd'hui** surligné, week-ends grisés.
+- **Types** (codes couleur) : Vacances (violet), Déplacement professionnel (corail), Télétravail (vert), Arrêt maladie (orange), Indisponible (gris), Disponible (turquoise).
+- **Saisie rapide** : un petit formulaire (type + période + note), pas de calendrier. On peut aussi cliquer une case pour pré-remplir la date. Chacun gère **ses propres** disponibilités ; les admins gèrent tout le monde.
+- Vues **Semaine / 2 semaines / Mois**, navigation précédent/suivant, recherche par nom.
+
+## Photo de profil
+- Ajout d'une **photo de profil** dans « Mon compte » (Paramètres) et dans la fiche utilisateur (admin). Elle s'affiche dans la frise, le menu et la liste des comptes.
+
+---
+
+**Version 2.1 — 9 juin 2026, 14:10**
+
+## Projets — suite (tâches & sessions de travail)
+- **Tâches** par projet : liste cochable avec barre de progression (X/Y). Les cases se cochent directement depuis la fiche du projet.
+- **Sessions de travail (rendez-vous WIP)** : planifiez une ou plusieurs dates de session (avec note/lieu).
+- **Alerte d'accueil** : une bulle **RENDEZ-VOUS PROJET** apparaît automatiquement **2 jours avant** chaque session, jusqu'au jour J.
+- La fiche projet affiche la **prochaine session** et l'avancement des tâches.
+
+---
+
+**Version 2.0 — 9 juin 2026, 13:40**
+
+## Inventaire — affichage PC
+- Le tableau ne se coupe plus à droite quand toutes les colonnes sont affichées : **défilement horizontal** automatique sur ordinateur (le mode mobile reste en cartes).
+
+## Nouvelle page PROJETS (entre Réparations et Ventes)
+- Liste des projets en cours / à venir en **blocs de 50 %** : nom, description courte, date de début, intervenants.
+- Bouton **Nouveau projet** avec : nom, date de début, **budget estimé** (optionnel), **intervenants** (sélecteur multiple, sans virgules), **ressources nécessaires** (ajout de lignes), **notes** et **fichiers joints** (plans, docs, PDF — jusqu'à ~4 Mo chacun, téléchargeables).
+- Onglet **Actifs / Archivés** et archivage comme partout.
+- *À venir (prévu) : gestionnaire de tâches accomplies + rendez-vous WIP avec alerte d'accueil 2 jours avant.*
+
+---
+
+**Version 1.9 — 9 juin 2026, 13:05**
+
+## Projets WIP — calendrier
+- Les **dates vides sont masquées** : l'agenda regroupe les séances par date (en-têtes de jour).
+- En haut, **deux bulles** affichent les **2 prochaines séances** (date, code, lieu, participants), cliquables.
+
+## Devis — deux nouveaux onglets
+- **Tarifs** : périodes de location modifiables (Week-end, Semaine, +…), **prix par matériel et par période**, **coûts unitaires** (essence, conso camion, location camion, main d'œuvre, couchage, présence, maintenance) et **éléments supplémentaires** à volonté.
+- **Calculatrice** : « Estimation des coûts d'une prestation » — dates départ/retour, matériel loué, transport (km, camions, essence), main d'œuvre, présence, couchage, maintenance et extras, **total calculé en direct**, puis bouton **Établir un devis** qui crée le devis pré-rempli.
+
+## Inventaire
+- Bouton de tri **⛔ Non fonctionnels** (pour préparer le travail des WIP).
+- Badge **EN WIP** automatique quand un matériel est dans un projet WIP actif.
+
+---
+
+**Version 1.8 — 9 juin 2026, 12:25**
+
+## Projets WIP — améliorations
+- **Calendrier** : les jours avec une séance ressortent en **bleu-gris** (plus seulement une pastille).
+- **État** : ajout de **« À venir »** en premier choix (couleur dédiée).
+- **Présents** et **membres d'équipe** : fini les virgules — un **sélecteur** : on clique, on choisit dans la liste des personnes (utilisateurs + partenaires), une par une, en chips.
+- **Lieu** ajouté à chaque séance.
+- **Matériel manquant** : autant de **lignes** que voulu, via un bouton « + Ajouter un matériel ».
+
+## Accueil — encarts
+- La bulle **À TRAITER EN URGENCE** passe à **50 %** de largeur ; à côté, une deuxième bulle **PROCHAIN WIP** affiche la **date, le lieu et les participants** (en gélules). Elle vire à l'orange quand la séance est dans les 2 jours.
+
+---
+
+**Version 1.7 — 9 juin 2026, 11:50**
+
+## Inventaire — Propriétaire
+- Nouveau champ **Propriétaire** dans « Modifier le matériel » : type via une **liste gérable** (Perso, Asso, Partenaire, VIP, Autre…) modifiable dans **Gérer**, plus un **nom** choisi dans l'annuaire (utilisateurs + partenaires).
+- Colonne **Propriétaire** activable via le bouton Colonnes.
+
+## Réparations — onglet « Projets WIP »
+- **Calendrier mensuel** simple : les séances apparaissent avec une pastille de couleur ; cliquer une date crée/ouvre une séance.
+- Chaque projet a un **code** auto `WIP-JJ-MM-AAAA`, une **date**, les **présents**, le **matériel manquant**, et des **équipes** : chaque équipe a sa tâche, ses membres, son matériel (choisi dans l'inventaire) et ses **étapes** cochables au fil des journées.
+- Bouton **Commander une pièce** (renvoie vers Pièces à acheter).
+- **4 états** colorés : À faire (orange), En cours (bleu), Incomplet (rose/rouge), Terminé (vert). Bouton **Archiver**.
+
+## Accueil — rappel
+- Sous « À TRAITER EN URGENCE », une bulle **RAPPEL** apparaît **2 jours avant** toute séance WIP à venir.
+
+---
+
+**Version 1.6 — 9 juin 2026, 11:10**
+
+## Corrections importantes
+- **Menu mobile** réparé : il restait bloqué (double-déclenchement) — on pouvait plus revenir à l'accueil sans rafraîchir. Corrigé.
+- **Rafraîchir une page** garde désormais la page en cours (au lieu de revenir systématiquement à l'Accueil).
+
+## Inventaire
+- Bouton **Dupliquer** sur chaque fiche produit (ouvre une copie pré-remplie à enregistrer).
+
+## Archives (toutes les pages)
+- Onglet **Actifs / Archivés** sur Inventaire, Devis, Événements, Réparations, Ventes et Prêts.
+- Bouton **Archiver / Désarchiver** par fiche. Les éléments archivés sortent des listes actives et **ne bloquent plus le matériel** (la trace est conservée).
+
+## Paramètres — traçabilité
+- Bulle **10 dernières actions** (qui a fait quoi, quand, sur quelle rubrique).
+- **Surveillance par rubrique** avec boutons **OUI / NON** : choisissez ce qui est consigné (Inventaire, Devis, Événements, Réparations, Ventes, Prêts).
+
+---
+
+**Version 1.5 — 9 juin 2026, 10:30**
+
+## Accès invité corrigé
+- L'invité voit désormais **toutes les pages** (y compris Utilisateurs et Activité) et peut **tout cliquer** pour explorer les fonctionnalités — mais **aucune modification** n'est possible (lecture seule). Idéal comme vitrine.
+
+## Utilisateurs & rôles
+- Bouton **Gérer les rôles** : ajouter / modifier / supprimer des rôles, chacun avec un **niveau d'accès** (Administrateur / Standard / Lecture seule). Supprimer un rôle réaffecte les comptes concernés.
+- **Filtres par rôle** en pastilles, comme l'inventaire.
+
+## Partenaires
+- Encart **« Nos partenaires »** en bas de page : 6 logos carrés, en mode **fixe ou aléatoire**.
+- Bouton **Partenaires** (page Événements) pour gérer chaque partenaire : logo carré, nom, adresse, notes.
+
+## Événements
+- **Hero du prochain événement** en haut de page : logo du partenaire, dates, description, et indication **matériel complet / incomplet**.
+- Lien d'un événement à une **fiche partenaire** (le « prochain événement » du partenaire se calcule automatiquement).
+
+## Inventaire
+- Import photo **compressé automatiquement sous 60 Ko** (avec lien vers un compresseur gratuit en secours).
+
+## Connexion
+- Retrait de la mention « Premier accès : admin / arcade ».
+
+---
+
+**Version 1.4 — 9 juin 2026, 09:55**
+
+## Accès invité (vitrine)
+- Bouton **« Je suis invité »** sur l'écran de connexion : ouvre un formulaire login / mot de passe.
+- Le compte invité est en **lecture seule** sur tout le site (idéal pour démontrer / louer l'application). Compte par défaut : `invite` / `invite` (modifiable dans Utilisateurs).
+
+## Réparations
+- **Étapes de réparation** par fiche : ajout, cochage (barre de progression) et suppression. Les étapes se cochent directement depuis la liste.
+- Nouvel onglet **Pièces à acheter** : inventaire des achats avec **degrés d'urgence** (Normal / Urgent / Critique), fournisseur, coût, statut (À acheter / Commandé / Reçu) et lien vers une réparation ou un matériel.
+- Les pièces **urgentes / critiques** ressortent en rouge.
+
+## Accueil
+- Bulle **« À TRAITER EN URGENCE »** listant les pièces urgentes à acheter (extensible à d'autres alertes plus tard).
+
+## Versions
+- Chaque version est désormais **archivée dans son propre dossier** (rollback possible). V1.3 conservée, V1.4 en cours.
+
+---
+
+**Version 1.3 — 9 juin 2026, 09:30**
+
+## Inventaire
+- **Photo par objet** : nouvelle colonne avant Dénomination, recadrage carré automatique à l'import. Taille d'affichage réglable (réglage global, dans « Gérer »).
+- **Catégories** : ajouter / renommer / supprimer depuis le bouton « Gérer » (le matériel concerné est mis à jour automatiquement).
+- **États** : liste modifiable (ajout de « À réviser » et « À démonter »), avec option « bloque » pour rendre le matériel indisponible.
+- **Colonnes personnalisables** : chaque utilisateur choisit les colonnes à afficher (bouton « Colonnes »), mémorisé par compte sur son appareil.
+
+---
+
+**Version 1.2 — 9 juin 2026, 09:05**
+
+---
+
+## Inventaire
+- Filtres par **catégorie** sous forme de pastilles (bulles) avec icônes, pour trier le matériel en un clic.
+- Affichage corrigé en **mobile** : tableau lisible en cartes, toutes les infos visibles.
+
+## Ventes
+- Bouton **Vendu OUI / NON** (vert/rouge) entre Date et Prix. OUI = sorti du parc, NON = de nouveau disponible.
+
+## Événements
+- Rattachement du **matériel libre** à un événement : il est réservé (bloqué) pour la période.
+- Bouton **Créer un devis** partenaire pré-rempli (matériel, dates, partenaire).
+- Bouton **Vérifier la disponibilité** désormais refermable.
+- Toggle **Validé OUI / NON** par événement.
+- Affichage du **créateur** et de la **date de création** de chaque événement.
+
+## Paramètres (admin)
+- Suivi d'**activité** : utilisateurs en ligne en temps réel, connexions par jour, et classement des contributions Inventaire / Réparations.
+
+## Divers
+- Pied de page avec **numéro de version** et © Yann Gabel Solutions pour West Coast Arcades.
+
+---
+*© 2026 Yann Gabel Solutions pour West Coast Arcades*
