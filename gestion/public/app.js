@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.8'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.9'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1984,6 +1984,7 @@ async function renderSiteInternet(){
   const tabs = `<div class="tabs-row" id="si-tabs">
       <button class="${SITE_TAB==='blog'?'active':''}" data-t="blog">${icon('doc')} Blog</button>
       <button class="${SITE_TAB==='affichage'?'active':''}" data-t="affichage">${icon('globe')} Affichage du site</button>
+      <button class="${SITE_TAB==='machines'?'active':''}" data-t="machines">🕹 Nos machines</button>
       <button class="${SITE_TAB==='modules'?'active':''}" data-t="modules">${icon('box')} Modules accueil</button>
     </div>`;
   const action = (SITE_TAB==='blog' ? `<button class="btn" id="si-new">${icon('plus')} Nouvel article</button>` : '') + `<button class="btn" id="si-media" style="background:var(--purple,#7c5cff)">🖼 Médiathèque</button>`;
@@ -1994,7 +1995,103 @@ async function renderSiteInternet(){
   $('#si-media')?.addEventListener('click',()=>mediaPicker());
   if(SITE_TAB==='blog') await renderBlogTab();
   else if(SITE_TAB==='affichage') await renderAffichageTab();
+  else if(SITE_TAB==='machines') await renderMachinesTab();
   else await renderModulesTab();
+}
+
+/* ============ Onglet NOS MACHINES : bannière + boutons + ordre d'affichage ============ */
+function machinesCfg(){
+  const c = (SITE_CONTENT && SITE_CONTENT.machines_page) || {};
+  return {
+    banner: Object.assign({ image:'', url:'', target:'_self', enabled:false }, c.banner||{}),
+    btn_rent: Object.assign({ enabled:true, label:'Louer cette borne', url:'contact.html', target:'_self', color:'', icon_type:'', icon:'' }, c.btn_rent||{}),
+    btn_more: Object.assign({ enabled:false, label:'Voir plus', url:'', target:'_self', color:'', icon_type:'', icon:'' }, c.btn_more||{}),
+    order: Array.isArray(c.order) ? c.order.slice() : [],
+  };
+}
+async function renderMachinesTab(){
+  const body=$('#si-body');
+  let mats=[];
+  try{ SITE_CONTENT = await api('/api/site'); }catch{ SITE_CONTENT=SITE_CONTENT||{}; }
+  try{ mats = await api('/api/materiel'); }catch{ mats=[]; }
+  const cfg = machinesCfg();
+  // Machines publiées sur le site (opt-in)
+  let pub = mats.filter(m=>m.visible_site===true);
+  // appliquer l'ordre mémorisé
+  const pos = id => { const i = cfg.order.indexOf(id); return i<0 ? 9999 : i; };
+  pub.sort((a,b)=> pos(a.id)-pos(b.id) || (a.denomination||'').localeCompare(b.denomination||''));
+  let order = pub.map(m=>m.id);
+
+  const btnRow = (key,b)=>`
+    <div class="tablecard" style="box-shadow:none;border:1px solid var(--line);padding:12px 14px;margin-bottom:10px">
+      <label class="mini" style="display:flex;align-items:center;gap:6px;font-weight:700;color:var(--navy);margin-bottom:8px"><input type="checkbox" class="mp-${key}-on" ${b.enabled?'checked':''}> ${key==='rent'?'Bouton « Louer cette borne »':'Second bouton (ex. « Voir plus »)'}</label>
+      <div class="row2">
+        <label class="field"><span>Texte du bouton</span><input class="mp-${key}-label" value="${esc(b.label||'')}"></label>
+        <label class="field"><span>Lien</span><input class="mp-${key}-url" value="${esc(b.url||'')}" placeholder="ex. contact.html"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Ouverture</span><select class="mp-${key}-target"><option value="_self" ${b.target!=='_blank'?'selected':''}>Même fenêtre</option><option value="_blank" ${b.target==='_blank'?'selected':''}>Nouvel onglet</option></select></label>
+        <div class="field"><span>Icône & couleur</span>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:4px">
+            <span class="mp-${key}-prev" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:22px;color:#fff;background:${b.color||'#467ff7'};font-weight:600;font-size:13px">${b.icon?iconHTML(b.icon_type,b.icon):''}<span>${esc(b.label||'Bouton')}</span></span>
+            <button type="button" class="btn small grey mp-${key}-pick">${icon('edit')} Icône</button>
+            <input type="color" class="mp-${key}-color" value="${/^#([0-9a-f]{6})$/i.test(b.color||'')?b.color:'#467ff7'}" style="width:42px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px" title="Couleur du bouton">
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  body.innerHTML = bubbleCSS()
+    + `<p class="help" style="margin-bottom:10px">Réglages de la page <strong>Nos Machines</strong> du site. Glisse la poignée ⠿ pour changer l'ordre d'affichage des bornes.</p>`
+    + bubble('🖼','Bannière (haut de page)','Image large (max 80%) sous l’en-tête, cliquable',
+        `<label class="mini" style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><input type="checkbox" id="mp-ban-on" ${cfg.banner.enabled?'checked':''}> Afficher la bannière</label>
+         <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+           <div id="mp-ban-prev" style="width:220px;height:70px;border-radius:8px;border:1px solid var(--line);background:#0b0b0d;background-size:cover;background-position:center;${cfg.banner.image?`background-image:url('${cfg.banner.image}')`:''}"></div>
+           ${mediaBtn('mp-ban-pick','Choisir l’image')}
+           <button type="button" class="btn small red" id="mp-ban-clear">${icon('trash')} Retirer</button>
+         </div>
+         <div class="row2">
+           <label class="field"><span>Lien (optionnel)</span><input id="mp-ban-url" value="${esc(cfg.banner.url||'')}" placeholder="ex. https://… ou agenda.html"></label>
+           <label class="field"><span>Ouverture du lien</span><select id="mp-ban-target"><option value="_self" ${cfg.banner.target!=='_blank'?'selected':''}>Même fenêtre</option><option value="_blank" ${cfg.banner.target==='_blank'?'selected':''}>Nouvel onglet</option></select></label>
+         </div>`, {open:true})
+    + bubble('🔘','Boutons des bornes','« Louer cette borne » + un second bouton', btnRow('rent',cfg.btn_rent)+btnRow('more',cfg.btn_more))
+    + bubble('↕️','Ordre des bornes','Glisse pour réordonner l’affichage sur le site', `<div id="mp-order"></div>`)
+    + `<div class="buttons" style="margin-top:6px"><button class="btn" id="mp-save">${icon('check')} Enregistrer la page Nos Machines</button></div>`;
+
+  // état local des boutons (icône/couleur modifiées via pickers)
+  const state = { rent:{...cfg.btn_rent}, more:{...cfg.btn_more}, banner:{...cfg.banner} };
+  function refreshBtnPrev(key){ const b=state[key]; const el=$('.mp-'+key+'-prev'); if(!el) return; el.style.background=$('.mp-'+key+'-color').value; el.innerHTML=(b.icon?iconHTML(b.icon_type,b.icon):'')+'<span>'+esc($('.mp-'+key+'-label').value||'Bouton')+'</span>'; }
+  ['rent','more'].forEach(key=>{
+    $('.mp-'+key+'-pick').addEventListener('click',()=>iconPicker({type:state[key].icon_type,icon:state[key].icon},r=>{ state[key].icon_type=r.type; state[key].icon=r.icon; refreshBtnPrev(key); }));
+    $('.mp-'+key+'-color').addEventListener('input',()=>refreshBtnPrev(key));
+    $('.mp-'+key+'-label').addEventListener('input',()=>refreshBtnPrev(key));
+  });
+  // bannière
+  wireMedia('mp-ban-pick', url=>{ state.banner.image=url; $('#mp-ban-prev').style.backgroundImage=`url('${url}')`; });
+  $('#mp-ban-clear').addEventListener('click',()=>{ state.banner.image=''; $('#mp-ban-prev').style.backgroundImage=''; });
+  // ordre des bornes (glisser-déposer)
+  const byId={}; pub.forEach(m=>byId[m.id]=m);
+  function drawOrder(){
+    const box=$('#mp-order'); if(!box) return;
+    box.innerHTML = order.length ? order.map((id,i)=>{ const m=byId[id]; if(!m) return ''; return `<div class="il-row" draggable="true" data-i="${i}" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card)">
+        <span style="cursor:grab;color:var(--muted)">⠿</span>
+        ${m.photo?`<img src="${esc(m.photo)}" style="width:46px;height:34px;object-fit:cover;border-radius:6px">`:'<span style="width:46px;height:34px;display:inline-block;border-radius:6px;background:var(--line)"></span>'}
+        <span style="flex:1;font-weight:600;color:var(--navy)">${esc(m.titre_site||m.denomination||'(sans nom)')}</span>
+      </div>`; }).join('') : '<p class="mini">Aucune borne publiée. Active « Visible sur le site public » sur une fiche matériel.</p>';
+    wireDnd(box,'.il-row',order,drawOrder);
+  }
+  drawOrder();
+
+  $('#mp-save').addEventListener('click',async()=>{
+    // relire l'ordre depuis le DOM (les data-i sont réindexés après chaque drop par notre rendu ? non : on lit l'ordre courant du tableau `order`)
+    const rd = key=>({ enabled:$('.mp-'+key+'-on').checked, label:$('.mp-'+key+'-label').value.trim(), url:$('.mp-'+key+'-url').value.trim(), target:$('.mp-'+key+'-target').value, color:$('.mp-'+key+'-color').value, icon_type:state[key].icon_type, icon:state[key].icon });
+    const payload={ machines_page:{
+      banner:{ image:state.banner.image, url:$('#mp-ban-url').value.trim(), target:$('#mp-ban-target').value, enabled:$('#mp-ban-on').checked },
+      btn_rent: rd('rent'), btn_more: rd('more'),
+      order: order.slice(),
+    }};
+    try{ await api('/api/site',{method:'PUT',body:JSON.stringify(payload)}); SITE_CONTENT.machines_page=payload.machines_page; toast('Page Nos Machines enregistrée'); renderMachinesTab(); }catch(e){ toast(e.message); }
+  });
 }
 
 async function renderBlogTab(){

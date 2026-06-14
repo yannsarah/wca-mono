@@ -119,8 +119,12 @@ export function handlePublic(req, res, pathname, searchParams) {
   // ----- Machines (OPT-IN strict : seulement materiel.visible_site === true) -----
   // Champs internes (valeur, n° série, emplacement, notes) JAMAIS exposés.
   if (pathname === '/api/public/machines') {
+    const mp = (d.settings && d.settings.site && d.settings.site.machines_page) || {};
+    const order = Array.isArray(mp.order) ? mp.order : [];
+    const rank = id => { const i = order.indexOf(id); return i < 0 ? 9999 : i; };
     const list = (d.materiel || [])
       .filter(optIn)
+      .sort((a, b) => rank(a.id) - rank(b.id) || (a.denomination || '').localeCompare(b.denomination || ''))
       .map(m => ({
         id: m.id, denomination: m.denomination, categorie: m.categorie || '',
         photo: m.photo || '', fonctionnel: !!m.fonctionnel,
@@ -176,6 +180,7 @@ export function handlePublic(req, res, pathname, searchParams) {
       blog_hero: s.blog_hero || '',
       icon_links: Array.isArray(s.icon_links) ? s.icon_links : (s.icon_links && Array.isArray(s.icon_links.items) ? s.icon_links.items : []),
       contact_home: s.contact_home || null,
+      machines_page: s.machines_page || null,
     }), true;
   }
 

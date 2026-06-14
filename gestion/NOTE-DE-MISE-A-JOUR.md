@@ -2,6 +2,15 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.9 — 14 juin 2026**
+## Nouvel onglet « Nos machines » (Site internet)
+- Nouvel onglet **Nos machines** dans Site internet, pilotable en dynamique.
+- **Ordre d'affichage des bornes** sur la page, par **glisser-déposer** (poignée ⠿).
+- **Boutons configurables** : « Louer cette borne » et un **second bouton** (ex. « Voir plus ») — texte, lien, ouverture (même fenêtre/onglet), **couleur** et **icône** au choix.
+- **Bannière en haut de page** (sous l'en-tête) : image (médiathèque), **largeur max 80 %**, lien cliquable optionnel, activable/désactivable.
+
+---
+
 **Version 2.8.8 — 14 juin 2026**
 ## Fiche matériel : description enrichie (site + fiche produit)
 - Nouveau champ **Description** en texte enrichi (gras, italique, listes), hauteur 150 px, **au-dessus des Notes** dans la fiche matériel.

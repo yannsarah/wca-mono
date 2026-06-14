@@ -896,7 +896,7 @@ add('GET', '/api/site', (req, res) => {
 });
 add('PUT', '/api/site', (req, res, p, body, query, user) => {
   const s = db().settings; if (!s.site || typeof s.site !== 'object') s.site = {};
-  for (const k of ['hero', 'photos', 'equipe', 'blog', 'blog_hero', 'icon_links', 'contact_home']) if (body[k] !== undefined) s.site[k] = body[k];
+  for (const k of ['hero', 'photos', 'equipe', 'blog', 'blog_hero', 'icon_links', 'contact_home', 'machines_page']) if (body[k] !== undefined) s.site[k] = body[k];
   logActivity(user, 'update', 'site', ''); save(); send(res, 200, s.site);
 });
 
