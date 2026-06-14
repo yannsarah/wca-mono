@@ -2,6 +2,15 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.17 — 15 juin 2026**
+## Module Asso : suivi des cotisations plus clair
+- Colonne **Cotisation** : badge **✅ À jour / ❌ Non cotisé**, **cliquable** pour basculer le paiement d'un clic (et **case à cocher « à jour »** dans la fiche du membre).
+- Badge **Actif / Passif** sur chaque membre (réglable dans sa fiche), en plus du badge Compte/Extérieur.
+- **Clic sur la ligne** = ouverture de la fiche du membre.
+- Bandeau récap de l'année : **montant**, **période (début → fin)**, **échéance** et nouvelle date de **relance / renouvellement** (à régler dans l'onglet Association).
+
+---
+
 **Version 2.8.16 — 15 juin 2026**
 ## Module Asso : membres extérieurs + correctifs
 - **Correctif « undefined »** : les prénoms parasites affichés dans la liste des membres sont nettoyés (à l'affichage et dans la base).

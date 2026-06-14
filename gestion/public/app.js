@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.16'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.17'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -3130,11 +3130,12 @@ async function renderAssoIdentite(){
         <div class="row2"><label class="field"><span>Montant (€)</span><input class="cf-montant" value="${esc(c.montant||'')}"></label><label class="field"><span>Date de l'AG</span><input class="cf-ag" type="date" value="${esc(c.ag_date||'')}"></label></div>
         <div class="row2"><label class="field"><span>Période du</span><input class="cf-pd" type="date" value="${esc(c.periode_debut||'')}"></label><label class="field"><span>au</span><input class="cf-pf" type="date" value="${esc(c.periode_fin||'')}"></label></div>
         <div class="row2"><label class="field"><span>Échéance de paiement</span><input class="cf-ech" type="date" value="${esc(c.echeance||'')}"></label><label class="field"><span>Date limite (exclusion AG)</span><input class="cf-ech2" type="date" value="${esc(c.echeance2||'')}"></label></div>
+        <label class="field"><span>Relance / renouvellement (quand prévenir les membres)</span><input class="cf-rappel" type="date" value="${esc(c.rappel||'')}"></label>
         <button class="btn small camp-save" data-an="${esc(c.annee)}">${icon('check')} Enregistrer ${esc(c.annee)}</button>
       </div>`).join('') : '<p class="mini">Aucune campagne. Ajoute une année ci-dessous.</p>';
     box.querySelectorAll('.camp-save').forEach(b=>b.addEventListener('click',async()=>{
       const card=b.closest('[data-an]');
-      const obj={ annee:b.dataset.an, montant:card.querySelector('.cf-montant').value.trim(), ag_date:card.querySelector('.cf-ag').value, periode_debut:card.querySelector('.cf-pd').value, periode_fin:card.querySelector('.cf-pf').value, echeance:card.querySelector('.cf-ech').value, echeance2:card.querySelector('.cf-ech2').value };
+      const obj={ annee:b.dataset.an, montant:card.querySelector('.cf-montant').value.trim(), ag_date:card.querySelector('.cf-ag').value, periode_debut:card.querySelector('.cf-pd').value, periode_fin:card.querySelector('.cf-pf').value, echeance:card.querySelector('.cf-ech').value, echeance2:card.querySelector('.cf-ech2').value, rappel:card.querySelector('.cf-rappel').value };
       try{ await api('/api/asso/campagnes',{method:'POST',body:JSON.stringify(obj)}); camps=await api('/api/asso/campagnes'); drawCamps(); toast('Campagne enregistrée'); }catch(e){ toast(e.message); }
     }));
     box.querySelectorAll('.camp-del').forEach(b=>b.addEventListener('click',()=>confirmModal('Supprimer la campagne '+b.dataset.an+' ?',async()=>{ try{ await api('/api/asso/campagnes/'+b.dataset.an,{method:'DELETE'}); camps=await api('/api/asso/campagnes'); drawCamps(); }catch(e){ toast(e.message); } })));
@@ -3157,28 +3158,41 @@ async function renderAssoMembres(){
   const mName=m=>(((m.prenom||'')+' '+(m.nom||'')).trim()||m.login||'(sans nom)');
   const cotisOf=(m,an)=>(m.cotisations||[]).find(c=>String(c.annee)===String(an));
   const paidCount=membres.filter(m=>{ const c=cotisOf(m,ASSO_YEAR); return c&&c.paye; }).length;
+  const camp=camps.find(x=>String(x.annee)===String(ASSO_YEAR));
+  const summary = camp
+    ? `<div class="card" style="margin-bottom:10px;padding:10px 14px;background:var(--teal-l,#e7f6f7);border-color:#b6e3e8"><strong>Cotisation ${esc(ASSO_YEAR)}</strong> : ${camp.montant?'<strong>'+esc(camp.montant)+' €</strong>':'<em>montant non défini</em>'}${camp.periode_debut?` · période du <strong>${frDate(camp.periode_debut)}</strong> au <strong>${frDate(camp.periode_fin)}</strong>`:''}${camp.echeance?` · échéance le <strong>${frDate(camp.echeance)}</strong>`:''}${camp.rappel?` · relance le <strong>${frDate(camp.rappel)}</strong>`:''} <span class="mini" style="color:var(--muted)">— réglages dans l'onglet Association</span></div>`
+    : `<div class="card" style="margin-bottom:10px;padding:10px 14px;background:var(--amber-l,#fdf3da);border-color:#f0dca6"><span class="mini">Aucune campagne définie pour ${esc(ASSO_YEAR)} — règle le montant et les dates dans l'onglet <strong>Association</strong>.</span></div>`;
+  const statutBadge=m=>(m.statut_membre==='passif'
+    ? '<span class="tag" style="background:var(--line);color:var(--muted)">Passif</span>'
+    : '<span class="tag" style="background:#dcf5e6;color:#1d7a46">Actif</span>');
+  function cotCell(m){
+    const c=cotisOf(m,ASSO_YEAR); const paid=!!(c&&c.paye);
+    const inner=`<span style="font-weight:700;color:${paid?'#1d7a46':'#c0392b'}">${paid?'✅ À jour':'❌ Non cotisé'}</span>${paid&&c.montant?`<span class="mini" style="color:var(--muted)"> · ${esc(c.montant)}€</span>`:''}`;
+    return admin ? `<button type="button" class="js-cot-toggle" data-mk="${m.kind}:${m.id}" title="Cliquer pour basculer payé / non payé" style="border:0;background:none;cursor:pointer;font:inherit;padding:0">${inner}</button>` : inner;
+  }
   body.innerHTML = `<div class="toolbar" style="gap:12px;flex-wrap:wrap;align-items:center">
       <label class="mini" style="display:flex;align-items:center;gap:6px">Année <select id="asso-year" style="width:auto">${(years.length?years:[ASSO_YEAR]).map(y=>`<option ${y===ASSO_YEAR?'selected':''}>${esc(y)}</option>`).join('')}</select></label>
       <span class="mini" style="color:var(--muted)">${paidCount}/${membres.length} à jour pour ${esc(ASSO_YEAR)}</span>
       ${admin?`<button class="btn small" id="mb-add-ext" style="margin-left:auto">${icon('plus')} Membre extérieur</button>`:''}
     </div>
+    ${summary}
     <div class="tablecard"><table class="grid"><thead><tr><th>Membre</th><th>Contact</th><th>Cotisation ${esc(ASSO_YEAR)}</th><th></th></tr></thead><tbody>${
-      membres.map(m=>{ const c=cotisOf(m,ASSO_YEAR); const st=c?(c.paye?`<span class="statut dispo">${icon('check')} Payée${c.montant?(' · '+esc(c.montant)+'€'):''}</span>`:'<span class="statut hs">Non payée</span>'):'<span class="statut">—</span>';
-        const badge=`<span class="tag ${m.kind==='externe'?'gray':'blue'}" style="margin-left:6px;font-size:10px">${m.kind==='externe'?'Extérieur':'Compte'}</span>`;
-        return `<tr class="js-mb-row" data-mk="${m.kind}:${m.id}" style="cursor:pointer"><td><strong>${esc(mName(m))}</strong>${badge}${m.ville?`<div class="sub">${esc(m.ville)}</div>`:''}</td>
+      membres.map(m=>{ const c=cotisOf(m,ASSO_YEAR);
+        return `<tr class="js-mb-row" data-mk="${m.kind}:${m.id}" style="cursor:pointer"><td><strong>${esc(mName(m))}</strong> ${statutBadge(m)}<div class="sub"><span class="tag ${m.kind==='externe'?'gray':'blue'}" style="font-size:10px">${m.kind==='externe'?'Extérieur':'Compte'}</span>${m.ville?' · '+esc(m.ville):''}</div></td>
           <td>${m.telephone?esc(m.telephone):''}${m.email?`<div class="sub">${esc(m.email)}</div>`:''}</td>
-          <td>${st}</td>
+          <td>${cotCell(m)}</td>
           <td class="actions"><div class="row-actions">
             <button class="iconbtn ghost js-mb-letter" data-mk="${m.kind}:${m.id}" title="Lettre de cotisation">✉️</button>
             ${c&&c.paye?`<button class="iconbtn ghost js-mb-recu" data-mk="${m.kind}:${m.id}" title="Reçu de cotisation">🧾</button>`:''}
             <button class="iconbtn ghost js-mb-edit" data-mk="${m.kind}:${m.id}" title="Modifier">${icon('edit')}</button>
           </div></td></tr>`; }).join('') || '<tr><td colspan="4" class="help" style="padding:14px">Aucun membre.</td></tr>'
     }</tbody></table></div>
-    <p class="help" style="margin-top:8px">ℹ️ Les <strong>comptes</strong> ont un accès à l'application (rôle « Membre asso actif », admin, technicien…). Les <strong>membres extérieurs</strong> cotisent sans compte. Ajoute un compte dans Utilisateurs › Comptes, ou un membre extérieur ci-dessus.</p>`;
+    <p class="help" style="margin-top:8px">ℹ️ Clique une ligne pour ouvrir la fiche. Le badge <strong>Cotisation</strong> est cliquable (basculer à jour / non cotisé). <strong>Actif/Passif</strong> et <strong>Compte/Extérieur</strong> se règlent dans la fiche.</p>`;
   $('#asso-year').addEventListener('change',e=>{ ASSO_YEAR=e.target.value; renderAssoMembres(); });
   $('#mb-add-ext')?.addEventListener('click',()=>memberModal({kind:'externe'}));
   const byMk=k=>membres.find(m=>(m.kind+':'+m.id)===k);
-  $$('.js-mb-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('.row-actions')) return; memberModal(byMk(r.dataset.mk)); }));
+  $$('.js-cot-toggle').forEach(b=>b.addEventListener('click',async(e)=>{ e.stopPropagation(); const m=byMk(b.dataset.mk); const c=cotisOf(m,ASSO_YEAR); const nowPaid=!(c&&c.paye); const base=m.kind==='externe'?'/api/membres-ext/':'/api/membres/'; try{ await api(base+m.id+'/cotisation',{method:'POST',body:JSON.stringify({annee:ASSO_YEAR,paye:nowPaid,montant:(c&&c.montant)||(camp&&camp.montant)||'',date_paiement:nowPaid?new Date().toISOString().slice(0,10):((c&&c.date_paiement)||'')})}); renderAssoMembres(); }catch(err){ toast(err.message); } }));
+  $$('.js-mb-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('.row-actions')||e.target.closest('.js-cot-toggle')) return; memberModal(byMk(r.dataset.mk)); }));
   $$('.js-mb-edit').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); memberModal(byMk(b.dataset.mk)); }));
   $$('.js-mb-letter').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const m=byMk(b.dataset.mk); const c=camps.find(x=>String(x.annee)===String(ASSO_YEAR))||{annee:ASSO_YEAR}; pdfDialog(assoLetterHTML(m,c,ASSO_CACHE.asso), 'Cotisation-'+(m.nom||m.prenom||'membre')+'-'+ASSO_YEAR); }));
   $$('.js-mb-recu').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const m=byMk(b.dataset.mk); const c=cotisOf(m,ASSO_YEAR); pdfDialog(assoRecuHTML(m,c,ASSO_CACHE.asso), 'Recu-'+(m.nom||m.prenom||'membre')+'-'+ASSO_YEAR); }));
@@ -3196,8 +3210,11 @@ function memberModal(mb){
     <label class="field"><span>Adresse</span><input id="mb-adresse" value="${esc(e.adresse||'')}"></label>
     <div class="row2"><label class="field"><span>Code postal</span><input id="mb-cp" value="${esc(e.code_postal||'')}"></label><label class="field"><span>Ville</span><input id="mb-ville" value="${esc(e.ville||'')}"></label></div>
     <div class="row2"><label class="field"><span>Téléphone</span><input id="mb-tel" value="${esc(e.telephone||'')}"></label><label class="field"><span>Email</span><input id="mb-email" value="${esc(e.email||'')}"></label></div>
-    <div class="row2"><label class="field"><span>Date d'adhésion</span><input id="mb-adh" type="date" value="${esc(e.date_adhesion||'')}"></label><label class="field"><span>Profession</span><input id="mb-prof" value="${esc(e.profession||'')}"></label></div>
-    ${isNew?'':`<div class="section-title" style="margin-top:6px">Cotisations</div><div id="mb-cotis"></div>
+    <div class="row2"><label class="field"><span>Date d'adhésion</span><input id="mb-adh" type="date" value="${esc(e.date_adhesion||'')}"></label><label class="field"><span>Statut du membre</span><select id="mb-statut"><option value="actif" ${e.statut_membre!=='passif'?'selected':''}>Membre actif</option><option value="passif" ${e.statut_membre==='passif'?'selected':''}>Membre passif</option></select></label></div>
+    <label class="field"><span>Profession</span><input id="mb-prof" value="${esc(e.profession||'')}"></label>
+    ${isNew?'':`<div class="section-title" style="margin-top:6px">Cotisations</div>
+    ${admin?`<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;font-weight:600;cursor:pointer"><input type="checkbox" id="mb-paye-year" style="width:auto"> Cotisation <strong>${esc(ASSO_YEAR)}</strong> à jour</label>`:''}
+    <div id="mb-cotis"></div>
     ${admin?`<div class="add-row" style="margin-top:6px;flex-wrap:wrap"><input id="mb-c-annee" placeholder="Année" style="max-width:90px"><input id="mb-c-montant" placeholder="Montant €" style="max-width:100px"><select id="mb-c-mode" style="width:auto"><option>Virement</option><option>Espèces</option><option>Chèque</option><option>Autre</option></select><label class="mini" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="mb-c-paye" checked> payé</label><button class="btn small" id="mb-c-add">${icon('plus')} Ajouter</button></div>`:''}`}
     <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">${admin?'Annuler':'Fermer'}</button>${admin?`<button class="btn" id="mb-save">${isNew?'Créer le membre':'Enregistrer la fiche'}</button>`:''}</div>`, {wide:true});
   function drawCot(){
@@ -3206,9 +3223,14 @@ function memberModal(mb){
     box.querySelectorAll('.mbc-del').forEach(b=>b.addEventListener('click',async()=>{ try{ const r=await api(base+e.id+'/cotisation/'+b.dataset.an,{method:'DELETE'}); cot=r.cotisations; drawCot(); }catch(err){ toast(err.message); } }));
   }
   if(!isNew) drawCot();
-  $('#mb-c-add')?.addEventListener('click',async()=>{ const an=$('#mb-c-annee').value.trim(); if(!an){ toast('Indique une année.'); return; } try{ const r=await api(base+e.id+'/cotisation',{method:'POST',body:JSON.stringify({annee:an,montant:$('#mb-c-montant').value.trim(),mode:$('#mb-c-mode').value,paye:$('#mb-c-paye').checked,date_paiement:new Date().toISOString().slice(0,10)})}); cot=r.cotisations; drawCot(); $('#mb-c-annee').value='';$('#mb-c-montant').value=''; toast('Cotisation enregistrée'); }catch(err){ toast(err.message); } });
+  const yearCot=()=>cot.find(c=>String(c.annee)===String(ASSO_YEAR));
+  const pyEl=$('#mb-paye-year');
+  if(pyEl){ pyEl.checked=!!(yearCot()&&yearCot().paye);
+    pyEl.addEventListener('change',async()=>{ const camp=(ASSO_CACHE.camps||[]).find(x=>String(x.annee)===String(ASSO_YEAR)); const yc=yearCot(); try{ const r=await api(base+e.id+'/cotisation',{method:'POST',body:JSON.stringify({annee:ASSO_YEAR,paye:pyEl.checked,montant:(yc&&yc.montant)||(camp&&camp.montant)||'',date_paiement:pyEl.checked?new Date().toISOString().slice(0,10):((yc&&yc.date_paiement)||'')})}); cot=r.cotisations; drawCot(); toast(pyEl.checked?`Cotisation ${ASSO_YEAR} à jour`:'Marqué non cotisé'); }catch(err){ toast(err.message); pyEl.checked=!pyEl.checked; } });
+  }
+  $('#mb-c-add')?.addEventListener('click',async()=>{ const an=$('#mb-c-annee').value.trim(); if(!an){ toast('Indique une année.'); return; } try{ const r=await api(base+e.id+'/cotisation',{method:'POST',body:JSON.stringify({annee:an,montant:$('#mb-c-montant').value.trim(),mode:$('#mb-c-mode').value,paye:$('#mb-c-paye').checked,date_paiement:new Date().toISOString().slice(0,10)})}); cot=r.cotisations; drawCot(); if(pyEl&&String(an)===String(ASSO_YEAR)) pyEl.checked=$('#mb-c-paye').checked; $('#mb-c-annee').value='';$('#mb-c-montant').value=''; toast('Cotisation enregistrée'); }catch(err){ toast(err.message); } });
   $('#mb-save')?.addEventListener('click',async()=>{
-    const obj={ prenom:$('#mb-prenom').value.trim(), nom:$('#mb-nom').value.trim(), adresse:$('#mb-adresse').value.trim(), code_postal:$('#mb-cp').value.trim(), ville:$('#mb-ville').value.trim(), telephone:$('#mb-tel').value.trim(), email:$('#mb-email').value.trim(), date_adhesion:$('#mb-adh').value, profession:$('#mb-prof').value.trim() };
+    const obj={ prenom:$('#mb-prenom').value.trim(), nom:$('#mb-nom').value.trim(), adresse:$('#mb-adresse').value.trim(), code_postal:$('#mb-cp').value.trim(), ville:$('#mb-ville').value.trim(), telephone:$('#mb-tel').value.trim(), email:$('#mb-email').value.trim(), date_adhesion:$('#mb-adh').value, profession:$('#mb-prof').value.trim(), statut_membre:$('#mb-statut').value };
     try{
       if(isNew) await api('/api/membres-ext',{method:'POST',body:JSON.stringify(obj)});
       else await api(base+e.id,{method:'PUT',body:JSON.stringify(obj)});

@@ -986,7 +986,7 @@ add('PUT', '/api/asso', (req, res, p, body, query, user) => {
 });
 
 // --- Campagnes de cotisation (réglages annuels, base des lettres) ---
-const CAMP_FIELDS = ['annee', 'montant', 'ag_date', 'periode_debut', 'periode_fin', 'echeance', 'echeance2', 'mode_paiement', 'statut_article'];
+const CAMP_FIELDS = ['annee', 'montant', 'ag_date', 'periode_debut', 'periode_fin', 'echeance', 'echeance2', 'rappel', 'mode_paiement', 'statut_article'];
 add('GET', '/api/asso/campagnes', (req, res, p, body, query, user) => {
   if (!requireView(user, res)) return;
   send(res, 200, Array.isArray(db().settings.cotisation_campagnes) ? db().settings.cotisation_campagnes : []);
@@ -1008,19 +1008,19 @@ add('DELETE', '/api/asso/campagnes/:annee', (req, res, p, body, query, user) => 
 });
 
 // --- Membres (= comptes utilisateurs, vue étendue) ---
-const MEMBER_FIELDS = ['adresse', 'code_postal', 'ville', 'telephone', 'email', 'date_adhesion', 'date_naissance', 'profession', 'notes_membre'];
+const MEMBER_FIELDS = ['adresse', 'code_postal', 'ville', 'telephone', 'email', 'date_adhesion', 'date_naissance', 'profession', 'notes_membre', 'statut_membre'];
 function memberView(u) {
   return {
     id: u.id, kind: 'compte', login: u.login, nom: cleanStr(u.nom), prenom: cleanStr(u.prenom), role: u.role, photo: u.photo || '',
     adresse: u.adresse || '', code_postal: u.code_postal || '', ville: u.ville || '', telephone: u.telephone || '',
     email: u.email || '', date_adhesion: u.date_adhesion || '', date_naissance: u.date_naissance || '',
-    profession: u.profession || '', notes_membre: u.notes_membre || '',
+    profession: u.profession || '', notes_membre: u.notes_membre || '', statut_membre: u.statut_membre || 'actif',
     cotisations: Array.isArray(u.cotisations) ? u.cotisations : [],
   };
 }
 // Membres extérieurs (cotisants sans compte de connexion).
 function extView(e) {
-  return { id: e.id, kind: 'externe', nom: cleanStr(e.nom), prenom: cleanStr(e.prenom), adresse: e.adresse || '', code_postal: e.code_postal || '', ville: e.ville || '', telephone: e.telephone || '', email: e.email || '', date_adhesion: e.date_adhesion || '', date_naissance: e.date_naissance || '', profession: e.profession || '', notes_membre: e.notes_membre || '', cotisations: Array.isArray(e.cotisations) ? e.cotisations : [] };
+  return { id: e.id, kind: 'externe', nom: cleanStr(e.nom), prenom: cleanStr(e.prenom), adresse: e.adresse || '', code_postal: e.code_postal || '', ville: e.ville || '', telephone: e.telephone || '', email: e.email || '', date_adhesion: e.date_adhesion || '', date_naissance: e.date_naissance || '', profession: e.profession || '', notes_membre: e.notes_membre || '', statut_membre: e.statut_membre || 'actif', cotisations: Array.isArray(e.cotisations) ? e.cotisations : [] };
 }
 add('GET', '/api/asso/membres', (req, res, p, body, query, user) => {
   if (!requireView(user, res)) return;
