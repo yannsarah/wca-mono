@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.2 — 14 juin 2026**
+## Harmonisation blog + regroupement des réglages
+- **Page article harmonisée** : la bannière devient le **hero** en haut (comme la page Blog), **hamburger à droite**, **logo central redondant retiré**. Plus propre, plus cohérent.
+- **Hamburger** du blog/article rendu **bien visible** (bordure).
+- **Tous les réglages du blog regroupés** dans **Site internet → Affichage du site → Blog** : disposition, widgets, encart pub, bannière des articles **et** image de fond du hero — un seul endroit. La carte « Blog » en double dans « Modules accueil » a été retirée.
+
+---
+
 **Version 2.1 — 14 juin 2026**
 ## Page Blog : nouveau Hero
 - Le haut de la page Blog devient un **hero en image** (au lieu du bandeau noir) : grande bannière de fond, **logo central retiré**, **menu hamburger déplacé à droite** (sur cette page uniquement) pour ne pas masquer le logo de la bannière.

@@ -7,17 +7,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/site.css">
 <link rel="stylesheet" href="assets/css/blog.css">
+<style>
+.blog-hero{position:relative;width:100%;min-height:clamp(130px,20vw,250px);background:#0b0b0d center/cover no-repeat;display:flex;align-items:center;justify-content:center}
+.blog-burger{position:absolute;top:16px;right:20px;z-index:5;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.3);width:50px;height:42px;border-radius:9px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 12px}
+.blog-burger span{display:block;height:3px;background:#fff;border-radius:2px}
+</style>
 </head>
 <body>
 <div class="sfm-overlay" id="sfmOverlay"></div>
 <aside class="sfm-panel" id="sfmPanel"><button class="x" id="sfmClose">&times;</button>
 <img class="lg" src="img/Logo-WCA-intro-350px.png" alt="WCA">
 <nav><a href="index.html">Accueil</a><a href="nos-machines.html">Nos Machines</a><a href="nos-salons.html">Nos Salons</a><a href="nos-partenaires.html">Partenaires</a><a href="agenda.html">Agenda</a><a href="blog.html">Blog</a><a href="contact.html">Contacter l'Asso</a></nav></aside>
-<header class="site-header"><div class="bar"><button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
-<a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="WCA"></a></div></header>
+<section class="blog-hero" id="artHero"><button class="blog-burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button></section>
 
 <div class="article-hero"><div class="date" id="aDate"></div><h1 id="aTitre">Chargement…</h1></div>
-<div class="feat" id="aFeat"></div>
 <article class="article">
   <a class="article-back" href="blog.html">&#8592; Tous les articles</a>
   <div class="article-body" id="aBody"><p style="color:#5d6b85">Chargement de l'article…</p></div>
@@ -44,9 +47,8 @@
     document.title=a.titre+' - West Coast Arcades';
     document.getElementById('aTitre').textContent=a.titre;
     document.getElementById('aDate').textContent=WCA.dateRange(a.date)+(a.auteur?(' · '+a.auteur):'');
-    var banner=a.banniere||(home.blog&&home.blog.banner)||'';
-    if(banner) document.getElementById('aFeat').innerHTML='<img src="'+WCA.esc(banner)+'" alt="" style="width:100%;height:clamp(150px,26vw,300px);object-fit:cover;display:block">';
-    else if(a.image) document.getElementById('aFeat').innerHTML='<img src="'+a.image+'" alt="">';
+    var banner=a.banniere||home.blog_hero||(home.blog&&home.blog.banner)||'';
+    if(banner) document.getElementById('artHero').style.backgroundImage="url('"+banner+"')";
     document.getElementById('aBody').innerHTML=a.contenu||('<p>'+WCA.esc(a.extrait||'')+'</p>');
     if(a.partenaires && a.partenaires.length){
       document.getElementById('aParts').innerHTML='<div style="max-width:1000px;margin:34px auto;padding:24px 16px;background:#f6f7fb;border-radius:14px"><div style="text-align:center;font-family:var(--poppins);font-weight:700;color:var(--navy,#1c244b);text-transform:uppercase;letter-spacing:1.5px;font-size:14px;margin-bottom:18px">Avec la participation de</div><div style="display:flex;flex-wrap:wrap;gap:22px;justify-content:center;align-items:center">'+a.partenaires.map(function(p){var logo=p.logo?'<img src="'+WCA.esc(p.logo)+'" alt="'+WCA.esc(p.nom)+'" style="max-height:66px;max-width:150px;object-fit:contain;display:block">':'<span style="font-weight:700;color:var(--navy,#1c244b)">'+WCA.esc(p.nom)+'</span>';return p.site_internet?'<a href="'+WCA.esc(p.site_internet)+'" target="_blank" rel="noopener" title="'+WCA.esc(p.nom)+'">'+logo+'</a>':'<span title="'+WCA.esc(p.nom)+'">'+logo+'</span>';}).join('')+'</div></div>';

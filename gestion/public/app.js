@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.1'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '2.2'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1967,22 +1967,15 @@ async function renderAffichageTab(){
     + `<details class="aff-sec" style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--card)">
         <summary style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px">
           <span style="font-size:22px;line-height:1">📰</span>
-          <span style="flex:1;min-width:0"><span style="font-weight:800;color:var(--navy)">Blog</span><span class="mini" style="display:block">Image de fond (hero) en haut de la page Blog</span></span>
+          <span style="flex:1;min-width:0"><span style="font-weight:800;color:var(--navy)">Blog</span><span class="mini" style="display:block">Tous les réglages du blog (affichage, widgets, bannières, image de fond)</span></span>
           <span class="aff-chev">▸</span>
         </summary>
         <div style="padding:0 14px 14px">
-          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-            <div id="aff-blog-prev" style="width:260px;height:64px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${blogHero?`background-image:url('${blogHero}')`:''}"></div>
-            <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="aff-blog-file" accept="image/*" style="display:none"></label>
-            <button type="button" class="btn small red" id="aff-blog-clear">${icon('trash')} Retirer</button>
-            <button type="button" class="btn" id="aff-blog-save">Enregistrer</button>
-          </div>
-          <p class="mini" style="margin-top:8px">Image large/paysage (ex. bannière néon). Le menu s'affiche par-dessus, en haut à droite.</p>
+          <p class="mini" style="margin-bottom:10px">Disposition (grille / sidebar), widgets, encart pub, bannière des articles et image de fond du hero — tout est regroupé ici.</p>
+          <button type="button" class="btn js-blog-cfg">${icon('edit')} Configurer le blog</button>
         </div>
       </details>`;
-  $('#aff-blog-file')?.addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,d=>{ blogHero=d; $('#aff-blog-prev').style.backgroundImage=`url('${d}')`; }); });
-  $('#aff-blog-clear')?.addEventListener('click',()=>{ blogHero=''; $('#aff-blog-prev').style.backgroundImage=''; });
-  $('#aff-blog-save')?.addEventListener('click',async()=>{ try{ await api('/api/site',{method:'PUT',body:JSON.stringify({blog_hero:blogHero})}); toast('Image du blog enregistrée'); }catch(e){ toast(e.message); } });
+  $('.js-blog-cfg')?.addEventListener('click',()=>blogDisplayModal());
   $$('.js-vis').forEach(t=>t.addEventListener('click',async()=>{
     const next=!t.classList.contains('on');
     try{ await api('/api/'+t.dataset.coll+'/'+t.dataset.id,{method:'PUT',body:JSON.stringify({visible_site:next})}); t.classList.toggle('on',next); t.classList.toggle('off',!next); toast(next?'Publié sur le site':'Masqué'); }catch(e){ toast(e.message); }
@@ -2035,9 +2028,8 @@ async function renderModulesTab(){
   body.innerHTML = `<p class="help" style="margin-bottom:10px">Chaque module est une section de la page d'accueil du site. Tu modifies le contenu ici ; tant qu'un module n'est pas configuré, le site garde son contenu actuel (aucun risque).</p>`
     + card('hero','🎬 Hero (haut de page)','Grand titre, texte d’accroche, image, bouton.', h.titre?('Titre : '+esc(h.titre)):'Non configuré.')
     + card('photos','🖼 Photos asso',"La galerie « L’association en quelques images… ».", ph.length?(ph.length+' photo(s)'):'Aucune photo.')
-    + card('equipe','👥 L’équipe',"La section « La fine équipe » (photo, nom, description).", eq.length?(eq.length+' membre(s)'):'Aucun membre.')
-    + card('blog','📰 Blog (affichage)','Mode grille ou sidebar, position, widgets, encart pub.', 'Mode : '+(bl.mode==='sidebar'?('Sidebar '+(bl.sidebar_side==='left'?'gauche':'droite')):'Grille'));
-  $$('.js-mod-edit').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.k; if(k==='hero') heroModal(); else if(k==='photos') photosModal(); else if(k==='equipe') equipeModal(); else if(k==='blog') blogDisplayModal(); }));
+    + card('equipe','👥 L’équipe',"La section « La fine équipe » (photo, nom, description).", eq.length?(eq.length+' membre(s)'):'Aucun membre.');
+  $$('.js-mod-edit').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.k; if(k==='hero') heroModal(); else if(k==='photos') photosModal(); else if(k==='equipe') equipeModal(); }));
 }
 
 function heroModal(){
@@ -2110,11 +2102,19 @@ function equipeModal(){
   $('#eq-save').addEventListener('click',async()=>{ try{ await api('/api/site',{method:'PUT',body:JSON.stringify({equipe:team})}); closeModal(); toast('Équipe enregistrée'); renderModulesTab(); }catch(e){ toast(e.message); } });
 }
 
-function blogDisplayModal(){
+async function blogDisplayModal(){
+  SITE_CONTENT = await api('/api/site').catch(()=>SITE_CONTENT||{});
   const b=SITE_CONTENT.blog||{}; const w=b.widgets||{}; const pub=b.pub||{};
-  let mode=b.mode||'grid'; let side=b.sidebar_side||'right'; let pubType=pub.type||'image'; let pubMedia=pub.media||''; let bannerG=b.banner||'';
+  let mode=b.mode||'grid'; let side=b.sidebar_side||'right'; let pubType=pub.type||'image'; let pubMedia=pub.media||''; let bannerG=b.banner||''; let heroImg=SITE_CONTENT.blog_hero||'';
   const ck='display:flex;align-items:center;gap:8px;margin:7px 0;cursor:pointer;font-weight:600';
-  openModal(`<h3>Blog — affichage</h3>
+  openModal(`<h3>Blog — réglages</h3>
+    <div class="field"><span>Image de fond du hero (grande bannière en haut de la page Blog)</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <div id="bl-hero-prev" style="width:220px;height:60px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${heroImg?`background-image:url('${heroImg}')`:''}"></div>
+        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="bl-hero-file" accept="image/*" style="display:none"></label>
+        <button type="button" class="btn small red" id="bl-hero-clear">${icon('trash')} Retirer</button>
+      </div>
+    </div>
     <div class="field"><span>Disposition de la page blog</span>
       <div class="seg" id="bl-mode" style="width:100%;margin-top:4px">
         <button class="${mode==='grid'?'active':''}" data-m="grid" style="flex:1">▦ Grille</button>
@@ -2154,10 +2154,12 @@ function blogDisplayModal(){
   $('#bl-pub-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ pubMedia=data; $('#bl-pub-prev').style.backgroundImage=`url('${data}')`; },150*1024); });
   $('#bl-ban-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ bannerG=data; $('#bl-ban-prev').style.backgroundImage=`url('${data}')`; }); });
   $('#bl-ban-clear').addEventListener('click',()=>{ bannerG=''; $('#bl-ban-prev').style.backgroundImage=''; });
+  $('#bl-hero-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ heroImg=data; $('#bl-hero-prev').style.backgroundImage=`url('${data}')`; }); });
+  $('#bl-hero-clear').addEventListener('click',()=>{ heroImg=''; $('#bl-hero-prev').style.backgroundImage=''; });
   $('#bl-save').addEventListener('click',async()=>{
     if(pubType==='youtube') pubMedia=$('#bl-pub-ytid').value.trim();
     const blog={ mode, sidebar_side:side, banner:bannerG, widgets:{ search:$('#bl-w-search').checked, pub:$('#bl-w-pub').checked, ventes:$('#bl-w-ventes').checked }, pub:{ type:pubType, media:pubMedia, link:$('#bl-pub-link').value.trim(), titre:$('#bl-pub-titre').value.trim() } };
-    try{ await api('/api/site',{method:'PUT',body:JSON.stringify({blog})}); closeModal(); toast('Affichage du blog enregistré'); renderModulesTab(); }catch(e){ toast(e.message); }
+    try{ await api('/api/site',{method:'PUT',body:JSON.stringify({blog, blog_hero:heroImg})}); closeModal(); toast('Réglages du blog enregistrés'); renderSiteInternet(); }catch(e){ toast(e.message); }
   });
 }
 
