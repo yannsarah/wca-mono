@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.2 — 14 juin 2026**
+## Médiathèque façon WordPress
+- **Recherche** par nom et **filtre par dossier** dans la médiathèque.
+- Chaque image affiche son **nom**, sa **taille** et son **dossier**, avec des boutons pour **renommer**, **ranger dans un dossier** et **supprimer**.
+- Nouveau bouton **« Importer l'existant »** (admin) : récupère d'un coup toutes les images déjà utilisées (matériel, articles, accueil, partenaires, équipe, événements, projets…) et les transforme en fichiers réutilisables, rangés dans le dossier **Importées**.
+
+---
+
 **Version 2.8.1 — 14 juin 2026**
 ## Médiathèque branchée partout
 - Tous les boutons **« Choisir une image »** (matériel, articles, hero, équipe, partenaires, événements, projets, vitrines, galerie, blog) ouvrent désormais la **médiathèque** : on choisit une image déjà téléversée **ou** on en ajoute une nouvelle depuis l'ordinateur (elle rejoint la médiathèque, réutilisable ensuite).

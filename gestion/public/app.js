@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.1'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.2'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1853,23 +1853,46 @@ async function loadMedias(){ try{ MEDIAS_CACHE=await api('/api/medias'); }catch{
 // Bouton « Choisir une image » qui ouvre la médiathèque (au lieu du sélecteur de fichier local).
 function mediaBtn(id,label){ return `<button type="button" class="btn small grey" id="${id}">${icon('plus')} ${label||'Choisir une image'}</button>`; }
 function wireMedia(btnId,onPick){ const b=document.getElementById(btnId); if(b) b.addEventListener('click',()=>mediaPicker(onPick)); }
+function fmtSize(b){ if(!b) return ''; return b>=1048576?(b/1048576).toFixed(1)+' Mo':Math.round(b/1024)+' Ko'; }
 function mediaPicker(onPick){
+  let q='', folder='';
   openModal(`<h3>Médiathèque</h3>
-    <p class="help" style="margin-bottom:10px">${onPick?'Clique sur une image pour la choisir.':'Gère ici tes images réutilisables.'} Ajoute des images (réutilisables partout dans la gestion).</p>
-    <label class="btn" style="cursor:pointer;display:inline-block;margin-bottom:12px">${icon('plus')} Ajouter des images<input type="file" id="med-add" accept="image/*" multiple style="display:none"></label>
-    <div id="med-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:52vh;overflow:auto"><span class="mini">Chargement…</span></div>
+    <p class="help" style="margin:0 0 10px">${onPick?'Clique sur une image pour la choisir, ou ajoutes-en une nouvelle.':'Gère tes images réutilisables.'}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input id="med-q" placeholder="🔍 Rechercher…" style="flex:1;min-width:150px">
+      <select id="med-folder" style="width:auto"></select>
+      <label class="btn" style="cursor:pointer">${icon('plus')} Ajouter<input type="file" id="med-add" accept="image/*" multiple style="display:none"></label>
+      ${isAdminUser()?`<button type="button" class="btn grey" id="med-migrate" title="Importer les images déjà utilisées dans le site/la gestion">${icon('download')} Importer l'existant</button>`:''}
+    </div>
+    <div id="med-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-height:50vh;overflow:auto"><span class="mini">Chargement…</span></div>
     <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Fermer</button></div>`);
+  function folders(){ const s=new Set(); MEDIAS_CACHE.forEach(m=>{ if(m.folder) s.add(m.folder); }); return [...s].sort(); }
+  function drawFolders(){ const sel=$('#med-folder'); if(!sel) return; sel.innerHTML='<option value="">Tous les dossiers</option>'+folders().map(f=>`<option value="${esc(f)}" ${folder===f?'selected':''}>${esc(f)}</option>`).join(''); }
   function draw(){
     const g=$('#med-grid'); if(!g) return;
-    g.innerHTML = MEDIAS_CACHE.length ? MEDIAS_CACHE.map(m=>`<div style="position:relative">
-        <img src="${m.url}" data-url="${esc(m.url)}" class="js-med-pick" title="${onPick?'Choisir':''}" style="width:100%;height:92px;object-fit:cover;border-radius:8px;${onPick?'cursor:pointer;':''}border:1px solid var(--line)">
-        <button class="js-med-del" data-id="${m.id}" title="Supprimer" style="position:absolute;top:3px;right:3px;background:#e23b3b;color:#fff;border:0;border-radius:5px;width:22px;height:22px;cursor:pointer;line-height:1">×</button>
-      </div>`).join('') : '<span class="mini" style="grid-column:1/-1">Médiathèque vide — ajoute ta première image ci-dessus.</span>';
+    const list=MEDIAS_CACHE.filter(m=>(!q||(m.name||'').toLowerCase().includes(q.toLowerCase()))&&(!folder||m.folder===folder));
+    g.innerHTML = list.length ? list.map(m=>`<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)">
+        <img src="${m.url}" data-url="${esc(m.url)}" class="js-med-pick" title="${onPick?'Choisir':''}" style="width:100%;height:88px;object-fit:cover;display:block;${onPick?'cursor:pointer':''}">
+        <div style="padding:5px 7px">
+          <div class="mini" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(m.name)}">${esc(m.name)}</div>
+          <div class="mini" style="color:var(--faint)">${fmtSize(m.size)}${m.folder?(' · '+esc(m.folder)):''}</div>
+          <div style="display:flex;gap:3px;margin-top:3px">
+            <button class="iconbtn ghost js-med-ren" data-id="${m.id}" title="Renommer" style="width:26px;height:26px">${icon('edit')}</button>
+            <button class="iconbtn ghost js-med-fold" data-id="${m.id}" title="Ranger dans un dossier" style="width:26px;height:26px">📁</button>
+            <button class="iconbtn ghost js-med-del" data-id="${m.id}" title="Supprimer" style="width:26px;height:26px;color:#e23b3b">${icon('trash')}</button>
+          </div>
+        </div>
+      </div>`).join('') : '<span class="mini" style="grid-column:1/-1">Aucune image. Clique « Ajouter » pour en téléverser.</span>';
     if(onPick) $$('.js-med-pick').forEach(im=>im.addEventListener('click',()=>{ onPick(im.dataset.url); closeModal(); }));
-    $$('.js-med-del').forEach(b=>b.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.confirm('Supprimer cette image de la médiathèque ?')) return; try{ await api('/api/medias/'+b.dataset.id,{method:'DELETE'}); await loadMedias(); draw(); }catch(err){ toast(err.message); } }));
+    $$('.js-med-ren').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Nom de l’image :', m?m.name:''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({name:nv})}); await loadMedias(); draw(); }catch(e){ toast(e.message); } }));
+    $$('.js-med-fold').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Dossier (laisser vide pour aucun) :', m?(m.folder||''):''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({folder:nv})}); await loadMedias(); drawFolders(); draw(); }catch(e){ toast(e.message); } }));
+    $$('.js-med-del').forEach(b=>b.addEventListener('click',async()=>{ if(!window.confirm('Supprimer cette image de la médiathèque ?')) return; try{ await api('/api/medias/'+b.dataset.id,{method:'DELETE'}); await loadMedias(); drawFolders(); draw(); }catch(e){ toast(e.message); } }));
   }
-  loadMedias().then(draw);
-  $('#med-add').addEventListener('change',ev=>{ const files=[...ev.target.files]; if(!files.length) return; ev.target.value=''; toast('Ajout en cours…'); let done=0; files.forEach(f=>compressImage(f,async data=>{ try{ await api('/api/medias',{method:'POST',body:JSON.stringify({data,name:f.name})}); }catch(err){ toast(err.message); } if(++done===files.length){ await loadMedias(); draw(); toast('Ajouté à la médiathèque'); } },1600,300*1024)); });
+  loadMedias().then(()=>{ drawFolders(); draw(); });
+  $('#med-q').addEventListener('input',()=>{ q=$('#med-q').value; draw(); });
+  $('#med-folder').addEventListener('change',()=>{ folder=$('#med-folder').value; draw(); });
+  $('#med-add').addEventListener('change',ev=>{ const files=[...ev.target.files]; if(!files.length) return; ev.target.value=''; toast('Ajout en cours…'); let done=0; files.forEach(f=>compressImage(f,async data=>{ try{ await api('/api/medias',{method:'POST',body:JSON.stringify({data,name:f.name})}); }catch(e){ toast(e.message); } if(++done===files.length){ await loadMedias(); drawFolders(); draw(); toast('Ajouté à la médiathèque'); } },1600,300*1024)); });
+  $('#med-migrate')?.addEventListener('click',async()=>{ if(!window.confirm('Importer dans la médiathèque toutes les images déjà utilisées (matériel, articles, accueil, partenaires…) ? Elles deviennent des fichiers réutilisables.')) return; toast('Importation en cours…'); try{ const r=await api('/api/medias/migrate',{method:'POST',body:'{}'}); await loadMedias(); drawFolders(); draw(); toast(r.migrated+' image(s) importée(s)'); }catch(e){ toast(e.message); } });
 }
 
 let SITE_TAB = 'blog';

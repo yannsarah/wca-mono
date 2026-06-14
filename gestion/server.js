@@ -919,22 +919,61 @@ function saveMediaFile(dataUrl, origName) {
   fs.writeFileSync(path.join(MEDIA_DIR, file), Buffer.from(m[2], 'base64'));
   return { id, file };
 }
+// Convertit une image en data: (champ d'un objet) en fichier de médiathèque, et remplace par l'URL.
+function migrateImageField(obj, key, req, label) {
+  if (obj && typeof obj[key] === 'string' && obj[key].startsWith('data:')) {
+    try {
+      const r = saveMediaFile(obj[key], label || key);
+      let size = 0; try { size = fs.statSync(path.join(MEDIA_DIR, r.file)).size; } catch {}
+      db().medias.push({ id: r.id, file: r.file, url: mediaUrl(req, r.file), name: label || r.file, folder: 'Importées', size, date: new Date().toISOString() });
+      obj[key] = db().medias[db().medias.length - 1].url;
+      return 1;
+    } catch { return 0; }
+  }
+  return 0;
+}
 add('GET', '/api/medias', (req, res) => {
   send(res, 200, [...(db().medias || [])].sort((a, b) => (b.date || '').localeCompare(a.date || '')));
 });
 add('POST', '/api/medias', (req, res, p, body, query, user) => {
   try {
     const r = saveMediaFile(body.data, body.name);
-    const media = { id: r.id, file: r.file, url: mediaUrl(req, r.file), name: body.name || r.file, date: new Date().toISOString() };
+    let size = 0; try { size = fs.statSync(path.join(MEDIA_DIR, r.file)).size; } catch {}
+    const media = { id: r.id, file: r.file, url: mediaUrl(req, r.file), name: body.name || r.file, folder: '', size, date: new Date().toISOString() };
     db().medias.push(media); logActivity(user, 'create', 'medias', media.name); save();
     send(res, 200, media);
   } catch (e) { send(res, 400, { error: e.message }); }
+});
+add('PUT', '/api/medias/:id', (req, res, p, body, query, user) => {
+  const m = (db().medias || []).find(x => x.id === +p.id);
+  if (!m) return send(res, 404, { error: 'Média introuvable.' });
+  if (body.name !== undefined) m.name = String(body.name).slice(0, 120);
+  if (body.folder !== undefined) m.folder = String(body.folder).slice(0, 60);
+  save(); send(res, 200, m);
 });
 add('DELETE', '/api/medias/:id', (req, res, p, body, query, user) => {
   const d = db(); const m = (d.medias || []).find(x => x.id === +p.id);
   if (m) { try { fs.unlinkSync(path.join(MEDIA_DIR, m.file)); } catch {} }
   d.medias = (d.medias || []).filter(x => x.id !== +p.id);
   logActivity(user, 'delete', 'medias', m ? m.name : ''); save(); send(res, 200, { ok: true });
+});
+// Importe (migre) toutes les images encore stockées « en dur » vers la médiathèque.
+add('POST', '/api/medias/migrate', (req, res, p, body, query, user) => {
+  if (roleNiveau(user && user.role) !== 'admin') return send(res, 403, { error: 'Réservé aux administrateurs.' });
+  const d = db(); let n = 0;
+  (d.materiel || []).forEach(m => n += migrateImageField(m, 'photo', req, m.denomination));
+  (d.evenements || []).forEach(e => { n += migrateImageField(e, 'photo', req, e.nom); n += migrateImageField(e, 'affiche', req, (e.nom || '') + ' affiche'); });
+  (d.projets || []).forEach(x => n += migrateImageField(x, 'photo', req, x.nom));
+  (d.partenaires || []).forEach(x => n += migrateImageField(x, 'logo', req, (x.nom || '') + ' logo'));
+  (d.articles || []).forEach(a => { n += migrateImageField(a, 'image', req, a.titre); n += migrateImageField(a, 'banniere', req, (a.titre || '') + ' bannière'); });
+  (d.users || []).forEach(u => n += migrateImageField(u, 'photo', req, (u.prenom || u.login || 'Membre') + ' avatar'));
+  const s = (d.settings && d.settings.site) || {};
+  if (s.hero) n += migrateImageField(s.hero, 'image', req, 'Hero accueil');
+  if (Array.isArray(s.photos)) s.photos.forEach((ph, i) => n += migrateImageField(ph, 'image', req, 'Galerie ' + (i + 1)));
+  if (Array.isArray(s.equipe)) s.equipe.forEach(m => n += migrateImageField(m, 'photo', req, m.nom || 'Membre'));
+  if (s.blog) { n += migrateImageField(s.blog, 'banner', req, 'Bannière blog'); if (s.blog.pub) n += migrateImageField(s.blog.pub, 'media', req, 'Encart pub'); }
+  n += migrateImageField(s, 'blog_hero', req, 'Hero blog');
+  save(); send(res, 200, { migrated: n });
 });
 
 /* =============================== PROJETS WIP =============================== */
