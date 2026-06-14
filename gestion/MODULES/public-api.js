@@ -173,6 +173,7 @@ export function handlePublic(req, res, pathname, searchParams) {
       photos: Array.isArray(s.photos) ? s.photos : [],
       equipe: Array.isArray(s.equipe) ? s.equipe : [],
       blog: s.blog || null,
+      blog_hero: s.blog_hero || '',
     }), true;
   }
 

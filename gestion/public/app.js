@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.0'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '2.1'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1936,10 +1936,11 @@ function articleModal(a){
 
 async function renderAffichageTab(){
   const body=$('#si-body');
-  const [evs,mats,projs,parts]=await Promise.all([
+  const [evs,mats,projs,parts,siteC]=await Promise.all([
     api('/api/evenements').catch(()=>[]), api('/api/materiel').catch(()=>[]),
-    api('/api/projets').catch(()=>[]), api('/api/partenaires').catch(()=>[])
+    api('/api/projets').catch(()=>[]), api('/api/partenaires').catch(()=>[]), api('/api/site').catch(()=>({}))
   ]);
+  let blogHero = siteC.blog_hero||'';
   function section(emo, title, desc, list, coll, nameKey, optIn){
     const n=(list||[]).length;
     const rows=(list||[]).map(x=>{
@@ -1962,7 +1963,26 @@ async function renderAffichageTab(){
     + section('📅','Événements',"Affichés sur l'agenda du site",evs,'evenements','nom',false)
     + section('🕹','Machines (inventaire)','Vitrine « Nos Machines » — masquées par défaut',mats,'materiel','denomination',true)
     + section('📌','Projets','Affichés sur la page Projets',projs,'projets','nom',false)
-    + section('🤝','Partenaires',"Encart partenaires du site",parts,'partenaires','nom',false);
+    + section('🤝','Partenaires',"Encart partenaires du site",parts,'partenaires','nom',false)
+    + `<details class="aff-sec" style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--card)">
+        <summary style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px">
+          <span style="font-size:22px;line-height:1">📰</span>
+          <span style="flex:1;min-width:0"><span style="font-weight:800;color:var(--navy)">Blog</span><span class="mini" style="display:block">Image de fond (hero) en haut de la page Blog</span></span>
+          <span class="aff-chev">▸</span>
+        </summary>
+        <div style="padding:0 14px 14px">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div id="aff-blog-prev" style="width:260px;height:64px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${blogHero?`background-image:url('${blogHero}')`:''}"></div>
+            <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="aff-blog-file" accept="image/*" style="display:none"></label>
+            <button type="button" class="btn small red" id="aff-blog-clear">${icon('trash')} Retirer</button>
+            <button type="button" class="btn" id="aff-blog-save">Enregistrer</button>
+          </div>
+          <p class="mini" style="margin-top:8px">Image large/paysage (ex. bannière néon). Le menu s'affiche par-dessus, en haut à droite.</p>
+        </div>
+      </details>`;
+  $('#aff-blog-file')?.addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,d=>{ blogHero=d; $('#aff-blog-prev').style.backgroundImage=`url('${d}')`; }); });
+  $('#aff-blog-clear')?.addEventListener('click',()=>{ blogHero=''; $('#aff-blog-prev').style.backgroundImage=''; });
+  $('#aff-blog-save')?.addEventListener('click',async()=>{ try{ await api('/api/site',{method:'PUT',body:JSON.stringify({blog_hero:blogHero})}); toast('Image du blog enregistrée'); }catch(e){ toast(e.message); } });
   $$('.js-vis').forEach(t=>t.addEventListener('click',async()=>{
     const next=!t.classList.contains('on');
     try{ await api('/api/'+t.dataset.coll+'/'+t.dataset.id,{method:'PUT',body:JSON.stringify({visible_site:next})}); t.classList.toggle('on',next); t.classList.toggle('off',!next); toast(next?'Publié sur le site':'Masqué'); }catch(e){ toast(e.message); }

@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.1 — 14 juin 2026**
+## Page Blog : nouveau Hero
+- Le haut de la page Blog devient un **hero en image** (au lieu du bandeau noir) : grande bannière de fond, **logo central retiré**, **menu hamburger déplacé à droite** (sur cette page uniquement) pour ne pas masquer le logo de la bannière.
+- L'**image de fond du hero** se choisit dans **Site internet → Affichage du site → Blog** (nouvelle ligne). Tant qu'aucune image n'est mise, un fond noir « Le Blog » s'affiche.
+
+---
+
 **Version 2.0 — 14 juin 2026**
 ## Finitions blog
 - **Bannière** de l'article réduite en **bandeau** (hauteur raisonnable, rognée proprement) au lieu de la pleine hauteur — moins imposant.
