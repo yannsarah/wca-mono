@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.6'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.7'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1855,51 +1855,101 @@ function mediaBtn(id,label){ return `<button type="button" class="btn small grey
 function wireMedia(btnId,onPick){ const b=document.getElementById(btnId); if(b) b.addEventListener('click',()=>mediaPicker(onPick)); }
 function fmtSize(b){ if(!b) return ''; return b>=1048576?(b/1048576).toFixed(1)+' Mo':Math.round(b/1024)+' Ko'; }
 function mediaPicker(onPick){
-  let q='', folder='';
+  let q='', folder='', tab='all';
   // Overlay indépendant : la médiathèque se superpose sans détruire la fenêtre en dessous (ex. « Modifier le matériel »).
   const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1200';
   ov.innerHTML=`<div class="modal modal-wide"><h3>Médiathèque</h3>
     <p class="help" style="margin:0 0 10px">${onPick?'Clique sur une image pour la choisir, ou ajoutes-en une nouvelle.':'Gère tes images réutilisables.'}</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <input class="med-q" placeholder="🔍 Rechercher…" style="flex:1;min-width:150px">
-      <select class="med-folder" style="width:auto"></select>
-      <label class="btn" style="cursor:pointer">${icon('plus')} Ajouter<input type="file" class="med-add" accept="image/*" multiple style="display:none"></label>
-      ${isAdminUser()?`<button type="button" class="btn grey med-migrate" title="Importer les images déjà utilisées dans le site/la gestion">${icon('download')} Importer l'existant</button>`:''}
+    <div class="tabs-row med-tabs" style="margin-bottom:10px">
+      <button type="button" data-t="all" class="active">🖼 Tout voir</button>
+      <button type="button" data-t="folders">📁 Par dossier</button>
+      ${isAdminUser()?`<button type="button" data-t="clean">🧹 Nettoyage</button>`:''}
     </div>
-    <div class="med-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-height:50vh;overflow:auto"><span class="mini">Chargement…</span></div>
+    <div class="med-controls" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"></div>
+    <div class="med-body" style="max-height:52vh;overflow:auto"><span class="mini">Chargement…</span></div>
     <div class="buttons" style="margin-top:12px"><button type="button" class="btn grey med-close">Fermer</button></div></div>`;
   document.body.appendChild(ov);
   const sel=s=>ov.querySelector(s), selAll=s=>[...ov.querySelectorAll(s)];
   const close=()=>{ ov.remove(); };
   ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
   sel('.med-close').addEventListener('click',close);
-  function folders(){ const s=new Set(); MEDIAS_CACHE.forEach(m=>{ if(m.folder) s.add(m.folder); }); return [...s].sort(); }
-  function drawFolders(){ const fs=sel('.med-folder'); if(!fs) return; fs.innerHTML='<option value="">Tous les dossiers</option>'+folders().map(f=>`<option value="${esc(f)}" ${folder===f?'selected':''}>${esc(f)}</option>`).join(''); }
-  function draw(){
-    const g=sel('.med-grid'); if(!g) return;
-    const list=MEDIAS_CACHE.filter(m=>(!q||(m.name||'').toLowerCase().includes(q.toLowerCase()))&&(!folder||m.folder===folder));
-    g.innerHTML = list.length ? list.map(m=>`<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)">
-        <img src="${m.url}" data-url="${esc(m.url)}" class="js-med-pick" title="${onPick?'Choisir':''}" style="width:100%;height:88px;object-fit:cover;display:block;${onPick?'cursor:pointer':''}">
-        <div style="padding:5px 7px">
-          <div class="mini" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(m.name)}">${esc(m.name)}</div>
-          <div class="mini" style="color:var(--faint)">${fmtSize(m.size)}${m.folder?(' · '+esc(m.folder)):''}</div>
-          <div style="display:flex;gap:3px;margin-top:3px">
-            <button class="iconbtn ghost js-med-ren" data-id="${m.id}" title="Renommer" style="width:26px;height:26px">${icon('edit')}</button>
-            <button class="iconbtn ghost js-med-fold" data-id="${m.id}" title="Ranger dans un dossier" style="width:26px;height:26px">📁</button>
-            <button class="iconbtn ghost js-med-del" data-id="${m.id}" title="Supprimer" style="width:26px;height:26px;color:#e23b3b">${icon('trash')}</button>
-          </div>
+  function folders(){ const s=new Set(); MEDIAS_CACHE.forEach(m=>{ if(m.folder) s.add(m.folder); }); return [...s].sort((a,b)=>a.localeCompare(b)); }
+  const gridStyle='display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px';
+  function cardHtml(m){ return `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)">
+      <img src="${m.url}" data-url="${esc(m.url)}" class="js-med-pick" title="${onPick?'Choisir':''}" style="width:100%;height:88px;object-fit:cover;display:block;${onPick?'cursor:pointer':''}">
+      <div style="padding:5px 7px">
+        <div class="mini" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(m.name)}">${esc(m.name)}</div>
+        <div class="mini" style="color:var(--faint)">${fmtSize(m.size)}${m.folder?(' · '+esc(m.folder)):''}</div>
+        <div style="display:flex;gap:3px;margin-top:3px">
+          <button class="iconbtn ghost js-med-ren" data-id="${m.id}" title="Renommer" style="width:26px;height:26px">${icon('edit')}</button>
+          <button class="iconbtn ghost js-med-fold" data-id="${m.id}" title="Ranger dans un dossier" style="width:26px;height:26px">📁</button>
+          <button class="iconbtn ghost js-med-del" data-id="${m.id}" title="Supprimer" style="width:26px;height:26px;color:#e23b3b">${icon('trash')}</button>
         </div>
-      </div>`).join('') : '<span class="mini" style="grid-column:1/-1">Aucune image. Clique « Ajouter » pour en téléverser.</span>';
+      </div>
+    </div>`; }
+  function wireCards(){
     if(onPick) selAll('.js-med-pick').forEach(im=>im.addEventListener('click',()=>{ onPick(im.dataset.url); close(); }));
-    selAll('.js-med-ren').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Nom de l’image :', m?m.name:''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({name:nv})}); await loadMedias(); draw(); }catch(e){ toast(e.message); } }));
-    selAll('.js-med-fold').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Dossier (laisser vide pour aucun) :', m?(m.folder||''):''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({folder:nv})}); await loadMedias(); drawFolders(); draw(); }catch(e){ toast(e.message); } }));
-    selAll('.js-med-del').forEach(b=>b.addEventListener('click',async()=>{ if(!window.confirm('Supprimer cette image de la médiathèque ?')) return; try{ await api('/api/medias/'+b.dataset.id,{method:'DELETE'}); await loadMedias(); drawFolders(); draw(); }catch(e){ toast(e.message); } }));
+    selAll('.js-med-ren').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Nom de l’image :', m?m.name:''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({name:nv})}); await loadMedias(); render(); }catch(e){ toast(e.message); } }));
+    selAll('.js-med-fold').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Dossier (laisser vide pour aucun) :', m?(m.folder||''):''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({folder:nv})}); await loadMedias(); render(); }catch(e){ toast(e.message); } }));
+    selAll('.js-med-del').forEach(b=>b.addEventListener('click',async()=>{ if(!window.confirm('Supprimer cette image de la médiathèque ?')) return; try{ await api('/api/medias/'+b.dataset.id,{method:'DELETE'}); await loadMedias(); render(); }catch(e){ toast(e.message); } }));
   }
-  loadMedias().then(()=>{ drawFolders(); draw(); });
-  sel('.med-q').addEventListener('input',e=>{ q=e.target.value; draw(); });
-  sel('.med-folder').addEventListener('change',e=>{ folder=e.target.value; draw(); });
-  sel('.med-add').addEventListener('change',ev=>{ const files=[...ev.target.files]; if(!files.length) return; ev.target.value=''; toast('Ajout en cours…'); let done=0; files.forEach(f=>compressImage(f,async data=>{ try{ await api('/api/medias',{method:'POST',body:JSON.stringify({data,name:f.name})}); }catch(e){ toast(e.message); } if(++done===files.length){ await loadMedias(); drawFolders(); draw(); toast('Ajouté à la médiathèque'); } },1600,300*1024)); });
-  sel('.med-migrate')?.addEventListener('click',async()=>{ if(!window.confirm('Importer dans la médiathèque toutes les images déjà utilisées (matériel, articles, accueil, partenaires…) ? Elles deviennent des fichiers réutilisables.')) return; toast('Importation en cours…'); try{ const r=await api('/api/medias/migrate',{method:'POST',body:'{}'}); await loadMedias(); drawFolders(); draw(); toast(r.migrated+' image(s) importée(s)'); }catch(e){ toast(e.message); } });
+  function addBtns(){ return `<label class="btn" style="cursor:pointer">${icon('plus')} Ajouter<input type="file" class="med-add" accept="image/*" multiple style="display:none"></label>
+      ${isAdminUser()?`<button type="button" class="btn grey med-migrate" title="Importer les images déjà utilisées dans le site/la gestion">${icon('download')} Importer l'existant</button>`:''}`; }
+  function wireControls(){
+    sel('.med-q')?.addEventListener('input',e=>{ q=e.target.value; renderBody(); });
+    sel('.med-folder')?.addEventListener('change',e=>{ folder=e.target.value; renderBody(); });
+    sel('.med-add')?.addEventListener('change',ev=>{ const files=[...ev.target.files]; if(!files.length) return; ev.target.value=''; toast('Ajout en cours…'); let done=0; files.forEach(f=>compressImage(f,async data=>{ try{ await api('/api/medias',{method:'POST',body:JSON.stringify({data,name:f.name})}); }catch(e){ toast(e.message); } if(++done===files.length){ await loadMedias(); render(); toast('Ajouté à la médiathèque'); } },1600,300*1024)); });
+    sel('.med-migrate')?.addEventListener('click',async()=>{ if(!window.confirm('Importer dans la médiathèque toutes les images déjà utilisées (matériel, articles, accueil, partenaires…) ? Elles deviennent des fichiers réutilisables.')) return; toast('Importation en cours…'); try{ const r=await api('/api/medias/migrate',{method:'POST',body:'{}'}); await loadMedias(); render(); toast(r.migrated+' image(s) importée(s)'); }catch(e){ toast(e.message); } });
+  }
+  function renderControls(){
+    const c=sel('.med-controls'); if(!c) return;
+    if(tab==='all') c.innerHTML=`<input class="med-q" placeholder="🔍 Rechercher…" value="${esc(q)}" style="flex:1;min-width:150px"><select class="med-folder" style="width:auto"><option value="">Tous les dossiers</option>${folders().map(f=>`<option value="${esc(f)}" ${folder===f?'selected':''}>${esc(f)}</option>`).join('')}</select>${addBtns()}`;
+    else if(tab==='folders') c.innerHTML=addBtns();
+    else c.innerHTML='';
+    wireControls();
+  }
+  function renderBody(){
+    const b=sel('.med-body'); if(!b) return;
+    if(tab==='clean'){ renderClean(b); return; }
+    if(tab==='folders'){
+      const groups=folders(); const noF=MEDIAS_CACHE.filter(m=>!m.folder);
+      let html=groups.map(f=>{ const items=MEDIAS_CACHE.filter(m=>m.folder===f); return `<div style="font-weight:800;color:var(--navy);margin:6px 0 8px">📁 ${esc(f)} <span class="mini" style="color:var(--faint)">(${items.length})</span></div><div style="${gridStyle};margin-bottom:14px">${items.map(cardHtml).join('')}</div>`; }).join('');
+      if(noF.length) html+=`<div style="font-weight:800;color:var(--navy);margin:6px 0 8px">🗂 Sans dossier <span class="mini" style="color:var(--faint)">(${noF.length})</span></div><div style="${gridStyle}">${noF.map(cardHtml).join('')}</div>`;
+      b.innerHTML = html || '<span class="mini">Aucune image.</span>';
+      wireCards(); return;
+    }
+    // tab 'all'
+    const list=MEDIAS_CACHE.filter(m=>(!q||(m.name||'').toLowerCase().includes(q.toLowerCase()))&&(!folder||m.folder===folder));
+    b.innerHTML = list.length ? `<div style="${gridStyle}">${list.map(cardHtml).join('')}</div>` : '<span class="mini">Aucune image. Clique « Ajouter » pour en téléverser.</span>';
+    wireCards();
+  }
+  async function renderClean(b){
+    b.innerHTML='<span class="mini">Analyse en cours…</span>';
+    let a; try{ a=await api('/api/medias/audit'); }catch(e){ b.innerHTML=`<span class="mini">${esc(e.message)}</span>`; return; }
+    const dupGroups=a.duplicates.length;
+    b.innerHTML=`<p class="help" style="margin:0 0 12px">Analyse en lecture seule de ta médiathèque (${a.total} image(s)).</p>
+      <div class="tablecard" style="padding:14px 16px;margin-bottom:10px;box-shadow:none;border:1px solid var(--line)">
+        <div style="font-weight:800;color:var(--navy)">🧩 Doublons identiques</div>
+        <p class="mini" style="margin:4px 0 10px">${a.dupFiles} fichier(s) en double sur ${dupGroups} image(s) unique(s). Fusionner = garder une copie, réaffecter les liens vers elle, supprimer les doublons. <strong>Sans risque visuel</strong> (images strictement identiques).</p>
+        ${a.dupFiles?`<button type="button" class="btn med-dedupe">🧹 Fusionner les ${a.dupFiles} doublon(s)</button>`:'<span class="mini">Aucun doublon. 👍</span>'}
+      </div>
+      <div class="tablecard" style="padding:14px 16px;margin-bottom:10px;box-shadow:none;border:1px solid var(--line)">
+        <div style="font-weight:800;color:var(--navy)">🖼 Images non utilisées</div>
+        <p class="mini" style="margin:4px 0 0">${a.unused.length} image(s) ne sont référencées nulle part. Affichées pour info — on ne les supprime pas automatiquement (par prudence). Tu peux les supprimer une par une dans « Tout voir » si tu es sûr.</p>
+      </div>
+      <div class="tablecard" style="padding:14px 16px;box-shadow:none;border:1px solid var(--line)">
+        <div style="font-weight:800;color:var(--navy)">⚠️ Fichiers manquants</div>
+        <p class="mini" style="margin:4px 0 0">${a.missing.length} entrée(s) pointent vers un fichier absent du serveur.${a.missing.length?' '+a.missing.map(m=>esc(m.name)).slice(0,8).join(', '):''}</p>
+      </div>`;
+    sel('.med-dedupe')?.addEventListener('click',async()=>{
+      if(!window.confirm('Fusionner les doublons identiques ?\n\nConseil : fais d’abord une sauvegarde (Administration › Sauvegarde). L’opération réaffecte les liens vers une seule copie puis supprime les doublons. Continuer ?')) return;
+      toast('Nettoyage en cours…');
+      try{ const r=await api('/api/medias/dedupe',{method:'POST',body:'{}'}); await loadMedias(); renderBody(); toast(`${r.merged} doublon(s) fusionné(s), ${r.reassigned} lien(s) réaffecté(s)`); }catch(e){ toast(e.message); }
+    });
+  }
+  function render(){ renderControls(); renderBody(); }
+  selAll('.med-tabs button').forEach(t=>t.addEventListener('click',()=>{ tab=t.dataset.t; selAll('.med-tabs button').forEach(x=>x.classList.toggle('active',x===t)); render(); }));
+  loadMedias().then(render);
 }
 
 /* ====== NORME DESIGN : bulles horizontales ouvrables (rubriques pliables) ======

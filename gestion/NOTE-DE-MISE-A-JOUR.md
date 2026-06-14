@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.7 — 14 juin 2026**
+## Médiathèque : onglets + nettoyage des doublons
+- Nouvelle **barre d'onglets** dans la médiathèque : **Tout voir** (vue actuelle, recherche + filtre dossier), **Par dossier** (images regroupées par dossier, classés par nom), et **Nettoyage** (admin).
+- Onglet **Nettoyage** : analyse en **lecture seule** (aucune modification tant qu'on ne clique pas). Il détecte les **doublons identiques** (mêmes octets), les **images non utilisées** et les **fichiers manquants**.
+- Bouton **« Fusionner les doublons »** : garde une seule copie, **réaffecte automatiquement les liens** vers elle (matériel, articles, accueil, partenaires… y compris à l'intérieur des articles) puis supprime les copies. **Sans risque visuel** : les images fusionnées sont strictement identiques. *(Un message conseille de faire une sauvegarde avant.)*
+
+---
+
 **Version 2.8.6 — 14 juin 2026**
 ## Utilisateurs : édition au clic + photo via médiathèque
 - Dans **Utilisateurs › Comptes**, on peut désormais **cliquer directement sur une ligne** pour modifier le compte (le crayon reste disponible).

@@ -976,6 +976,86 @@ add('POST', '/api/medias/migrate', (req, res, p, body, query, user) => {
   save(); send(res, 200, { migrated: n });
 });
 
+/* ---- Nettoyage médiathèque : références d'images dans toute la base ----
+   visit(getURL, setURL, isHTML) appelé pour chaque champ susceptible de contenir une URL d'image. */
+function walkImageRefs(d, visit) {
+  const f = (obj, key, html) => { if (obj && typeof obj === 'object') visit(() => obj[key], v => { obj[key] = v; }, !!html); };
+  (d.materiel || []).forEach(m => f(m, 'photo'));
+  (d.evenements || []).forEach(e => { f(e, 'photo'); f(e, 'affiche'); });
+  (d.projets || []).forEach(x => f(x, 'photo'));
+  (d.partenaires || []).forEach(x => f(x, 'logo'));
+  (d.articles || []).forEach(a => { f(a, 'image'); f(a, 'banniere'); f(a, 'contenu', true); });
+  (d.users || []).forEach(u => f(u, 'photo'));
+  const s = (d.settings && d.settings.site) || {};
+  if (s.hero) f(s.hero, 'image');
+  if (Array.isArray(s.photos)) s.photos.forEach(ph => f(ph, 'image'));
+  if (Array.isArray(s.equipe)) s.equipe.forEach(m => f(m, 'photo'));
+  if (s.blog) { f(s.blog, 'banner'); if (s.blog.pub) f(s.blog.pub, 'media'); }
+  f(s, 'blog_hero');
+  if (Array.isArray(s.icon_links)) s.icon_links.forEach(it => f(it, 'icon'));
+}
+// Compte combien de fois une URL est référencée (champs simples = 1, HTML = nb d'occurrences).
+function countRef(d, urlList) {
+  const counts = {}; urlList.forEach(u => counts[u] = 0);
+  walkImageRefs(d, (get, set, html) => {
+    const v = get(); if (typeof v !== 'string' || !v) return;
+    if (html) { urlList.forEach(u => { if (u && v.indexOf(u) >= 0) counts[u] += v.split(u).length - 1; }); }
+    else if (counts[v] !== undefined) counts[v]++;
+  });
+  return counts;
+}
+function mediaFileHash(file) { try { return crypto.createHash('sha1').update(fs.readFileSync(path.join(MEDIA_DIR, file))).digest('hex'); } catch { return null; }
+}
+// Analyse SANS rien modifier : doublons identiques, fichiers manquants, images non utilisées.
+add('GET', '/api/medias/audit', (req, res, p, body, query, user) => {
+  if (roleNiveau(user && user.role) !== 'admin') return send(res, 403, { error: 'Réservé aux administrateurs.' });
+  const d = db(); const meds = d.medias || [];
+  const urls = meds.map(m => m.url).filter(Boolean);
+  const refs = countRef(d, urls);
+  const byHash = {}; const missing = [];
+  meds.forEach(m => { const h = mediaFileHash(m.file); if (!h) { missing.push({ id: m.id, name: m.name, file: m.file }); return; } (byHash[h] = byHash[h] || []).push(m); });
+  const duplicates = [];
+  Object.values(byHash).forEach(group => {
+    if (group.length < 2) return;
+    const sorted = group.slice().sort((a, b) => (refs[b.url] || 0) - (refs[a.url] || 0) || a.id - b.id);
+    const keep = sorted[0];
+    duplicates.push({
+      keep: { id: keep.id, name: keep.name, url: keep.url, refs: refs[keep.url] || 0 },
+      dups: sorted.slice(1).map(m => ({ id: m.id, name: m.name, url: m.url, refs: refs[m.url] || 0 })),
+    });
+  });
+  const unused = meds.filter(m => (refs[m.url] || 0) === 0).map(m => ({ id: m.id, name: m.name, url: m.url }));
+  send(res, 200, { total: meds.length, duplicates, missing, unused, dupFiles: duplicates.reduce((n, g) => n + g.dups.length, 0) });
+});
+// Fusionne UNIQUEMENT les doublons identiques (mêmes octets) : réaffecte les liens puis supprime les copies.
+add('POST', '/api/medias/dedupe', (req, res, p, body, query, user) => {
+  if (roleNiveau(user && user.role) !== 'admin') return send(res, 403, { error: 'Réservé aux administrateurs.' });
+  const d = db(); const meds = d.medias || [];
+  const byHash = {};
+  meds.forEach(m => { const h = mediaFileHash(m.file); if (h) (byHash[h] = byHash[h] || []).push(m); });
+  const urls = meds.map(m => m.url).filter(Boolean);
+  const refs = countRef(d, urls);
+  const remap = {}; const toDelete = [];
+  Object.values(byHash).forEach(group => {
+    if (group.length < 2) return;
+    const sorted = group.slice().sort((a, b) => (refs[b.url] || 0) - (refs[a.url] || 0) || a.id - b.id);
+    const keep = sorted[0];
+    sorted.slice(1).forEach(m => { if (m.url && m.url !== keep.url) remap[m.url] = keep.url; toDelete.push(m); });
+  });
+  let reassigned = 0;
+  walkImageRefs(d, (get, set, html) => {
+    const v = get(); if (typeof v !== 'string' || !v) return;
+    if (html) { let nv = v; Object.keys(remap).forEach(o => { if (nv.indexOf(o) >= 0) { nv = nv.split(o).join(remap[o]); reassigned++; } }); if (nv !== v) set(nv); }
+    else if (remap[v]) { set(remap[v]); reassigned++; }
+  });
+  // Supprime les enregistrements + fichiers des doublons
+  const delIds = new Set(toDelete.map(m => m.id));
+  toDelete.forEach(m => { try { fs.unlinkSync(path.join(MEDIA_DIR, m.file)); } catch {} });
+  d.medias = meds.filter(m => !delIds.has(m.id));
+  logActivity(user, 'update', 'medias', 'Nettoyage doublons (' + delIds.size + ')'); save();
+  send(res, 200, { merged: delIds.size, reassigned });
+});
+
 /* =============================== PROJETS WIP =============================== */
 const WIP_STATUTS = ['a_venir', 'a_faire', 'en_cours', 'incomplet', 'termine'];
 function manquantArr(v) { return Array.isArray(v) ? v.map(x => String(x).trim()).filter(Boolean) : (v ? [String(v).trim()].filter(Boolean) : []); }
