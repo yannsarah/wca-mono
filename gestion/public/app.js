@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.4'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '2.5'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1870,7 +1870,7 @@ async function renderSiteInternet(){
       <button class="${SITE_TAB==='affichage'?'active':''}" data-t="affichage">${icon('globe')} Affichage du site</button>
       <button class="${SITE_TAB==='modules'?'active':''}" data-t="modules">${icon('box')} Modules accueil</button>
     </div>`;
-  const action = (SITE_TAB==='blog' ? `<button class="btn" id="si-new">${icon('plus')} Nouvel article</button>` : '') + `<button class="btn grey" id="si-media">🖼 Médiathèque</button>`;
+  const action = (SITE_TAB==='blog' ? `<button class="btn" id="si-new">${icon('plus')} Nouvel article</button>` : '') + `<button class="btn" id="si-media" style="background:var(--purple,#7c5cff)">🖼 Médiathèque</button>`;
   setTopbar('Site internet', action);
   $('#view').innerHTML = tabs + `<div id="si-body"><p class="help" style="padding:20px">Chargement…</p></div>`;
   $$('#si-tabs button').forEach(b=>b.addEventListener('click',()=>{ SITE_TAB=b.dataset.t; renderSiteInternet(); }));

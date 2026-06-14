@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.5 — 14 juin 2026**
+## Correctifs visibilité
+- **Hamburger** blog/article : enfin bien visible (boîte sombre arrondie + barres blanches de largeur fixe).
+- Bouton **Médiathèque** rendu bien visible (en violet) dans Site internet.
+
+---
+
 **Version 2.4 — 14 juin 2026**
 ## Médiathèque — étape 1 (le socle)
 - Nouvelle **Médiathèque** : les images sont stockées comme de **vrais fichiers** sur le serveur (réutilisables, base extensible).
