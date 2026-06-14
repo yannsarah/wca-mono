@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.11'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.12'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -82,6 +82,10 @@ function applyTheme(t){
 const isReadonly = () => CURRENT_USER?.niveau === 'lecture';
 const isAdminUser = () => CURRENT_USER?.niveau === 'admin';
 function renderFooter(){ const f=$('#appfoot'); if(f) f.innerHTML = `<span>West Coast Arcades — Gestion · <strong>V${APP_VERSION}</strong></span><span class="foot-copy">© ${new Date().getFullYear()} Yann Gabel Solutions pour West Coast Arcades</span>`; }
+
+/* Bouton « effacer » des champs de recherche (délégation globale, une seule fois). */
+document.addEventListener('input', e=>{ if(e.target.matches('.search input, .fz-search input')){ const c=e.target.closest('.search, .fz-search'); if(c) c.classList.toggle('has-val', !!e.target.value); } });
+document.addEventListener('click', e=>{ const b=e.target.closest('.search-clear'); if(!b) return; const c=b.closest('.search, .fz-search'); const inp=c&&c.querySelector('input'); if(inp){ inp.value=''; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.focus(); } });
 
 /* ------------------------------- État & navigation ------------------------------- */
 const state = { view: 'accueil' };
@@ -582,7 +586,7 @@ async function renderInventaire(){
   $('#add-mat').addEventListener('click',()=>materielModal());
   $('#cols-btn').addEventListener('click',colonnesModal);
   $('#gerer-btn').addEventListener('click',gererModal);
-  view().innerHTML = `${segArchHtml('inventaire')}<div class="toolbar"><div class="search">${icon('search')}<input id="mat-q" value="${esc(INV.q)}" placeholder="Rechercher (nom, catégorie, emplacement)…"></div>
+  view().innerHTML = `${segArchHtml('inventaire')}<div class="toolbar"><div class="search${INV.q?' has-val':''}">${icon('search')}<input id="mat-q" value="${esc(INV.q)}" placeholder="Rechercher (nom, catégorie, emplacement)…"><button type="button" class="search-clear" tabindex="-1" aria-label="Effacer">×</button></div>
       <button class="btn ${INV.nonfonc?'red':'outline'} small" id="nf-btn" title="Voir le travail à faire pour les WIP">⛔ Non fonctionnels</button></div>
     <div id="cat-pills" class="cat-pills"></div><div id="mat-list"></div>`;
   wireSegArch('inventaire',()=>renderInventaire());
@@ -1053,20 +1057,21 @@ async function renderTarifs(){
   await loadConfig(); await loadMateriel();
   const periods=TARIFS.periodes||[]; const couts=TARIFS.couts||{};
   const coutFields=[['essence_litre','Essence (€/L)'],['conso_100','Conso camion (L/100km)'],['camion_jour','Location camion (€/jour)'],['mo_heure','Main d’œuvre (€/h)'],['couchage_nuit','Couchage (€/nuit/pers.)'],['presence_jour','Présence (€/jour)'],['maintenance_pct','Maintenance (% matériel)']];
-  body.innerHTML = `
-   <div class="card" style="margin-bottom:12px"><strong>${icon('calendar','ic')} Périodes de location</strong>
-     <div class="manage-list" style="margin-top:10px">${periods.length?periods.map((p,i)=>`<div class="manage-row"><input class="mr-input js-per-label" data-i="${i}" value="${esc(p.label)}"><input class="js-per-jours" data-i="${i}" type="number" min="1" value="${esc(p.jours)}" style="max-width:80px" title="jours"><span class="mini">j</span><button class="iconbtn ghost js-per-del" data-i="${i}" type="button">${icon('trash')}</button></div>`).join(''):'<p class="mini">Aucune période.</p>'}</div>
-     <div class="add-row"><input id="per-new" placeholder="Nouvelle période (ex. Mois)"><input id="per-new-j" type="number" min="1" value="1" style="max-width:80px"><span class="mini">j</span><button class="btn small" id="per-add">${icon('plus')} Ajouter</button></div></div>
-   <div class="card" style="margin-bottom:12px"><strong>${icon('tag','ic')} Prix de location par matériel</strong>
-     <div class="tablecard" style="margin-top:10px;box-shadow:none;border:none;overflow:auto"><table class="grid"><thead><tr><th>Matériel</th>${periods.map(p=>`<th>${esc(p.label)}</th>`).join('')}</tr></thead>
-       <tbody>${MAT_CACHE.map(m=>`<tr><td><strong>${esc(m.denomination)}</strong></td>${periods.map(p=>`<td><input class="js-mat-prix" data-id="${m.id}" data-k="${esc(p.key)}" type="number" min="0" step="0.01" value="${esc((m.tarifs&&m.tarifs[p.key])||'')}" style="max-width:100px"></td>`).join('')}</tr>`).join('')||'<tr><td>Aucun matériel</td></tr>'}</tbody></table></div>
-     <p class="help">Saisie enregistrée automatiquement.</p></div>
-   <div class="card" style="margin-bottom:12px"><strong>${icon('settings','ic')} Coûts unitaires</strong>
-     <div class="row2" style="margin-top:10px">${coutFields.map(([k,l])=>`<label class="field"><span>${l}</span><input class="js-cout" data-k="${k}" type="number" min="0" step="0.01" value="${esc(couts[k]??0)}"></label>`).join('')}</div>
-     <button class="btn small" id="couts-save">Enregistrer les coûts</button></div>
-   <div class="card"><strong>${icon('plus','ic')} Éléments supplémentaires (à volonté)</strong>
-     <div class="manage-list" style="margin-top:10px">${(TARIFS.extras||[]).map((x,i)=>`<div class="manage-row"><input class="mr-input js-extra-label" data-i="${i}" value="${esc(x.label)}"><input class="js-extra-montant" data-i="${i}" type="number" step="0.01" value="${esc(x.montant)}" style="max-width:110px"><span class="mini">€</span><button class="iconbtn ghost js-extra-del" data-i="${i}" type="button">${icon('trash')}</button></div>`).join('')||'<p class="mini">Aucun élément.</p>'}</div>
-     <div class="add-row"><input id="extra-new" placeholder="Nouvel élément (ex. Décoration)"><input id="extra-new-m" type="number" step="0.01" value="0" style="max-width:110px"><span class="mini">€</span><button class="btn small" id="extra-add">${icon('plus')} Ajouter</button></div></div>`;
+  body.innerHTML = bubbleCSS()
+   + `<p class="help" style="margin-bottom:10px">Clique sur une rubrique pour la déplier.</p>`
+   + bubble('📅','Périodes de location','Durées proposées (week-end, semaine…)',
+       `<div class="manage-list">${periods.length?periods.map((p,i)=>`<div class="manage-row"><input class="mr-input js-per-label" data-i="${i}" value="${esc(p.label)}"><input class="js-per-jours" data-i="${i}" type="number" min="1" value="${esc(p.jours)}" style="max-width:80px" title="jours"><span class="mini">j</span><button class="iconbtn ghost js-per-del" data-i="${i}" type="button">${icon('trash')}</button></div>`).join(''):'<p class="mini">Aucune période.</p>'}</div>
+        <div class="add-row"><input id="per-new" placeholder="Nouvelle période (ex. Mois)"><input id="per-new-j" type="number" min="1" value="1" style="max-width:80px"><span class="mini">j</span><button class="btn small" id="per-add">${icon('plus')} Ajouter</button></div>`, {open:true})
+   + bubble('🏷️','Prix de location par matériel','Tarif de chaque borne selon la période',
+       `<div class="tablecard" style="box-shadow:none;border:none;overflow:auto;margin:0"><table class="grid"><thead><tr><th>Matériel</th>${periods.map(p=>`<th>${esc(p.label)}</th>`).join('')}</tr></thead>
+          <tbody>${MAT_CACHE.map(m=>`<tr><td><strong>${esc(m.denomination)}</strong></td>${periods.map(p=>`<td><input class="js-mat-prix" data-id="${m.id}" data-k="${esc(p.key)}" type="number" min="0" step="0.01" value="${esc((m.tarifs&&m.tarifs[p.key])||'')}" style="max-width:100px"></td>`).join('')}</tr>`).join('')||'<tr><td>Aucun matériel</td></tr>'}</tbody></table></div>
+        <p class="help">Saisie enregistrée automatiquement.</p>`)
+   + bubble('⚙️','Coûts unitaires','Carburant, camion, main d’œuvre… (pour la calculatrice)',
+       `<div class="row2">${coutFields.map(([k,l])=>`<label class="field"><span>${l}</span><input class="js-cout" data-k="${k}" type="number" min="0" step="0.01" value="${esc(couts[k]??0)}"></label>`).join('')}</div>
+        <button class="btn small" id="couts-save">Enregistrer les coûts</button>`)
+   + bubble('➕','Éléments supplémentaires','Options facturables à volonté (déco, animation…)',
+       `<div class="manage-list">${(TARIFS.extras||[]).map((x,i)=>`<div class="manage-row"><input class="mr-input js-extra-label" data-i="${i}" value="${esc(x.label)}"><input class="js-extra-montant" data-i="${i}" type="number" step="0.01" value="${esc(x.montant)}" style="max-width:110px"><span class="mini">€</span><button class="iconbtn ghost js-extra-del" data-i="${i}" type="button">${icon('trash')}</button></div>`).join('')||'<p class="mini">Aucun élément.</p>'}</div>
+        <div class="add-row"><input id="extra-new" placeholder="Nouvel élément (ex. Décoration)"><input id="extra-new-m" type="number" step="0.01" value="0" style="max-width:110px"><span class="mini">€</span><button class="btn small" id="extra-add">${icon('plus')} Ajouter</button></div>`);
   const saveTarifs=async(patch)=>{ try{ await api('/api/config',{method:'PUT',body:JSON.stringify({tarifs:patch})}); await loadConfig(); }catch(e){ toast(e.message); } };
   $('#per-add').addEventListener('click',async()=>{ const label=$('#per-new').value.trim(); if(!label) return; await saveTarifs({periodes:[...periods.map(p=>({...p})),{label,jours:+$('#per-new-j').value||1}]}); renderTarifs(); toast('Période ajoutée'); });
   $$('.js-per-label').forEach(inp=>inp.addEventListener('change',async()=>{ await saveTarifs({periodes:periods.map((p,i)=>({key:p.key,label:$$('.js-per-label')[i].value,jours:+$$('.js-per-jours')[i].value||1}))}); renderTarifs(); }));
@@ -2915,7 +2920,7 @@ function drawDispo(){
     </div>
     <div class="fz-legend">${Object.entries(ABS_TYPES).map(([k,t])=>`<span class="fz-leg"><span class="fz-dot" style="background:${t.color}"></span>${t.label}</span>`).join('')}</div>
     <div class="friz"><div class="fz-inner" style="--fz-name:200px;--fz-day:46px">
-      <div class="fz-row fz-head" style="grid-template-columns:var(--fz-name) repeat(${days},var(--fz-day))"><div class="fz-name fz-search">${icon('search','ic')}<input id="fz-q" value="${esc(DISPO.q)}" placeholder="Recherche employés"></div>${headCells}</div>
+      <div class="fz-row fz-head" style="grid-template-columns:var(--fz-name) repeat(${days},var(--fz-day))"><div class="fz-name fz-search${DISPO.q?' has-val':''}">${icon('search','ic')}<input id="fz-q" value="${esc(DISPO.q)}" placeholder="Recherche employés"><button type="button" class="search-clear" tabindex="-1" aria-label="Effacer">×</button></div>${headCells}</div>
       ${rows||'<div class="empty-state" style="margin:16px">Aucun membre.</div>'}
     </div></div>`;
   $$('.fz-toolbar .seg button').forEach(b=>b.addEventListener('click',()=>{ DISPO.days=+b.dataset.d; drawDispo(); }));

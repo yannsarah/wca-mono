@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.12 — 14 juin 2026**
+## Petits conforts : recherche + Tarifs pliables
+- Les **champs de recherche** ont un **bouton « × »** pour tout effacer d'un clic.
+- Dans **Devis › Tarifs**, les rubriques (Périodes, Prix par matériel, Coûts, Éléments supplémentaires) sont des **bulles pliables** (même design qu'Affichage du site) : tout est replié au départ, sauf **Périodes de location**.
+
+---
+
 **Version 2.8.11 — 14 juin 2026**
 ## Module « Fiches produit PDF » (page Devis)
 - Nouvel onglet **Fiches PDF** dans la page **Devis** (et ses onglets sont maintenant **réordonnables** au glisser-déposer).
