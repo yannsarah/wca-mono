@@ -281,7 +281,12 @@ label.field{display:block;margin:12px 0}
 label.field span{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:5px}
 input,select,textarea{
   width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:14.5px;
-  font-family:inherit;background:#fff;color:var(--ink);
+  font-family:inherit;background:var(--card);color:var(--ink);
+}
+/* Les cases à cocher / radios ne doivent pas hériter du style « champ plein largeur ». */
+input[type="checkbox"],input[type="radio"]{
+  width:auto;flex:none;padding:0;border-radius:3px;box-shadow:none;background:none;
+  min-height:0;vertical-align:middle;
 }
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(20,164,180,.15)}
 textarea{min-height:68px;resize:vertical}

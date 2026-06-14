@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 1.9 — 14 juin 2026**
+## Correctifs thème sombre + bannière du blog
+- **Thème sombre** : fini les fonds blancs et les cases à cocher transformées en gros rectangles vides — couleurs en dur remplacées par les variables de thème (corrigé à la racine, valable partout et pour l'avenir).
+- **Bannière du blog** : téléversable **globalement** (Site internet → Blog) et **par billet** (éditeur d'article). Affichée en haut de l'article au format **paysage**, à la place de l'image carrée. Nouveau compresseur d'image qui **conserve le format** (plus de recadrage carré pour les bannières).
+
+---
+
 **Version 1.8 — 13 juin 2026**
 ## Partenaires sur projets/billets + Blog 2ᵉ vague
 - **Partenaires participants** : sur un **projet** et sur un **billet de blog**, on coche les partenaires (base Partenaires). Encart **paysage** en bas de l'article (« Avec la participation de ») et de la page Projets (« Ils participent à nos projets »), logos cliquables vers leur site.

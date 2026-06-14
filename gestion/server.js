@@ -841,7 +841,7 @@ add('DELETE', '/api/partenaires/:id', (req, res, p) => {
 });
 
 /* =============================== BLOG / ARTICLES =============================== */
-const ARTF = ['titre', 'slug', 'date', 'image', 'extrait', 'contenu', 'auteur', 'visible_site', 'archive', 'partenaires_ids', 'categorie'];
+const ARTF = ['titre', 'slug', 'date', 'image', 'extrait', 'contenu', 'auteur', 'visible_site', 'archive', 'partenaires_ids', 'categorie', 'banniere'];
 function slugify(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);

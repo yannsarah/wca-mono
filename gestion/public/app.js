@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.8'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '1.9'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -415,6 +415,21 @@ async function loadAlertes(){
 
 /* ============================== PARTENAIRES ============================== */
 const PHOTO_LINK = 'https://squoosh.app';
+// Compresse en GARDANT le format (paysage/portrait), largeur max maxW, sous maxBytes. Pour bannières & visuels larges.
+function compressImage(file, cb, maxW=1400, maxBytes=220*1024){
+  const img=new Image(); const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    URL.revokeObjectURL(url);
+    let w=img.width, h=img.height; if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+    const bytes=d=>Math.ceil((d.length-(d.indexOf(',')+1))*3/4);
+    let out=null;
+    for(const q of [0.86,0.78,0.7,0.6,0.5,0.42]){ out=cv.toDataURL('image/jpeg',q); if(bytes(out)<=maxBytes){ cb(out); return; } }
+    cb(out);
+  };
+  img.onerror=()=>{ URL.revokeObjectURL(url); toast('Image illisible.'); };
+  img.src=url;
+}
 // Recadre en carré et compresse sous maxBytes (≈60 Ko par défaut).
 function compressSquare(file, cb, maxBytes=60*1024){
   const img=new Image(); const url=URL.createObjectURL(file);
@@ -1861,7 +1876,7 @@ async function renderBlogTab(){
 
 function articleModal(a){
   const isEdit=!!(a&&a.id); a=a||{};
-  let cover = a.image||'';
+  let cover = a.image||''; let banner = a.banniere||'';
   openModal(`<h3>${isEdit?'Modifier l’article':'Nouvel article'}</h3>
     <label class="field"><span>Titre *</span><input id="art-titre" value="${esc(a.titre||'')}" placeholder="Titre de l'article"></label>
     <div class="row2">
@@ -1877,6 +1892,13 @@ function articleModal(a){
         <button type="button" class="btn small red" id="art-cover-clear">${icon('trash')} Retirer</button>
       </div>
     </div>
+    <div class="field"><span>Bannière de l'article (paysage, en haut — sinon celle du blog est utilisée)</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <div id="art-ban-prev" style="width:180px;height:56px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${banner?`background-image:url('${banner}')`:''}"></div>
+        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="art-ban-file" accept="image/*" style="display:none"></label>
+        <button type="button" class="btn small red" id="art-ban-clear">${icon('trash')} Retirer</button>
+      </div>
+    </div>
     <div class="field"><span>Contenu</span>
       <div class="wysi-toolbar" style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px">
         <button type="button" class="btn small grey" data-cmd="bold" title="Gras"><b>G</b></button>
@@ -1890,7 +1912,7 @@ function articleModal(a){
         <label class="btn small grey" style="cursor:pointer" title="Insérer une image">${icon('plus')} Image<input type="file" id="art-img-file" accept="image/*" style="display:none"></label>
         <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')} Format</button>
       </div>
-      <div id="art-contenu" contenteditable="true" style="min-height:220px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#fff;color:var(--navy);overflow:auto;line-height:1.5">${a.contenu||''}</div>
+      <div id="art-contenu" contenteditable="true" style="min-height:220px;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--card);color:var(--ink);overflow:auto;line-height:1.5">${a.contenu||''}</div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:12px;cursor:pointer"><input type="checkbox" id="art-vis" ${a.visible_site!==false?'checked':''}> 🌐 Publié sur le site (visible dans le blog)</label>
     <div class="field"><span>Partenaires participants (encart en bas de l'article)</span><div id="art-parts" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:4px"><span class="mini">Chargement…</span></div></div>
@@ -1903,8 +1925,10 @@ function articleModal(a){
   $('#art-img-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ ed.focus(); document.execCommand('insertImage',false,data); },120*1024); });
   $('#art-cover-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ cover=data; $('#art-cover-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
   $('#art-cover-clear').addEventListener('click',()=>{ cover=''; $('#art-cover-prev').style.backgroundImage=''; });
+  $('#art-ban-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ banner=data; $('#art-ban-prev').style.backgroundImage=`url('${data}')`; }); });
+  $('#art-ban-clear').addEventListener('click',()=>{ banner=''; $('#art-ban-prev').style.backgroundImage=''; });
   $('#art-save').addEventListener('click',async()=>{
-    const body={ titre:$('#art-titre').value.trim(), date:$('#art-date').value, auteur:$('#art-auteur').value.trim(), extrait:$('#art-extrait').value.trim(), contenu:$('#art-contenu').innerHTML.trim(), image:cover, visible_site:$('#art-vis').checked, categorie:$('#art-cat').value.trim(), partenaires_ids:[...document.querySelectorAll('.art-pt:checked')].map(x=>+x.value) };
+    const body={ titre:$('#art-titre').value.trim(), date:$('#art-date').value, auteur:$('#art-auteur').value.trim(), extrait:$('#art-extrait').value.trim(), contenu:$('#art-contenu').innerHTML.trim(), image:cover, banniere:banner, visible_site:$('#art-vis').checked, categorie:$('#art-cat').value.trim(), partenaires_ids:[...document.querySelectorAll('.art-pt:checked')].map(x=>+x.value) };
     if(!body.titre){ toast('Le titre est obligatoire.'); return; }
     try{ await api(isEdit?'/api/articles/'+a.id:'/api/articles',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast('Enregistré'); renderBlogTab(); }catch(e){ toast(e.message); }
   });
@@ -1923,11 +1947,11 @@ async function renderAffichageTab(){
       const vit = optIn ? `<button class="btn small light js-vitrine" data-id="${x.id}" style="margin-right:10px">${icon('edit')} Fiche vitrine</button>` : '';
       return `<tr><td>${esc(x[nameKey]||'(sans nom)')}</td><td class="actions" style="white-space:nowrap;text-align:right">${vit}<span class="toggle-oui-non ${on?'on':'off'} js-vis" data-coll="${coll}" data-id="${x.id}" style="cursor:pointer"><span class="t-oui">${icon('check')} Publié</span><span class="t-non">Masqué</span></span></td></tr>`;
     }).join('') || `<tr><td colspan="2" class="help" style="padding:10px">Aucun élément.</td></tr>`;
-    return `<details class="aff-sec" style="border:1px solid var(--line,#e6e6ef);border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff">
+    return `<details class="aff-sec" style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--card)">
       <summary style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px">
         <span style="font-size:22px;line-height:1">${emo}</span>
         <span style="flex:1;min-width:0"><span style="font-weight:800;color:var(--navy)">${title}</span><span class="mini" style="display:block">${desc}</span></span>
-        <span class="statut" style="background:#eef2f7;color:var(--navy)">${n}</span>
+        <span class="statut" style="background:var(--line);color:var(--navy)">${n}</span>
         <span class="aff-chev">▸</span>
       </summary>
       <div style="padding:0 12px 12px"><div class="tablecard" style="box-shadow:none;border:1px solid var(--line,#eee);margin:0"><table class="grid"><tbody>${rows}</tbody></table></div></div>
@@ -2068,7 +2092,7 @@ function equipeModal(){
 
 function blogDisplayModal(){
   const b=SITE_CONTENT.blog||{}; const w=b.widgets||{}; const pub=b.pub||{};
-  let mode=b.mode||'grid'; let side=b.sidebar_side||'right'; let pubType=pub.type||'image'; let pubMedia=pub.media||'';
+  let mode=b.mode||'grid'; let side=b.sidebar_side||'right'; let pubType=pub.type||'image'; let pubMedia=pub.media||''; let bannerG=b.banner||'';
   const ck='display:flex;align-items:center;gap:8px;margin:7px 0;cursor:pointer;font-weight:600';
   openModal(`<h3>Blog — affichage</h3>
     <div class="field"><span>Disposition de la page blog</span>
@@ -2081,6 +2105,13 @@ function blogDisplayModal(){
       <div class="seg" id="bl-side" style="width:100%;margin-top:4px">
         <button class="${side==='left'?'active':''}" data-s="left" style="flex:1">◧ À gauche</button>
         <button class="${side==='right'?'active':''}" data-s="right" style="flex:1">◨ À droite</button>
+      </div>
+    </div>
+    <div class="field"><span>Bannière du blog (paysage, en haut des articles)</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <div id="bl-ban-prev" style="width:200px;height:60px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${bannerG?`background-image:url('${bannerG}')`:''}"></div>
+        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="bl-ban-file" accept="image/*" style="display:none"></label>
+        <button type="button" class="btn small red" id="bl-ban-clear">${icon('trash')} Retirer</button>
       </div>
     </div>
     <div class="section-title">Widgets de la sidebar</div>
@@ -2101,9 +2132,11 @@ function blogDisplayModal(){
   $('#bl-w-pub').addEventListener('change',()=>{ $('#bl-pub-cfg').style.display=$('#bl-w-pub').checked?'':'none'; });
   $('#bl-pub-type').addEventListener('change',()=>{ pubType=$('#bl-pub-type').value; $('#bl-pub-img').style.display=pubType==='image'?'':'none'; $('#bl-pub-yt').style.display=pubType==='youtube'?'':'none'; });
   $('#bl-pub-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ pubMedia=data; $('#bl-pub-prev').style.backgroundImage=`url('${data}')`; },150*1024); });
+  $('#bl-ban-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ bannerG=data; $('#bl-ban-prev').style.backgroundImage=`url('${data}')`; }); });
+  $('#bl-ban-clear').addEventListener('click',()=>{ bannerG=''; $('#bl-ban-prev').style.backgroundImage=''; });
   $('#bl-save').addEventListener('click',async()=>{
     if(pubType==='youtube') pubMedia=$('#bl-pub-ytid').value.trim();
-    const blog={ mode, sidebar_side:side, widgets:{ search:$('#bl-w-search').checked, pub:$('#bl-w-pub').checked, ventes:$('#bl-w-ventes').checked }, pub:{ type:pubType, media:pubMedia, link:$('#bl-pub-link').value.trim(), titre:$('#bl-pub-titre').value.trim() } };
+    const blog={ mode, sidebar_side:side, banner:bannerG, widgets:{ search:$('#bl-w-search').checked, pub:$('#bl-w-pub').checked, ventes:$('#bl-w-ventes').checked }, pub:{ type:pubType, media:pubMedia, link:$('#bl-pub-link').value.trim(), titre:$('#bl-pub-titre').value.trim() } };
     try{ await api('/api/site',{method:'PUT',body:JSON.stringify({blog})}); closeModal(); toast('Affichage du blog enregistré'); renderModulesTab(); }catch(e){ toast(e.message); }
   });
 }

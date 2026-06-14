@@ -160,7 +160,7 @@ export function handlePublic(req, res, pathname, searchParams) {
     return sendJSON(res, 200, {
       id: a.id, slug: a.slug || String(a.id), titre: a.titre || '', date: a.date || '',
       extrait: a.extrait || '', image: a.image || '', contenu: a.contenu || '', auteur: a.auteur || '',
-      categorie: a.categorie || '',
+      categorie: a.categorie || '', banniere: a.banniere || '',
       partenaires: partnersOf(d, a.partenaires_ids),
     }), true;
   }
