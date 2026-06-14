@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.6'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '1.7'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -500,14 +500,20 @@ function partenaireEditModal(p){
       </div>
     </label>
     <label class="field"><span>Nom *</span><input id="pt-nom" value="${esc(e.nom)}" placeholder="ex. RGV, Crazy Flip…"></label>
-    <label class="field"><span>Adresse</span><input id="pt-adr" value="${esc(e.adresse)}"></label>
-    <label class="field"><span>Notes</span><textarea id="pt-notes">${esc(e.notes)}</textarea></label>
+    <label class="field"><span>Email</span><input id="pt-email" value="${esc(e.email||'')}" placeholder="contact@partenaire.fr"></label>
+    <div class="row2">
+      <label class="field"><span>Téléphone</span><input id="pt-tel" value="${esc(e.telephone||'')}" placeholder="06 12 34 56 78"></label>
+      <label class="field"><span>Afficher le téléphone sur le site</span><select id="pt-tel-vis"><option value="0" ${e.telephone_visible?'':'selected'}>Non</option><option value="1" ${e.telephone_visible?'selected':''}>✅ Oui — visible sur le site</option></select></label>
+    </div>
+    <label class="field"><span>Site internet</span><input id="pt-site" value="${esc(e.site_internet||'')}" placeholder="https://www.partenaire.fr"></label>
+    <label class="field"><span>Adresse postale</span><input id="pt-adr" value="${esc(e.adresse)}"></label>
+    <label class="field"><span>Notes (privées)</span><textarea id="pt-notes">${esc(e.notes)}</textarea></label>
     <p class="help">Le « prochain événement » se renseigne en liant un événement à ce partenaire (page Événements).</p>
     <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="pt-save">Enregistrer</button></div>`);
   $('#pt-logo-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ logo=data; $('#pt-logo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
   $('#pt-logo-clear').addEventListener('click',()=>{ logo=''; $('#pt-logo-prev').innerHTML=`<span class="ph">${icon('users','ic')}</span>`; });
   $('#pt-save').addEventListener('click',async()=>{
-    const body={ nom:$('#pt-nom').value.trim(), adresse:$('#pt-adr').value.trim(), notes:$('#pt-notes').value.trim(), logo };
+    const body={ nom:$('#pt-nom').value.trim(), email:$('#pt-email').value.trim(), telephone:$('#pt-tel').value.trim(), telephone_visible:$('#pt-tel-vis').value==='1', site_internet:$('#pt-site').value.trim(), adresse:$('#pt-adr').value.trim(), notes:$('#pt-notes').value.trim(), logo };
     if(!body.nom){ toast('Le nom est obligatoire.'); return; }
     try{ await api(p?'/api/partenaires/'+p.id:'/api/partenaires',{method:p?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast('Enregistré'); await loadPartners(); if($('#pt-body')) renderPartenaires(); renderPartnersStrip(); }catch(err){ toast(err.message); }
   });
@@ -1900,19 +1906,29 @@ async function renderAffichageTab(){
     api('/api/evenements').catch(()=>[]), api('/api/materiel').catch(()=>[]),
     api('/api/projets').catch(()=>[]), api('/api/partenaires').catch(()=>[])
   ]);
-  function section(title, list, coll, nameKey, optIn){
+  function section(emo, title, desc, list, coll, nameKey, optIn){
+    const n=(list||[]).length;
     const rows=(list||[]).map(x=>{
       const on = optIn ? (x.visible_site===true) : (x.visible_site!==false);
       const vit = optIn ? `<button class="btn small light js-vitrine" data-id="${x.id}" style="margin-right:10px">${icon('edit')} Fiche vitrine</button>` : '';
       return `<tr><td>${esc(x[nameKey]||'(sans nom)')}</td><td class="actions" style="white-space:nowrap;text-align:right">${vit}<span class="toggle-oui-non ${on?'on':'off'} js-vis" data-coll="${coll}" data-id="${x.id}" style="cursor:pointer"><span class="t-oui">${icon('check')} Publié</span><span class="t-non">Masqué</span></span></td></tr>`;
     }).join('') || `<tr><td colspan="2" class="help" style="padding:10px">Aucun élément.</td></tr>`;
-    return `<h4 style="margin:20px 0 8px;color:var(--navy)">${title}</h4><div class="tablecard"><table class="grid"><tbody>${rows}</tbody></table></div>`;
+    return `<details class="aff-sec" style="border:1px solid var(--line,#e6e6ef);border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff">
+      <summary style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px">
+        <span style="font-size:22px;line-height:1">${emo}</span>
+        <span style="flex:1;min-width:0"><span style="font-weight:800;color:var(--navy)">${title}</span><span class="mini" style="display:block">${desc}</span></span>
+        <span class="statut" style="background:#eef2f7;color:var(--navy)">${n}</span>
+        <span class="aff-chev">▸</span>
+      </summary>
+      <div style="padding:0 12px 12px"><div class="tablecard" style="box-shadow:none;border:1px solid var(--line,#eee);margin:0"><table class="grid"><tbody>${rows}</tbody></table></div></div>
+    </details>`;
   }
-  body.innerHTML = `<p class="help" style="margin-bottom:6px">Choisissez ce qui apparaît sur westcoastarcades.fr. Les <strong>machines</strong> sont masquées par défaut (l'inventaire reste privé) ; événements, projets et partenaires sont visibles sauf si vous les masquez.</p>`
-    + section('📅 Événements', evs, 'evenements','nom',false)
-    + section('🕹 Machines (inventaire)', mats, 'materiel','denomination',true)
-    + section('📌 Projets', projs, 'projets','nom',false)
-    + section('🤝 Partenaires', parts, 'partenaires','nom',false);
+  body.innerHTML = `<style>.aff-sec summary{list-style:none}.aff-sec summary::-webkit-details-marker{display:none}.aff-chev{display:inline-block;transition:.15s;color:var(--muted)}.aff-sec[open] .aff-chev{transform:rotate(90deg)}</style>`
+    + `<p class="help" style="margin-bottom:10px">Clique sur une rubrique pour la déplier. Les <strong>machines</strong> sont masquées par défaut (l'inventaire reste privé) ; événements, projets et partenaires sont visibles sauf si tu les masques.</p>`
+    + section('📅','Événements',"Affichés sur l'agenda du site",evs,'evenements','nom',false)
+    + section('🕹','Machines (inventaire)','Vitrine « Nos Machines » — masquées par défaut',mats,'materiel','denomination',true)
+    + section('📌','Projets','Affichés sur la page Projets',projs,'projets','nom',false)
+    + section('🤝','Partenaires',"Encart partenaires du site",parts,'partenaires','nom',false);
   $$('.js-vis').forEach(t=>t.addEventListener('click',async()=>{
     const next=!t.classList.contains('on');
     try{ await api('/api/'+t.dataset.coll+'/'+t.dataset.id,{method:'PUT',body:JSON.stringify({visible_site:next})}); t.classList.toggle('on',next); t.classList.toggle('off',!next); toast(next?'Publié sur le site':'Masqué'); }catch(e){ toast(e.message); }

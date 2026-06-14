@@ -98,7 +98,12 @@ export function handlePublic(req, res, pathname, searchParams) {
     const list = (d.partenaires || [])
       .filter(p => p && p.visible_site !== false)
       .sort((a, b) => (a.ordre || 0) - (b.ordre || 0) || (a.nom || '').localeCompare(b.nom || ''))
-      .map(p => ({ id: p.id, nom: p.nom, logo: p.logo || '', ordre: p.ordre || 0 }));
+      .map(p => ({
+        id: p.id, nom: p.nom, logo: p.logo || '', ordre: p.ordre || 0,
+        site_internet: p.site_internet || '',
+        email: p.email || '',
+        telephone: p.telephone_visible ? (p.telephone || '') : '',
+      }));
     return sendJSON(res, 200, list), true;
   }
 

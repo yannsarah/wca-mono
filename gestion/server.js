@@ -809,7 +809,17 @@ add('GET', '/api/partenaires', (req, res) => {
   const list = [...(db().partenaires || [])].sort((a, b) => (a.ordre || 0) - (b.ordre || 0) || (a.nom || '').localeCompare(b.nom || ''));
   send(res, 200, list.map(enrichPartner));
 });
-const PTF = ['nom', 'adresse', 'logo', 'notes', 'ordre', 'visible_site'];
+const PTF = ['nom', 'adresse', 'logo', 'notes', 'ordre', 'visible_site', 'email', 'telephone', 'telephone_visible', 'site_internet'];
+// Récupération douce de l'existant : l'email était saisi dans « adresse », le téléphone dans « notes ».
+function migratePartners() {
+  const d = db(); let changed = false;
+  (d.partenaires || []).forEach(p => {
+    if (!p.email && p.adresse && /@/.test(p.adresse)) { p.email = String(p.adresse).trim(); p.adresse = ''; changed = true; }
+    if (!p.telephone && p.notes && /^[\d\s+().\-]{6,25}$/.test(String(p.notes).trim())) { p.telephone = String(p.notes).trim(); p.notes = ''; changed = true; }
+    if (p.telephone_visible === undefined) { p.telephone_visible = false; changed = true; }
+  });
+  if (changed) save();
+}
 add('POST', '/api/partenaires', (req, res, p, body) => {
   if (!body.nom) return send(res, 400, { error: 'Le nom du partenaire est obligatoire.' });
   const row = { id: nextId('partenaires') };
@@ -1346,12 +1356,13 @@ http.createServer((req, res) => {
   // Filet de sécurité : garantit que toutes les collections existent (même si store.js est plus ancien).
   try {
     const d = db();
-    ['materiel', 'devis', 'evenements', 'reparations', 'ventes', 'prets', 'users', 'achats', 'partenaires', 'wip', 'projets', 'absences', 'idees'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
+    ['materiel', 'devis', 'evenements', 'reparations', 'ventes', 'prets', 'users', 'achats', 'partenaires', 'wip', 'projets', 'absences', 'idees', 'articles'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
     if (!Array.isArray(d.logins)) d.logins = [];
     if (!d.presence || typeof d.presence !== 'object') d.presence = {};
     if (!Array.isArray(d.activity)) d.activity = [];
     save();
   } catch (e) { logFatal('ensureCollections', e); }
+  try { migratePartners(); } catch (e) { logFatal('migratePartners', e); }
   try { ensureAdmin(); } catch (e) { logFatal('ensureAdmin', e); }
   try { ensureGuest(); } catch (e) { logFatal('ensureGuest', e); }
   console.log(`\n  West Coast Arcades — Gestion démarré → http://localhost:${PORT}\n`);

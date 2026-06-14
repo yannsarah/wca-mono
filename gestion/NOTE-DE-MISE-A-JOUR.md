@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 1.7 — 13 juin 2026**
+## Partenaires enrichis + Affichage repliable
+- Fiche **partenaire** : nouveaux champs **Email**, **Téléphone** (+ « afficher sur le site » o/n), **Site internet**. Récupération automatique de l'existant : l'email saisi dans « Adresse » et le téléphone dans « Notes » sont déplacés dans les bons champs (sans rien perdre).
+- **Site internet → Affichage du site** : les rubriques (événements, machines, projets, partenaires) sont maintenant **repliées par défaut** et s'ouvrent au clic — beaucoup moins chargé.
+
+---
+
 **Version 1.6 — 13 juin 2026**
 ## Blog du site — modes d'affichage + widgets (1ʳᵉ vague)
 - Page **Blog** du site refondue : **2 modes** au choix dans l'appli (Site internet → Modules → Blog) — **Grille** ou **Sidebar** (à gauche ou à droite).
