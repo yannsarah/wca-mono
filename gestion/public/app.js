@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.7'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '2.8.1'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -517,7 +517,7 @@ function partenaireEditModal(p){
       <div class="photo-edit">
         <div class="photo-prev" id="pt-logo-prev">${logo?`<img src="${logo}" alt="">`:`<span class="ph">${icon('users','ic')}</span>`}</div>
         <div class="photo-btns">
-          <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir un logo<input type="file" id="pt-logo-file" accept="image/*" style="display:none"></label>
+          ${mediaBtn('pt-logo-pick','Choisir un logo')}
           <button type="button" class="btn small red" id="pt-logo-clear">${icon('trash')} Retirer</button>
           <span class="help">Compressé automatiquement. Sinon : <a href="${PHOTO_LINK}" target="_blank" style="color:var(--teal-d);font-weight:700">réduire ici</a>.</span>
         </div>
@@ -534,7 +534,7 @@ function partenaireEditModal(p){
     <label class="field"><span>Notes (privées)</span><textarea id="pt-notes">${esc(e.notes)}</textarea></label>
     <p class="help">Le « prochain événement » se renseigne en liant un événement à ce partenaire (page Événements).</p>
     <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="pt-save">Enregistrer</button></div>`);
-  $('#pt-logo-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ logo=data; $('#pt-logo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
+  wireMedia('pt-logo-pick', url=>{ logo=url; $('#pt-logo-prev').innerHTML=`<img src="${url}" alt="">`; });
   $('#pt-logo-clear').addEventListener('click',()=>{ logo=''; $('#pt-logo-prev').innerHTML=`<span class="ph">${icon('users','ic')}</span>`; });
   $('#pt-save').addEventListener('click',async()=>{
     const body={ nom:$('#pt-nom').value.trim(), email:$('#pt-email').value.trim(), telephone:$('#pt-tel').value.trim(), telephone_visible:$('#pt-tel-vis').value==='1', site_internet:$('#pt-site').value.trim(), adresse:$('#pt-adr').value.trim(), notes:$('#pt-notes').value.trim(), logo };
@@ -670,7 +670,7 @@ function materielModal(m, dup){
       <div class="photo-edit">
         <div class="photo-prev" id="f-photo-prev">${photoData?`<img src="${photoData}" alt="">`:`<span class="ph">${icon('box','ic')}</span>`}</div>
         <div class="photo-btns">
-          <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir une photo<input type="file" id="f-photo-file" accept="image/*" style="display:none"></label>
+          ${mediaBtn('f-photo-pick','Choisir une photo')}
           <button type="button" class="btn small red" id="f-photo-clear">${icon('trash')} Retirer</button>
           <span class="help">Carré imposé, compressé sous 60 Ko. Sinon : <a href="${PHOTO_LINK}" target="_blank" style="color:var(--teal-d);font-weight:700">réduire la photo ici</a>.</span>
         </div>
@@ -704,7 +704,7 @@ function materielModal(m, dup){
     </div>
     <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button>${isEdit?`<button class="btn wipper" id="f-wip" type="button">${icon('calendar')} WIPPER</button>`:''}<button class="btn" id="f-save">Enregistrer</button></div>`);
   $('#f-wip')?.addEventListener('click',()=>wipperModal(m.id, m.denomination));
-  $('#f-photo-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ photoData=data; $('#f-photo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
+  wireMedia('f-photo-pick', url=>{ photoData=url; $('#f-photo-prev').innerHTML=`<img src="${url}" alt="">`; });
   $('#f-photo-clear').addEventListener('click',()=>{ photoData=''; $('#f-photo-prev').innerHTML=`<span class="ph">${icon('box','ic')}</span>`; });
   quickAddSelect($('#f-cat'), $('#f-cat-add'), { placeholder:'Nouvelle catégorie…', create: async txt=>{ await api('/api/categories',{method:'POST',body:JSON.stringify({value:txt})}); if(!CATEGORIES.includes(txt)) CATEGORIES.push(txt); return {value:txt,label:txt}; } });
   quickAddSelect($('#f-etat'), $('#f-etat-add'), { placeholder:'Nouvel état…', create: async txt=>{ await api('/api/etats',{method:'POST',body:JSON.stringify({label:txt})}); if(!ETATS.some(x=>x.label===txt)) ETATS.push({label:txt,bloque:false}); return {value:txt,label:txt}; } });
@@ -1136,7 +1136,7 @@ function evenementModal(ev){
       <div class="photo-edit">
         <div class="photo-prev" id="e-photo-prev">${evPhoto?`<img src="${evPhoto}" alt="">`:`<span class="ph">${icon('calendar','ic')}</span>`}</div>
         <div class="photo-btns">
-          <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir une photo<input type="file" id="e-photo-file" accept="image/*" style="display:none"></label>
+          ${mediaBtn('e-photo-pick','Choisir une photo')}
           <button type="button" class="btn small red" id="e-photo-clear">${icon('trash')} Retirer</button>
           <span class="help">Recadrée en carré, compressée sous 60 Ko.</span>
         </div>
@@ -1175,7 +1175,7 @@ function evenementModal(ev){
   }
   $('#e-deb').addEventListener('change',renderEvMat); $('#e-fin').addEventListener('change',renderEvMat);
   renderEvMat();
-  $('#e-photo-file').addEventListener('change',ev2=>{ const f=ev2.target.files[0]; if(!f) return; compressSquare(f,data=>{ evPhoto=data; $('#e-photo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
+  wireMedia('e-photo-pick', url=>{ evPhoto=url; $('#e-photo-prev').innerHTML=`<img src="${url}" alt="">`; });
   $('#e-photo-clear').addEventListener('click',()=>{ evPhoto=''; $('#e-photo-prev').innerHTML=`<span class="ph">${icon('calendar','ic')}</span>`; });
   function renderChamps(){
     const box=$('#e-champs');
@@ -1656,7 +1656,7 @@ async function projetModal(pj){
       <div class="photo-edit">
         <div class="photo-prev" id="pj-photo-prev">${pjPhoto?`<img src="${pjPhoto}" alt="">`:`<span class="ph">${icon('box','ic')}</span>`}</div>
         <div class="photo-btns">
-          <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir une photo<input type="file" id="pj-photo-file" accept="image/*" style="display:none"></label>
+          ${mediaBtn('pj-photo-pick','Choisir une photo')}
           <button type="button" class="btn small red" id="pj-photo-clear">${icon('trash')} Retirer</button>
           <span class="help">Recadrée en carré, compressée sous 60 Ko.</span>
         </div>
@@ -1720,7 +1720,7 @@ async function projetModal(pj){
     [...ev.target.files].forEach(f=>{ if(f.size>4*1024*1024){ toast(`${f.name} dépasse 4 Mo`); return; } const r=new FileReader(); r.onload=()=>{ fichiers.push({name:f.name,type:f.type,size:f.size,data:r.result}); renderFiles(); }; r.readAsDataURL(f); });
     ev.target.value='';
   });
-  $('#pj-photo-file').addEventListener('change',ev2=>{ const f=ev2.target.files[0]; if(!f) return; compressSquare(f,data=>{ pjPhoto=data; $('#pj-photo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
+  wireMedia('pj-photo-pick', url=>{ pjPhoto=url; $('#pj-photo-prev').innerHTML=`<img src="${url}" alt="">`; });
   $('#pj-photo-clear').addEventListener('click',()=>{ pjPhoto=''; $('#pj-photo-prev').innerHTML=`<span class="ph">${icon('box','ic')}</span>`; });
   function renderPjChamps(){
     const box=$('#pj-champs');
@@ -1850,6 +1850,9 @@ let USR_TAB = null;
 /* ---- Médiathèque (images réutilisables, stockées en fichiers sur le serveur) ---- */
 let MEDIAS_CACHE=[];
 async function loadMedias(){ try{ MEDIAS_CACHE=await api('/api/medias'); }catch{ MEDIAS_CACHE=[]; } return MEDIAS_CACHE; }
+// Bouton « Choisir une image » qui ouvre la médiathèque (au lieu du sélecteur de fichier local).
+function mediaBtn(id,label){ return `<button type="button" class="btn small grey" id="${id}">${icon('plus')} ${label||'Choisir une image'}</button>`; }
+function wireMedia(btnId,onPick){ const b=document.getElementById(btnId); if(b) b.addEventListener('click',()=>mediaPicker(onPick)); }
 function mediaPicker(onPick){
   openModal(`<h3>Médiathèque</h3>
     <p class="help" style="margin-bottom:10px">${onPick?'Clique sur une image pour la choisir.':'Gère ici tes images réutilisables.'} Ajoute des images (réutilisables partout dans la gestion).</p>
@@ -1920,14 +1923,14 @@ function articleModal(a){
     <div class="field"><span>Image à la une</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
         <div id="art-cover-prev" style="width:96px;height:96px;border-radius:8px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${cover?`background-image:url('${cover}')`:''}"></div>
-        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="art-cover-file" accept="image/*" style="display:none"></label>
+        ${mediaBtn('art-cover-pick','Choisir')}
         <button type="button" class="btn small red" id="art-cover-clear">${icon('trash')} Retirer</button>
       </div>
     </div>
     <div class="field"><span>Bannière de l'article (paysage, en haut — sinon celle du blog est utilisée)</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
         <div id="art-ban-prev" style="width:180px;height:56px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${banner?`background-image:url('${banner}')`:''}"></div>
-        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="art-ban-file" accept="image/*" style="display:none"></label>
+        ${mediaBtn('art-ban-pick','Choisir')}
         <button type="button" class="btn small red" id="art-ban-clear">${icon('trash')} Retirer</button>
       </div>
     </div>
@@ -1955,9 +1958,9 @@ function articleModal(a){
   $$('.wysi-toolbar [data-block]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand('formatBlock',false,b.dataset.block); }));
   $('#art-link').addEventListener('click',()=>{ const url=prompt('Adresse du lien (https://…)'); if(url){ ed.focus(); document.execCommand('createLink',false,url); } });
   $('#art-img-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ ed.focus(); document.execCommand('insertHTML',false,'<p style="text-align:center"><img src="'+data+'" style="max-width:100%;height:auto;display:inline-block;margin:10px 0;border-radius:6px" draggable="false"></p><p><br></p>'); },1200,180*1024); });
-  $('#art-cover-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ cover=data; $('#art-cover-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
+  wireMedia('art-cover-pick', url=>{ cover=url; $('#art-cover-prev').style.backgroundImage=`url('${url}')`; });
   $('#art-cover-clear').addEventListener('click',()=>{ cover=''; $('#art-cover-prev').style.backgroundImage=''; });
-  $('#art-ban-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ banner=data; $('#art-ban-prev').style.backgroundImage=`url('${data}')`; }); });
+  wireMedia('art-ban-pick', url=>{ banner=url; $('#art-ban-prev').style.backgroundImage=`url('${url}')`; });
   $('#art-ban-clear').addEventListener('click',()=>{ banner=''; $('#art-ban-prev').style.backgroundImage=''; });
   $('#art-save').addEventListener('click',async()=>{
     const body={ titre:$('#art-titre').value.trim(), date:$('#art-date').value, auteur:$('#art-auteur').value.trim(), extrait:$('#art-extrait').value.trim(), contenu:$('#art-contenu').innerHTML.trim(), image:cover, banniere:banner, visible_site:$('#art-vis').checked, categorie:$('#art-cat').value.trim(), partenaires_ids:[...document.querySelectorAll('.art-pt:checked')].map(x=>+x.value) };
@@ -2024,7 +2027,7 @@ function vitrineModal(m){
     <div class="field"><span>Photo</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
         <div id="vit-prev" style="width:150px;height:104px;border-radius:8px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${photo?`background-image:url('${photo}')`:''}"></div>
-        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="vit-photo" accept="image/*" style="display:none"></label>
+        ${mediaBtn('vit-pick','Choisir')}
         <button type="button" class="btn small red" id="vit-photo-clear">${icon('trash')} Retirer</button>
       </div>
     </div>
@@ -2040,7 +2043,7 @@ function vitrineModal(m){
       <label class="field"><span>Publié sur le site</span><select id="vit-vis"><option value="0" ${m.visible_site?'':'selected'}>Non</option><option value="1" ${m.visible_site?'selected':''}>✅ Oui — affichée sur westcoastarcades.fr</option></select></label>
     </div>
     <div class="buttons" style="margin-top:12px;flex-wrap:wrap"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn light" id="vit-del" type="button">${icon('trash')} Vider la fiche</button><button class="btn" id="vit-save">Enregistrer</button></div>`);
-  $('#vit-photo').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ photo=data; $('#vit-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
+  wireMedia('vit-pick', url=>{ photo=url; $('#vit-prev').style.backgroundImage=`url('${url}')`; });
   $('#vit-photo-clear').addEventListener('click',()=>{ photo=''; $('#vit-prev').style.backgroundImage=''; });
   const put = body => api('/api/materiel/'+m.id,{method:'PUT',body:JSON.stringify(body)});
   $('#vit-save').addEventListener('click',async()=>{
@@ -2072,7 +2075,7 @@ function heroModal(){
     <div class="field"><span>Image (visuel à droite)</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
         <div id="h-prev" style="width:96px;height:120px;border-radius:8px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${img?`background-image:url('${img}')`:''}"></div>
-        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="h-img" accept="image/*" style="display:none"></label>
+        ${mediaBtn('h-pick','Choisir')}
         <button type="button" class="btn small red" id="h-img-clear">${icon('trash')} Retirer</button>
       </div>
     </div>
@@ -2082,7 +2085,7 @@ function heroModal(){
     </div>
     <label class="field"><span>Vidéo de fond YouTube — ID ou lien (optionnel)</span><input id="h-video" value="${esc(h.video_url||'')}" placeholder="ex. W3NuWfFUITM"></label>
     <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="h-save">Enregistrer</button></div>`);
-  $('#h-img').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ img=data; $('#h-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
+  wireMedia('h-pick', url=>{ img=url; $('#h-prev').style.backgroundImage=`url('${url}')`; });
   $('#h-img-clear').addEventListener('click',()=>{ img=''; $('#h-prev').style.backgroundImage=''; });
   $('#h-save').addEventListener('click',async()=>{
     const hero={ titre:$('#h-titre').value.trim(), texte:$('#h-texte').value.trim(), image:img, cta_label:$('#h-cta').value.trim(), cta_url:$('#h-ctaurl').value.trim(), video_url:$('#h-video').value.trim() };
@@ -2100,10 +2103,10 @@ function photosModal(){
   openModal(`<h3>Module Photos asso</h3>
     <p class="help" style="margin-bottom:8px">La galerie « L'association en quelques images… ». Ajoute autant de photos que tu veux.</p>
     <div id="ph-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
-    <label class="btn light" style="cursor:pointer">${icon('plus')} Ajouter des photos<input type="file" id="ph-add" accept="image/*" multiple style="display:none"></label>
+    <button type="button" class="btn light" id="ph-add-btn">${icon('plus')} Ajouter des photos</button>
     <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="ph-save">Enregistrer</button></div>`);
   draw();
-  $('#ph-add').addEventListener('change',ev=>{ [...ev.target.files].forEach(f=>compressSquare(f,data=>{ photos.push({image:data}); draw(); },120*1024)); ev.target.value=''; });
+  $('#ph-add-btn').addEventListener('click',()=>mediaPicker(url=>{ photos.push({image:url}); draw(); }));
   $('#ph-save').addEventListener('click',async()=>{ try{ await api('/api/site',{method:'PUT',body:JSON.stringify({photos})}); closeModal(); toast('Photos enregistrées'); renderModulesTab(); }catch(e){ toast(e.message); } });
 }
 
@@ -2122,7 +2125,7 @@ function equipeModal(){
     $$('.js-eq-nom').forEach(inp=>inp.addEventListener('input',()=>{ team[+inp.dataset.i].nom=inp.value; }));
     $$('.js-eq-desc').forEach(inp=>inp.addEventListener('input',()=>{ team[+inp.dataset.i].description=inp.value; }));
     $$('.js-eq-del').forEach(b=>b.addEventListener('click',()=>{ team.splice(+b.dataset.i,1); draw(); }));
-    $$('.js-eq-photo').forEach(d=>d.addEventListener('click',()=>{ const i=+d.dataset.i; const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.onchange=ev=>{ const f=ev.target.files[0]; if(f) compressSquare(f,data=>{ team[i].photo=data; draw(); },120*1024); }; inp.click(); }));
+    $$('.js-eq-photo').forEach(d=>d.addEventListener('click',()=>{ const i=+d.dataset.i; mediaPicker(url=>{ team[i].photo=url; draw(); }); }));
   }
   openModal(`<h3>Module L'équipe</h3>
     <p class="help" style="margin-bottom:8px">La section « La fine équipe ». Clique sur une photo pour la changer.</p>
@@ -2143,7 +2146,7 @@ async function blogDisplayModal(){
     <div class="field"><span>Image de fond du hero (grande bannière en haut de la page Blog)</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
         <div id="bl-hero-prev" style="width:220px;height:60px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${heroImg?`background-image:url('${heroImg}')`:''}"></div>
-        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="bl-hero-file" accept="image/*" style="display:none"></label>
+        ${mediaBtn('bl-hero-pick','Choisir')}
         <button type="button" class="btn small red" id="bl-hero-clear">${icon('trash')} Retirer</button>
       </div>
     </div>
@@ -2162,7 +2165,7 @@ async function blogDisplayModal(){
     <div class="field"><span>Bannière du blog (paysage, en haut des articles)</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
         <div id="bl-ban-prev" style="width:200px;height:60px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;background-repeat:no-repeat;${bannerG?`background-image:url('${bannerG}')`:''}"></div>
-        <label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="bl-ban-file" accept="image/*" style="display:none"></label>
+        ${mediaBtn('bl-ban-pick','Choisir')}
         <button type="button" class="btn small red" id="bl-ban-clear">${icon('trash')} Retirer</button>
       </div>
     </div>
@@ -2173,7 +2176,7 @@ async function blogDisplayModal(){
     <div class="card" id="bl-pub-cfg" style="margin-top:8px;padding:12px;${w.pub?'':'display:none'}">
       <div style="font-weight:700;color:var(--navy);margin-bottom:8px">Encart publicitaire</div>
       <label class="field"><span>Type</span><select id="bl-pub-type"><option value="image" ${pubType==='image'?'selected':''}>Image / GIF</option><option value="youtube" ${pubType==='youtube'?'selected':''}>Vidéo YouTube</option></select></label>
-      <div id="bl-pub-img" style="${pubType==='image'?'':'display:none'}"><div style="display:flex;gap:10px;align-items:center;margin:4px 0"><div id="bl-pub-prev" style="width:130px;height:84px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;${pubMedia&&pubType==='image'?`background-image:url('${pubMedia}')`:''}"></div><label class="btn small grey" style="cursor:pointer">${icon('plus')} Image<input type="file" id="bl-pub-file" accept="image/*" style="display:none"></label></div></div>
+      <div id="bl-pub-img" style="${pubType==='image'?'':'display:none'}"><div style="display:flex;gap:10px;align-items:center;margin:4px 0"><div id="bl-pub-prev" style="width:130px;height:84px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;${pubMedia&&pubType==='image'?`background-image:url('${pubMedia}')`:''}"></div>${mediaBtn('bl-pub-pick','Image')}</div></div>
       <label class="field" id="bl-pub-yt" style="${pubType==='youtube'?'':'display:none'}"><span>ID ou lien YouTube</span><input id="bl-pub-ytid" value="${pubType==='youtube'?esc(pubMedia):''}" placeholder="ex. W3NuWfFUITM"></label>
       <label class="field"><span>Lien au clic (optionnel)</span><input id="bl-pub-link" value="${esc(pub.link||'')}" placeholder="https://…"></label>
       <label class="field"><span>Titre de l'encart (optionnel)</span><input id="bl-pub-titre" value="${esc(pub.titre||'')}" placeholder="ex. Nos partenaires"></label>
@@ -2183,10 +2186,10 @@ async function blogDisplayModal(){
   $$('#bl-side button').forEach(x=>x.addEventListener('click',()=>{ side=x.dataset.s; $$('#bl-side button').forEach(y=>y.classList.toggle('active',y===x)); }));
   $('#bl-w-pub').addEventListener('change',()=>{ $('#bl-pub-cfg').style.display=$('#bl-w-pub').checked?'':'none'; });
   $('#bl-pub-type').addEventListener('change',()=>{ pubType=$('#bl-pub-type').value; $('#bl-pub-img').style.display=pubType==='image'?'':'none'; $('#bl-pub-yt').style.display=pubType==='youtube'?'':'none'; });
-  $('#bl-pub-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ pubMedia=data; $('#bl-pub-prev').style.backgroundImage=`url('${data}')`; },150*1024); });
-  $('#bl-ban-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ bannerG=data; $('#bl-ban-prev').style.backgroundImage=`url('${data}')`; }); });
+  wireMedia('bl-pub-pick', url=>{ pubMedia=url; $('#bl-pub-prev').style.backgroundImage=`url('${url}')`; });
+  wireMedia('bl-ban-pick', url=>{ bannerG=url; $('#bl-ban-prev').style.backgroundImage=`url('${url}')`; });
   $('#bl-ban-clear').addEventListener('click',()=>{ bannerG=''; $('#bl-ban-prev').style.backgroundImage=''; });
-  $('#bl-hero-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ heroImg=data; $('#bl-hero-prev').style.backgroundImage=`url('${data}')`; }); });
+  wireMedia('bl-hero-pick', url=>{ heroImg=url; $('#bl-hero-prev').style.backgroundImage=`url('${url}')`; });
   $('#bl-hero-clear').addEventListener('click',()=>{ heroImg=''; $('#bl-hero-prev').style.backgroundImage=''; });
   $('#bl-save').addEventListener('click',async()=>{
     if(pubType==='youtube') pubMedia=$('#bl-pub-ytid').value.trim();

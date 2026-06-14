@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.1 — 14 juin 2026**
+## Médiathèque branchée partout
+- Tous les boutons **« Choisir une image »** (matériel, articles, hero, équipe, partenaires, événements, projets, vitrines, galerie, blog) ouvrent désormais la **médiathèque** : on choisit une image déjà téléversée **ou** on en ajoute une nouvelle depuis l'ordinateur (elle rejoint la médiathèque, réutilisable ensuite).
+- *(Nouveau versionnage : +0.0.1 par mise à jour, récap utilisateurs toutes les 5 versions.)*
+
+---
+
 **Version 2.7 — 14 juin 2026**
 ## Éditeur d'article plus confortable
 - La fenêtre de rédaction d'un article s'ouvre maintenant en **mode paysage (large)** et est **redimensionnable** (glisse le coin en bas à droite) — fini le scroll interminable sur les longs articles.
