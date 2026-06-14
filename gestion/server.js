@@ -57,7 +57,9 @@ function hashPw(pw, salt) { return crypto.scryptSync(String(pw), salt, 32).toStr
 function makePw(pw) { const salt = crypto.randomBytes(12).toString('hex'); return { salt, hash: hashPw(pw, salt) }; }
 function makeResetCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 6; i++) c += A[Math.floor(Math.random() * A.length)]; const salt = crypto.randomBytes(8).toString('hex'); return { code: c, salt, hash: hashPw(c, salt) }; }
 function checkPw(pw, u) { return !!u && u.hash === hashPw(pw, u.salt); }
-function publicUser(u) { return u && { id: u.id, login: u.login, nom: u.nom, prenom: u.prenom, photo: u.photo || '', role: u.role, niveau: roleNiveau(u.role), must_change: !!u.must_change }; }
+// Nettoie les valeurs textuelles parasites (« undefined »/« null » stockées par d'anciens imports).
+function cleanStr(s) { return (s === undefined || s === null || s === 'undefined' || s === 'null') ? '' : String(s); }
+function publicUser(u) { return u && { id: u.id, login: u.login, nom: cleanStr(u.nom), prenom: cleanStr(u.prenom), photo: u.photo || '', role: u.role, niveau: roleNiveau(u.role), must_change: !!u.must_change }; }
 
 function sessionSecret() {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
@@ -1009,16 +1011,62 @@ add('DELETE', '/api/asso/campagnes/:annee', (req, res, p, body, query, user) => 
 const MEMBER_FIELDS = ['adresse', 'code_postal', 'ville', 'telephone', 'email', 'date_adhesion', 'date_naissance', 'profession', 'notes_membre'];
 function memberView(u) {
   return {
-    id: u.id, login: u.login, nom: u.nom || '', prenom: u.prenom || '', role: u.role, photo: u.photo || '',
+    id: u.id, kind: 'compte', login: u.login, nom: cleanStr(u.nom), prenom: cleanStr(u.prenom), role: u.role, photo: u.photo || '',
     adresse: u.adresse || '', code_postal: u.code_postal || '', ville: u.ville || '', telephone: u.telephone || '',
     email: u.email || '', date_adhesion: u.date_adhesion || '', date_naissance: u.date_naissance || '',
     profession: u.profession || '', notes_membre: u.notes_membre || '',
     cotisations: Array.isArray(u.cotisations) ? u.cotisations : [],
   };
 }
-add('GET', '/api/membres', (req, res, p, body, query, user) => {
+// Membres extérieurs (cotisants sans compte de connexion).
+function extView(e) {
+  return { id: e.id, kind: 'externe', nom: cleanStr(e.nom), prenom: cleanStr(e.prenom), adresse: e.adresse || '', code_postal: e.code_postal || '', ville: e.ville || '', telephone: e.telephone || '', email: e.email || '', date_adhesion: e.date_adhesion || '', date_naissance: e.date_naissance || '', profession: e.profession || '', notes_membre: e.notes_membre || '', cotisations: Array.isArray(e.cotisations) ? e.cotisations : [] };
+}
+add('GET', '/api/asso/membres', (req, res, p, body, query, user) => {
   if (!requireView(user, res)) return;
-  send(res, 200, db().users.map(memberView));
+  const ext = Array.isArray(db().settings.membres_ext) ? db().settings.membres_ext : [];
+  send(res, 200, [...db().users.map(memberView), ...ext.map(extView)]);
+});
+// CRUD membres extérieurs
+add('POST', '/api/membres-ext', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const s = db().settings; if (!Array.isArray(s.membres_ext)) s.membres_ext = [];
+  const e = { id: Date.now(), cotisations: [] };
+  MEMBER_FIELDS.forEach(k => { if (body[k] !== undefined) e[k] = String(body[k]); });
+  e.nom = String(body.nom || '').trim(); e.prenom = String(body.prenom || '').trim();
+  s.membres_ext.push(e); save(); send(res, 200, extView(e));
+});
+add('PUT', '/api/membres-ext/:id', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const e = (db().settings.membres_ext || []).find(x => x.id === +p.id); if (!e) return send(res, 404, { error: 'Membre introuvable.' });
+  if (body.nom !== undefined) e.nom = String(body.nom).trim();
+  if (body.prenom !== undefined) e.prenom = String(body.prenom).trim();
+  MEMBER_FIELDS.forEach(k => { if (body[k] !== undefined) e[k] = String(body[k]); });
+  save(); send(res, 200, extView(e));
+});
+add('DELETE', '/api/membres-ext/:id', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const s = db().settings; s.membres_ext = (s.membres_ext || []).filter(x => x.id !== +p.id);
+  save(); send(res, 200, { ok: true });
+});
+add('POST', '/api/membres-ext/:id/cotisation', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const e = (db().settings.membres_ext || []).find(x => x.id === +p.id); if (!e) return send(res, 404, { error: 'Membre introuvable.' });
+  if (!Array.isArray(e.cotisations)) e.cotisations = [];
+  const annee = String(body.annee || '').trim(); if (!annee) return send(res, 400, { error: 'Année obligatoire.' });
+  let c = e.cotisations.find(x => String(x.annee) === annee); if (!c) { c = { annee }; e.cotisations.push(c); }
+  if (body.paye !== undefined) c.paye = !!body.paye;
+  if (body.date_paiement !== undefined) c.date_paiement = String(body.date_paiement);
+  if (body.montant !== undefined) c.montant = body.montant;
+  if (body.mode !== undefined) c.mode = String(body.mode);
+  e.cotisations.sort((a, b) => String(b.annee).localeCompare(String(a.annee)));
+  save(); send(res, 200, extView(e));
+});
+add('DELETE', '/api/membres-ext/:id/cotisation/:annee', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const e = (db().settings.membres_ext || []).find(x => x.id === +p.id); if (!e) return send(res, 404, { error: 'Membre introuvable.' });
+  e.cotisations = (e.cotisations || []).filter(x => String(x.annee) !== String(p.annee));
+  save(); send(res, 200, extView(e));
 });
 add('PUT', '/api/membres/:id', (req, res, p, body, query, user) => {
   if (!requireAdmin(user, res)) return;
@@ -1736,6 +1784,14 @@ http.createServer((req, res) => {
     if (!Array.isArray(d.logins)) d.logins = [];
     if (!d.presence || typeof d.presence !== 'object') d.presence = {};
     if (!Array.isArray(d.activity)) d.activity = [];
+    // Nettoyage : prénoms/noms parasites « undefined »/« null » stockés par d'anciens imports.
+    (d.users || []).forEach(u => { if (u.prenom === 'undefined' || u.prenom === 'null') u.prenom = ''; if (u.nom === 'undefined' || u.nom === 'null') u.nom = ''; });
+    // Rôle « Membre asso actif » (ajouté une fois ; ensuite l'admin le gère dans Groupes & permissions).
+    if (d.settings && !d.settings._membre_role_v1) {
+      if (!Array.isArray(d.settings.roles) || !d.settings.roles.length) d.settings.roles = DEFAULT_ROLES.map(r => ({ ...r }));
+      if (!d.settings.roles.some(r => r.key === 'membre')) d.settings.roles.push({ key: 'membre', label: 'Membre asso actif', niveau: 'lecture' });
+      d.settings._membre_role_v1 = true;
+    }
     save();
   } catch (e) { logFatal('ensureCollections', e); }
   try { fs.mkdirSync(MEDIA_DIR, { recursive: true }); } catch (e) { logFatal('mediaDir', e); }

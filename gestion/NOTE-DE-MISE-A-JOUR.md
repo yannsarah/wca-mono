@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.16 — 15 juin 2026**
+## Module Asso : membres extérieurs + correctifs
+- **Correctif « undefined »** : les prénoms parasites affichés dans la liste des membres sont nettoyés (à l'affichage et dans la base).
+- Nouveau rôle **« Membre asso actif »** (compte avec accès, droits réglables dans Groupes & permissions).
+- Nouveau **membre extérieur** : un cotisant **sans compte de connexion** (juste prénom, nom, adresse, contact et cotisations). Bouton « Membre extérieur » dans l'onglet Membres ; un badge distingue **Compte** et **Extérieur**.
+
+---
+
 **Version 2.8.15 — 14 juin 2026**
 ## Nouveau « Module Asso » (loi 1901)
 Accessible depuis **Administration › Module Asso**, en trois onglets :

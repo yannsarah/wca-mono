@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.15'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.16'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -3149,57 +3149,72 @@ async function renderAssoMembres(){
   const body=$('#asso-body');
   try{ ASSO_CACHE.asso=await api('/api/asso'); }catch{}
   try{ ASSO_CACHE.camps=await api('/api/asso/campagnes'); }catch{ ASSO_CACHE.camps=[]; }
-  try{ ASSO_CACHE.membres=await api('/api/membres'); }catch{ ASSO_CACHE.membres=[]; }
+  try{ ASSO_CACHE.membres=await api('/api/asso/membres'); }catch{ ASSO_CACHE.membres=[]; }
   const camps=ASSO_CACHE.camps, membres=ASSO_CACHE.membres;
   const years=camps.map(c=>String(c.annee));
   if(!ASSO_YEAR || !years.includes(ASSO_YEAR)) ASSO_YEAR=years[0]||String(new Date().getFullYear());
   const admin=isAdminUser();
+  const mName=m=>(((m.prenom||'')+' '+(m.nom||'')).trim()||m.login||'(sans nom)');
   const cotisOf=(m,an)=>(m.cotisations||[]).find(c=>String(c.annee)===String(an));
   const paidCount=membres.filter(m=>{ const c=cotisOf(m,ASSO_YEAR); return c&&c.paye; }).length;
   body.innerHTML = `<div class="toolbar" style="gap:12px;flex-wrap:wrap;align-items:center">
       <label class="mini" style="display:flex;align-items:center;gap:6px">Année <select id="asso-year" style="width:auto">${(years.length?years:[ASSO_YEAR]).map(y=>`<option ${y===ASSO_YEAR?'selected':''}>${esc(y)}</option>`).join('')}</select></label>
       <span class="mini" style="color:var(--muted)">${paidCount}/${membres.length} à jour pour ${esc(ASSO_YEAR)}</span>
+      ${admin?`<button class="btn small" id="mb-add-ext" style="margin-left:auto">${icon('plus')} Membre extérieur</button>`:''}
     </div>
     <div class="tablecard"><table class="grid"><thead><tr><th>Membre</th><th>Contact</th><th>Cotisation ${esc(ASSO_YEAR)}</th><th></th></tr></thead><tbody>${
       membres.map(m=>{ const c=cotisOf(m,ASSO_YEAR); const st=c?(c.paye?`<span class="statut dispo">${icon('check')} Payée${c.montant?(' · '+esc(c.montant)+'€'):''}</span>`:'<span class="statut hs">Non payée</span>'):'<span class="statut">—</span>';
-        return `<tr class="js-mb-row" data-id="${m.id}" style="cursor:pointer"><td><strong>${esc((m.prenom+' '+m.nom).trim()||m.login)}</strong>${m.ville?`<div class="sub">${esc(m.ville)}</div>`:''}</td>
+        const badge=`<span class="tag ${m.kind==='externe'?'gray':'blue'}" style="margin-left:6px;font-size:10px">${m.kind==='externe'?'Extérieur':'Compte'}</span>`;
+        return `<tr class="js-mb-row" data-mk="${m.kind}:${m.id}" style="cursor:pointer"><td><strong>${esc(mName(m))}</strong>${badge}${m.ville?`<div class="sub">${esc(m.ville)}</div>`:''}</td>
           <td>${m.telephone?esc(m.telephone):''}${m.email?`<div class="sub">${esc(m.email)}</div>`:''}</td>
           <td>${st}</td>
           <td class="actions"><div class="row-actions">
-            <button class="iconbtn ghost js-mb-letter" data-id="${m.id}" title="Lettre de cotisation">✉️</button>
-            ${c&&c.paye?`<button class="iconbtn ghost js-mb-recu" data-id="${m.id}" title="Reçu de cotisation">🧾</button>`:''}
-            <button class="iconbtn ghost js-mb-edit" data-id="${m.id}" title="Modifier">${icon('edit')}</button>
-          </div></td></tr>`; }).join('') || '<tr><td colspan="4" class="help" style="padding:14px">Aucun membre. Les membres sont les comptes (Utilisateurs › Comptes).</td></tr>'
+            <button class="iconbtn ghost js-mb-letter" data-mk="${m.kind}:${m.id}" title="Lettre de cotisation">✉️</button>
+            ${c&&c.paye?`<button class="iconbtn ghost js-mb-recu" data-mk="${m.kind}:${m.id}" title="Reçu de cotisation">🧾</button>`:''}
+            <button class="iconbtn ghost js-mb-edit" data-mk="${m.kind}:${m.id}" title="Modifier">${icon('edit')}</button>
+          </div></td></tr>`; }).join('') || '<tr><td colspan="4" class="help" style="padding:14px">Aucun membre.</td></tr>'
     }</tbody></table></div>
-    <p class="help" style="margin-top:8px">ℹ️ Les membres sont les <strong>comptes utilisateurs</strong>. Pour en ajouter un, crée un compte dans Utilisateurs › Comptes, puis complète sa fiche ici.</p>`;
+    <p class="help" style="margin-top:8px">ℹ️ Les <strong>comptes</strong> ont un accès à l'application (rôle « Membre asso actif », admin, technicien…). Les <strong>membres extérieurs</strong> cotisent sans compte. Ajoute un compte dans Utilisateurs › Comptes, ou un membre extérieur ci-dessus.</p>`;
   $('#asso-year').addEventListener('change',e=>{ ASSO_YEAR=e.target.value; renderAssoMembres(); });
-  const open=id=>memberModal(membres.find(m=>m.id===+id));
-  $$('.js-mb-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('.row-actions')) return; open(r.dataset.id); }));
-  $$('.js-mb-edit').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); open(b.dataset.id); }));
-  $$('.js-mb-letter').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const m=membres.find(x=>x.id===+b.dataset.id); const c=camps.find(x=>String(x.annee)===String(ASSO_YEAR))||{annee:ASSO_YEAR}; pdfDialog(assoLetterHTML(m,c,ASSO_CACHE.asso), 'Cotisation-'+esc((m.nom||m.login))+'-'+ASSO_YEAR); }));
-  $$('.js-mb-recu').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const m=membres.find(x=>x.id===+b.dataset.id); const c=cotisOf(m,ASSO_YEAR); pdfDialog(assoRecuHTML(m,c,ASSO_CACHE.asso), 'Recu-'+esc((m.nom||m.login))+'-'+ASSO_YEAR); }));
+  $('#mb-add-ext')?.addEventListener('click',()=>memberModal({kind:'externe'}));
+  const byMk=k=>membres.find(m=>(m.kind+':'+m.id)===k);
+  $$('.js-mb-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('.row-actions')) return; memberModal(byMk(r.dataset.mk)); }));
+  $$('.js-mb-edit').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); memberModal(byMk(b.dataset.mk)); }));
+  $$('.js-mb-letter').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const m=byMk(b.dataset.mk); const c=camps.find(x=>String(x.annee)===String(ASSO_YEAR))||{annee:ASSO_YEAR}; pdfDialog(assoLetterHTML(m,c,ASSO_CACHE.asso), 'Cotisation-'+(m.nom||m.prenom||'membre')+'-'+ASSO_YEAR); }));
+  $$('.js-mb-recu').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const m=byMk(b.dataset.mk); const c=cotisOf(m,ASSO_YEAR); pdfDialog(assoRecuHTML(m,c,ASSO_CACHE.asso), 'Recu-'+(m.nom||m.prenom||'membre')+'-'+ASSO_YEAR); }));
 }
 function memberModal(mb){
-  if(!mb) return; const e=mb; let cot=(e.cotisations||[]).map(c=>({...c}));
-  const admin=isAdminUser();
-  openModal(`<h3>Membre — ${esc((e.prenom+' '+e.nom).trim()||e.login)}</h3>
-    <div class="row2"><label class="field"><span>Prénom</span><input id="mb-prenom" value="${esc(e.prenom)}"></label><label class="field"><span>Nom</span><input id="mb-nom" value="${esc(e.nom)}"></label></div>
+  if(!mb) return; const e=mb; const admin=isAdminUser();
+  const ext = e.kind==='externe';
+  const isNew = ext && !e.id;
+  const base = ext ? '/api/membres-ext/' : '/api/membres/';
+  let cot=(e.cotisations||[]).map(c=>({...c}));
+  const title = isNew ? 'Nouveau membre extérieur' : ('Membre — '+(((e.prenom||'')+' '+(e.nom||'')).trim()||e.login||''));
+  openModal(`<h3>${esc(title)}</h3>
+    ${ext?(isNew?'<p class="help" style="margin:-4px 0 10px">Membre <strong>sans compte</strong> (cotise seulement).</p>':'<p class="help" style="margin:-4px 0 10px">Membre extérieur (sans accès à l’application).</p>'):'<p class="help" style="margin:-4px 0 10px">Compte avec accès à l’application. L’identifiant et le rôle se gèrent dans Utilisateurs › Comptes.</p>'}
+    <div class="row2"><label class="field"><span>Prénom</span><input id="mb-prenom" value="${esc(e.prenom||'')}"></label><label class="field"><span>Nom</span><input id="mb-nom" value="${esc(e.nom||'')}"></label></div>
     <label class="field"><span>Adresse</span><input id="mb-adresse" value="${esc(e.adresse||'')}"></label>
     <div class="row2"><label class="field"><span>Code postal</span><input id="mb-cp" value="${esc(e.code_postal||'')}"></label><label class="field"><span>Ville</span><input id="mb-ville" value="${esc(e.ville||'')}"></label></div>
     <div class="row2"><label class="field"><span>Téléphone</span><input id="mb-tel" value="${esc(e.telephone||'')}"></label><label class="field"><span>Email</span><input id="mb-email" value="${esc(e.email||'')}"></label></div>
     <div class="row2"><label class="field"><span>Date d'adhésion</span><input id="mb-adh" type="date" value="${esc(e.date_adhesion||'')}"></label><label class="field"><span>Profession</span><input id="mb-prof" value="${esc(e.profession||'')}"></label></div>
-    <div class="section-title" style="margin-top:6px">Cotisations</div>
-    <div id="mb-cotis"></div>
-    ${admin?`<div class="add-row" style="margin-top:6px;flex-wrap:wrap"><input id="mb-c-annee" placeholder="Année" style="max-width:90px"><input id="mb-c-montant" placeholder="Montant €" style="max-width:100px"><select id="mb-c-mode" style="width:auto"><option>Virement</option><option>Espèces</option><option>Chèque</option><option>Autre</option></select><label class="mini" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="mb-c-paye" checked> payé</label><button class="btn small" id="mb-c-add">${icon('plus')} Ajouter</button></div>`:''}
-    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Fermer</button>${admin?`<button class="btn" id="mb-save">Enregistrer la fiche</button>`:''}</div>`, {wide:true});
+    ${isNew?'':`<div class="section-title" style="margin-top:6px">Cotisations</div><div id="mb-cotis"></div>
+    ${admin?`<div class="add-row" style="margin-top:6px;flex-wrap:wrap"><input id="mb-c-annee" placeholder="Année" style="max-width:90px"><input id="mb-c-montant" placeholder="Montant €" style="max-width:100px"><select id="mb-c-mode" style="width:auto"><option>Virement</option><option>Espèces</option><option>Chèque</option><option>Autre</option></select><label class="mini" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="mb-c-paye" checked> payé</label><button class="btn small" id="mb-c-add">${icon('plus')} Ajouter</button></div>`:''}`}
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">${admin?'Annuler':'Fermer'}</button>${admin?`<button class="btn" id="mb-save">${isNew?'Créer le membre':'Enregistrer la fiche'}</button>`:''}</div>`, {wide:true});
   function drawCot(){
-    const box=$('#mb-cotis');
+    const box=$('#mb-cotis'); if(!box) return;
     box.innerHTML = cot.length ? `<div class="tablecard" style="box-shadow:none;border:1px solid var(--line)"><table class="grid"><tbody>${cot.map(c=>`<tr><td><strong>${esc(c.annee)}</strong></td><td>${c.paye?`<span class="statut dispo">Payée</span>`:'<span class="statut hs">Non payée</span>'}</td><td>${c.montant?esc(c.montant)+'€':''}</td><td>${c.date_paiement?frDate(c.date_paiement):''}</td><td>${esc(c.mode||'')}</td><td class="actions">${admin?`<button class="iconbtn ghost mbc-del" data-an="${esc(c.annee)}" style="color:#e23b3b">${icon('trash')}</button>`:''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="mini">Aucune cotisation enregistrée.</p>';
-    box.querySelectorAll('.mbc-del').forEach(b=>b.addEventListener('click',async()=>{ try{ const r=await api('/api/membres/'+e.id+'/cotisation/'+b.dataset.an,{method:'DELETE'}); cot=r.cotisations; drawCot(); }catch(err){ toast(err.message); } }));
+    box.querySelectorAll('.mbc-del').forEach(b=>b.addEventListener('click',async()=>{ try{ const r=await api(base+e.id+'/cotisation/'+b.dataset.an,{method:'DELETE'}); cot=r.cotisations; drawCot(); }catch(err){ toast(err.message); } }));
   }
-  drawCot();
-  $('#mb-c-add')?.addEventListener('click',async()=>{ const an=$('#mb-c-annee').value.trim(); if(!an){ toast('Indique une année.'); return; } try{ const r=await api('/api/membres/'+e.id+'/cotisation',{method:'POST',body:JSON.stringify({annee:an,montant:$('#mb-c-montant').value.trim(),mode:$('#mb-c-mode').value,paye:$('#mb-c-paye').checked,date_paiement:new Date().toISOString().slice(0,10)})}); cot=r.cotisations; drawCot(); $('#mb-c-annee').value='';$('#mb-c-montant').value=''; toast('Cotisation enregistrée'); }catch(err){ toast(err.message); } });
-  $('#mb-save')?.addEventListener('click',async()=>{ try{ await api('/api/membres/'+e.id,{method:'PUT',body:JSON.stringify({ prenom:$('#mb-prenom').value.trim(), nom:$('#mb-nom').value.trim(), adresse:$('#mb-adresse').value.trim(), code_postal:$('#mb-cp').value.trim(), ville:$('#mb-ville').value.trim(), telephone:$('#mb-tel').value.trim(), email:$('#mb-email').value.trim(), date_adhesion:$('#mb-adh').value, profession:$('#mb-prof').value.trim() })}); closeModal(); toast('Fiche enregistrée'); renderAssoMembres(); }catch(err){ toast(err.message); } });
+  if(!isNew) drawCot();
+  $('#mb-c-add')?.addEventListener('click',async()=>{ const an=$('#mb-c-annee').value.trim(); if(!an){ toast('Indique une année.'); return; } try{ const r=await api(base+e.id+'/cotisation',{method:'POST',body:JSON.stringify({annee:an,montant:$('#mb-c-montant').value.trim(),mode:$('#mb-c-mode').value,paye:$('#mb-c-paye').checked,date_paiement:new Date().toISOString().slice(0,10)})}); cot=r.cotisations; drawCot(); $('#mb-c-annee').value='';$('#mb-c-montant').value=''; toast('Cotisation enregistrée'); }catch(err){ toast(err.message); } });
+  $('#mb-save')?.addEventListener('click',async()=>{
+    const obj={ prenom:$('#mb-prenom').value.trim(), nom:$('#mb-nom').value.trim(), adresse:$('#mb-adresse').value.trim(), code_postal:$('#mb-cp').value.trim(), ville:$('#mb-ville').value.trim(), telephone:$('#mb-tel').value.trim(), email:$('#mb-email').value.trim(), date_adhesion:$('#mb-adh').value, profession:$('#mb-prof').value.trim() };
+    try{
+      if(isNew) await api('/api/membres-ext',{method:'POST',body:JSON.stringify(obj)});
+      else await api(base+e.id,{method:'PUT',body:JSON.stringify(obj)});
+      closeModal(); toast('Fiche enregistrée'); renderAssoMembres();
+    }catch(err){ toast(err.message); }
+  });
 }
 
 /* ---- Onglet Assemblées générales ---- */
