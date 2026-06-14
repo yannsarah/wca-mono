@@ -187,7 +187,7 @@ function config() {
   if (!tf.couts || typeof tf.couts !== 'object') tf.couts = { ...DEFAULT_TARIFS.couts };
   else Object.keys(DEFAULT_TARIFS.couts).forEach(k => { if (tf.couts[k] === undefined) tf.couts[k] = DEFAULT_TARIFS.couts[k]; });
   if (!Array.isArray(tf.extras)) tf.extras = [];
-  return { categories: d.settings.categories, etats: d.settings.etats, proprietaires: d.settings.proprietaires, photo_px: d.settings.photo_px, roles: d.settings.roles, partenaires_mode: d.settings.partenaires_mode, partenaires_count: d.settings.partenaires_count, partenaires_visible: d.settings.partenaires_visible, watch: d.settings.watch, tarifs: tf, modules: d.settings.modules, modules_registry: MODULE_REGISTRY };
+  return { categories: d.settings.categories, etats: d.settings.etats, proprietaires: d.settings.proprietaires, photo_px: d.settings.photo_px, roles: d.settings.roles, partenaires_mode: d.settings.partenaires_mode, partenaires_count: d.settings.partenaires_count, partenaires_visible: d.settings.partenaires_visible, watch: d.settings.watch, tarifs: tf, modules: d.settings.modules, modules_registry: MODULE_REGISTRY, nav_visibility: d.settings.nav_visibility || {}, counts: { devis: (d.devis || []).length, evenements: (d.evenements || []).length, reparations: (d.reparations || []).length, projets: (d.projets || []).length, ventes: (d.ventes || []).length, prets: (d.prets || []).length } };
 }
 function normNiveau(n) { return ['admin', 'standard', 'lecture'].includes(n) ? n : 'standard'; }
 function roleNiveau(key) {
@@ -337,6 +337,7 @@ add('PUT', '/api/config', (req, res, p, body, query, user) => {
   if (body.partenaires_count !== undefined) d.settings.partenaires_count = Math.max(1, Math.min(12, +body.partenaires_count || 4));
   if (body.partenaires_visible !== undefined) d.settings.partenaires_visible = !!body.partenaires_visible;
   if (body.modules && typeof body.modules === 'object' && roleNiveau(user && user.role) === 'admin') { Object.keys(body.modules).forEach(k => { if (MODULE_REGISTRY.some(m => m.key === k)) d.settings.modules[k] = !!body.modules[k]; }); }
+  if (body.nav_visibility && typeof body.nav_visibility === 'object' && roleNiveau(user && user.role) === 'admin') { if (!d.settings.nav_visibility || typeof d.settings.nav_visibility !== 'object') d.settings.nav_visibility = {}; Object.keys(body.nav_visibility).forEach(k => { const v = body.nav_visibility[k]; d.settings.nav_visibility[k] = (v === 'show' || v === 'hide') ? v : 'auto'; }); }
   if (body.watch && typeof body.watch === 'object') { WATCH_KEYS.forEach(k => { if (body.watch[k] !== undefined) d.settings.watch[k] = !!body.watch[k]; }); }
   if (body.tarifs && typeof body.tarifs === 'object') {
     const tf = d.settings.tarifs;

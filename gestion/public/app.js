@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.5'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '2.6'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -96,7 +96,7 @@ const NAV = [
   { id:'prets', label:'Prêts', icon:'share', mod:'prets' },
   { id:'site', label:'Site internet', icon:'globe', mod:'site' },
   { id:'users', label:'Utilisateurs', icon:'users' },
-  { id:'reglages', label:'Paramètres', icon:'settings' },
+  { id:'reglages', label:'Administration', icon:'settings' },
 ];
 
 /* ------------------------------- Utilitaires ------------------------------- */
@@ -177,6 +177,9 @@ let PARTENAIRES_COUNT = 4;
 let PARTENAIRES_VISIBLE = true;
 let MODULES_ENABLED = {};
 let MODULE_REGISTRY = [];
+let NAV_VIS = {};      // {navId: 'auto'|'show'|'hide'}
+let NAV_COUNTS = {};   // {coll: nombre d'éléments}
+const NAV_HIDEABLE = { devis:'devis', evenements:'evenements', reparations:'reparations', projets:'projets', ventes:'ventes', prets:'prets' };
 function moduleOn(key){ return MODULES_ENABLED[key]!==false; }
 let PROPRIETAIRES = ['Perso','Asso','Partenaire','VIP','Autre'];
 let TARIFS = { periodes:[{key:'we',label:'Week-end',jours:2},{key:'sem',label:'Semaine',jours:7}], couts:{essence_litre:1.9,conso_100:12,camion_jour:120,mo_heure:25,couchage_nuit:0,maintenance_pct:0,presence_jour:0}, extras:[] };
@@ -186,7 +189,7 @@ function peopleDatalist(id){ return `<datalist id="${id}">${PEOPLE.map(n=>`<opti
 function roleLabel(key){ return (ROLES.find(r=>r.key===key)||{}).label || key || '—'; }
 function roleNiveauOf(key){ const r=ROLES.find(x=>x.key===key); return r?r.niveau:(key==='admin'?'admin':key==='invite'?'lecture':'standard'); }
 async function loadConfig(){
-  try{ const c=await api('/api/config'); if(Array.isArray(c.categories)) CATEGORIES=c.categories; if(Array.isArray(c.etats)) ETATS=c.etats; if(Array.isArray(c.proprietaires)) PROPRIETAIRES=c.proprietaires; if(typeof c.photo_px==='number') PHOTO_PX=c.photo_px; if(Array.isArray(c.roles)&&c.roles.length) ROLES=c.roles; if(c.partenaires_mode) PARTENAIRES_MODE=c.partenaires_mode; if(typeof c.partenaires_count==='number') PARTENAIRES_COUNT=c.partenaires_count; if(typeof c.partenaires_visible==='boolean') PARTENAIRES_VISIBLE=c.partenaires_visible; if(c.tarifs) TARIFS=c.tarifs; if(c.modules) MODULES_ENABLED=c.modules; if(Array.isArray(c.modules_registry)) MODULE_REGISTRY=c.modules_registry; }catch{}
+  try{ const c=await api('/api/config'); if(Array.isArray(c.categories)) CATEGORIES=c.categories; if(Array.isArray(c.etats)) ETATS=c.etats; if(Array.isArray(c.proprietaires)) PROPRIETAIRES=c.proprietaires; if(typeof c.photo_px==='number') PHOTO_PX=c.photo_px; if(Array.isArray(c.roles)&&c.roles.length) ROLES=c.roles; if(c.partenaires_mode) PARTENAIRES_MODE=c.partenaires_mode; if(typeof c.partenaires_count==='number') PARTENAIRES_COUNT=c.partenaires_count; if(typeof c.partenaires_visible==='boolean') PARTENAIRES_VISIBLE=c.partenaires_visible; if(c.tarifs) TARIFS=c.tarifs; if(c.modules) MODULES_ENABLED=c.modules; if(Array.isArray(c.modules_registry)) MODULE_REGISTRY=c.modules_registry; if(c.nav_visibility) NAV_VIS=c.nav_visibility; if(c.counts) NAV_COUNTS=c.counts; }catch{} if(CURRENT_USER && document.getElementById('nav')) buildNav();
   return { categories:CATEGORIES, etats:ETATS, photo_px:PHOTO_PX, roles:ROLES };
 }
 let MAT_CACHE = [];
@@ -195,7 +198,13 @@ function matOptions(selectedId){ return MAT_CACHE.map(m=>`<option value="${m.id}
 
 /* ------------------------------- Coquille / nav ------------------------------- */
 function buildNav(){
-  const items = NAV.filter(n => (!n.admin || isAdminUser() || isReadonly()) && (!n.mod || moduleOn(n.mod)));
+  const items = NAV.filter(n => {
+    if(n.admin && !(isAdminUser()||isReadonly())) return false;
+    if(n.mod && !moduleOn(n.mod)) return false;
+    const ck = NAV_HIDEABLE[n.id];
+    if(ck){ const ov=NAV_VIS[n.id]; if(ov==='show') return true; if(ov==='hide') return false; return (NAV_COUNTS[ck]||0)>0; }
+    return true;
+  });
   $('#nav').innerHTML = items.map(n => `<a data-view="${n.id}">${icon(n.icon)}<span>${n.label}</span></a>`).join('');
   const closeDrawer = () => { $('#sidebar').classList.remove('open'); $('#scrim').classList.remove('show'); };
   $$('#nav a').forEach(a => a.addEventListener('click', () => { setView(a.dataset.view); closeDrawer(); }));
@@ -2191,28 +2200,32 @@ async function renderUsers(){
   const canComptes = isAdminUser() || isReadonly();
   const dispoOn = moduleOn('disponibilites');
   const partOn = moduleOn('partenaires') && canComptes;
+  const groupesOn = isAdminUser();
   if(USR_TAB===null) USR_TAB = isAdminUser()||!dispoOn ? 'comptes' : 'dispo';
   if(USR_TAB==='comptes' && !canComptes) USR_TAB = dispoOn?'dispo':'comptes';
   if(USR_TAB==='dispo' && !dispoOn) USR_TAB='comptes';
   if(USR_TAB==='partenaires' && !partOn) USR_TAB = canComptes?'comptes':'dispo';
+  if(USR_TAB==='groupes' && !groupesOn) USR_TAB = canComptes?'comptes':'dispo';
   if(!canComptes && !dispoOn){ setView('accueil'); return; }
   const action = USR_TAB==='comptes'
-    ? (isAdminUser()?`<button class="btn" id="add-u">${icon('userplus')} Nouvel utilisateur</button><button class="btn grey" id="roles-btn">${icon('edit')} Gérer les rôles</button>`:'')
+    ? (isAdminUser()?`<button class="btn" id="add-u">${icon('userplus')} Nouvel utilisateur</button>`:'')
     : USR_TAB==='dispo' ? `<button class="btn" id="add-abs">${icon('plus')} Ajouter une absence</button>` : '';
   setTopbar('Utilisateurs', action);
   $('#add-u')?.addEventListener('click',()=>userModal());
-  $('#roles-btn')?.addEventListener('click',gererRolesModal);
   $('#add-abs')?.addEventListener('click',()=>absenceModal());
   view().innerHTML = `<div class="tabs-row">
-      ${dispoOn?`<button class="${USR_TAB==='dispo'?'active':''}" id="ut-dispo">${icon('calendar')} Disponibilités</button>`:''}
       ${canComptes?`<button class="${USR_TAB==='comptes'?'active':''}" id="ut-comptes">${icon('users')} Comptes</button>`:''}
       ${partOn?`<button class="${USR_TAB==='partenaires'?'active':''}" id="ut-part">${icon('share')} Partenaires</button>`:''}
+      ${dispoOn?`<button class="${USR_TAB==='dispo'?'active':''}" id="ut-dispo">${icon('calendar')} Disponibilités</button>`:''}
+      ${groupesOn?`<button class="${USR_TAB==='groupes'?'active':''}" id="ut-groupes">${icon('lock')} Groupes & permissions</button>`:''}
     </div><div id="usr-body"></div>`;
   $('#ut-dispo')?.addEventListener('click',()=>{ USR_TAB='dispo'; renderUsers(); });
   $('#ut-comptes')?.addEventListener('click',()=>{ USR_TAB='comptes'; renderUsers(); });
   $('#ut-part')?.addEventListener('click',()=>{ USR_TAB='partenaires'; renderUsers(); });
+  $('#ut-groupes')?.addEventListener('click',()=>{ USR_TAB='groupes'; renderUsers(); });
   if(USR_TAB==='comptes'){ $('#usr-body').innerHTML=`<div id="u-pills" class="cat-pills"></div><div id="u-list"></div>`; loadUsers(); }
   else if(USR_TAB==='partenaires'){ PT_INTAB=true; $('#usr-body').innerHTML='<div id="pt-body"></div>'; loadPartners().then(()=>renderPartenaires()); }
+  else if(USR_TAB==='groupes'){ $('#usr-body').innerHTML='<div id="roles-body"></div>'; renderRoles(); }
   else { renderDispo(); }
 }
 
@@ -2337,8 +2350,7 @@ function renderRoles(){
         <select class="js-role-niv" data-key="${esc(r.key)}" style="max-width:150px">${Object.entries(NIVEAUX).map(([k,v])=>`<option value="${k}" ${r.niveau===k?'selected':''}>${v}</option>`).join('')}</select>
         <button class="iconbtn ghost js-role-del" data-key="${esc(r.key)}" title="Supprimer">${icon('trash')}</button>
       </div>`).join('')}</div>
-    <div class="add-row"><input id="role-new" placeholder="Nouveau rôle…"><select id="role-new-niv" style="max-width:150px">${Object.entries(NIVEAUX).map(([k,v])=>`<option value="${k}" ${k==='standard'?'selected':''}>${v}</option>`).join('')}</select><button class="btn small" id="role-add">${icon('plus')} Ajouter</button></div>
-    <div class="buttons" style="margin-top:14px"><button class="btn" onclick="closeModal()">Fermer</button></div>`;
+    <div class="add-row"><input id="role-new" placeholder="Nouveau rôle…"><select id="role-new-niv" style="max-width:150px">${Object.entries(NIVEAUX).map(([k,v])=>`<option value="${k}" ${k==='standard'?'selected':''}>${v}</option>`).join('')}</select><button class="btn small" id="role-add">${icon('plus')} Ajouter</button></div>`;
   const after=async()=>{ await loadConfig(); renderRoles(); if($('#u-list')) loadUsers(); updateUserbox(); };
   $('#role-add').addEventListener('click',async()=>{ const label=$('#role-new').value.trim(); if(!label) return; try{ await api('/api/roles',{method:'POST',body:JSON.stringify({label,niveau:$('#role-new-niv').value})}); toast('Rôle ajouté'); after(); }catch(e){ toast(e.message); } });
   $$('.js-role-name').forEach(inp=>inp.addEventListener('change',async()=>{ try{ await api('/api/roles',{method:'PUT',body:JSON.stringify({key:inp.dataset.key,label:inp.value.trim()})}); toast('Rôle renommé'); after(); }catch(e){ toast(e.message); } }));
@@ -2382,7 +2394,7 @@ function userPwModal(id){
 
 /* ============================== PARAMÈTRES ============================== */
 async function renderReglages(){
-  setTopbar('Paramètres','');
+  setTopbar('Administration','');
   const u=CURRENT_USER||{};
   const isAdmin=isAdminUser();
   const canActivite=(isAdmin||isReadonly()) && moduleOn('activite');
@@ -2414,9 +2426,12 @@ async function renderReglages(){
       <label class="field"><span>Nouveau mot de passe</span><input id="me-new" type="password"></label>
       <button class="btn small" id="me-pw">Modifier le mot de passe</button>
     </div>
-    ${isAdmin?`<div class="section-title">Modules (options du site)</div>
-    <div class="card"><p class="help" style="margin:0 0 10px">Activez ou désactivez les modules. Un module désactivé masque sa page et ses fonctions. Idéal pour un site vitrine avec options.</p>
+    ${isAdmin?`<div class="section-title">Menus & modules</div>
+    <div class="card"><p class="help" style="margin:0 0 10px">Activez ou désactivez les modules. Un module désactivé masque sa page et ses fonctions.</p>
       <div class="watch-list">${MODULE_REGISTRY.map(m=>`<div class="watch-row"><span class="wr-lbl">${esc(m.label)}<br><small style="font-weight:400;color:var(--muted)">${esc(m.desc||'')}</small></span><span class="toggle-oui-non ${moduleOn(m.key)?'on':'off'} js-mod" data-k="${esc(m.key)}"><span class="t-oui">OUI</span><span class="t-non">NON</span></span></div>`).join('')}</div>
+    </div>
+    <div class="card" style="margin-top:10px"><p class="help" style="margin:0 0 10px">Affichage des menus de gauche. <strong>Auto</strong> : le menu se cache quand il est vide. Tu peux forcer l'affichage ou le masquage.</p>
+      <div class="watch-list">${NAV.filter(n=>NAV_HIDEABLE[n.id]).map(n=>{ const ov=NAV_VIS[n.id]||'auto'; const cnt=NAV_COUNTS[NAV_HIDEABLE[n.id]]||0; return `<div class="watch-row"><span class="wr-lbl">${icon(n.icon)} ${esc(n.label)} <small style="color:var(--muted)">(${cnt})</small></span><select class="js-navvis" data-id="${esc(n.id)}" style="width:auto"><option value="auto" ${ov==='auto'?'selected':''}>Auto (cacher si vide)</option><option value="show" ${ov==='show'?'selected':''}>Toujours afficher</option><option value="hide" ${ov==='hide'?'selected':''}>Cacher</option></select></div>`; }).join('')}</div>
     </div>`:''}
     ${isAdmin?`<div class="section-title">Sauvegarde & restauration</div>
     <div class="card">
@@ -2439,6 +2454,7 @@ async function renderReglages(){
   $('#me-logout').addEventListener('click',doLogout);
   if(isAdmin){
     $$('.js-mod').forEach(t=>t.addEventListener('click',async()=>{ const k=t.dataset.k; const v=!moduleOn(k); try{ await api('/api/config',{method:'PUT',body:JSON.stringify({modules:{[k]:v}})}); MODULES_ENABLED[k]=v; toast(v?'Module activé':'Module désactivé'); buildNav(); renderReglages(); }catch(e){ toast(e.message); } }));
+    $$('.js-navvis').forEach(s=>s.addEventListener('change',async()=>{ const id=s.dataset.id, v=s.value; try{ await api('/api/config',{method:'PUT',body:JSON.stringify({nav_visibility:{[id]:v}})}); NAV_VIS[id]=v; toast('Affichage du menu mis à jour'); buildNav(); }catch(e){ toast(e.message); } }));
     $('#bk-export').addEventListener('click',async()=>{ try{ const data=await api('/api/backup'); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`wca-sauvegarde-${todayISO()}.json`; a.click(); toast('Sauvegarde téléchargée'); }catch(e){ toast(e.message); } });
     $('#bk-file').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=async()=>{ try{ const data=JSON.parse(r.result); confirmModal('Restaurer cette sauvegarde ? Toutes les données actuelles seront remplacées.', async()=>{ try{ await api('/api/restore',{method:'POST',body:JSON.stringify(data)}); toast('Données restaurées'); setView('accueil'); }catch(err){ toast(err.message); } }); }catch{ toast('Fichier invalide.'); } }; r.readAsText(f); });
   }

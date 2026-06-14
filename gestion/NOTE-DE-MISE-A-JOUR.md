@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.6 — 14 juin 2026**
+## Réorganisation : Administration & Utilisateurs
+- **Paramètres → renommé « Administration »**. Nouvelle section **« Menus & modules »** : activer/désactiver les fonctions, **et** régler l'affichage des menus de gauche (**Auto** = caché si vide / **Toujours afficher** / **Cacher**). Les menus vides (Projets, Ventes, Prêts…) se **cachent automatiquement** pour alléger le menu.
+- **Utilisateurs** devient le hub des personnes : onglets **Comptes · Partenaires · Disponibilités · Groupes & permissions** (la gestion des rôles est désormais un onglet, admin uniquement).
+
+---
+
 **Version 2.5 — 14 juin 2026**
 ## Correctifs visibilité
 - **Hamburger** blog/article : enfin bien visible (boîte sombre arrondie + barres blanches de largeur fixe).
