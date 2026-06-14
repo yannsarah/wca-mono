@@ -16,6 +16,9 @@ gestion/data.json
 # Médiathèque : fichiers images téléversés (vivent sur le serveur, jamais dans Git)
 gestion/public/medias/
 
+# Documents asso (PV, convocations… ) : fichiers sur le serveur, jamais dans Git
+gestion/docs/
+
 # === site/ : secrets & sources à ne jamais publier ===
 .deploy/
 **/.deploy/

@@ -11,6 +11,7 @@ import { handlePublic } from './MODULES/public-api.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(__dirname, 'public');
 const MEDIA_DIR = path.join(PUBLIC, 'medias'); // médiathèque : images stockées en fichiers
+const DOCS_DIR = path.join(__dirname, 'docs');  // documents asso (hors public : servis via route authentifiée)
 const PORT = process.env.PORT || 3000;
 
 // Registre des modules activables (dossier MODULES/modules.json), avec repli intégré.
@@ -966,6 +967,153 @@ add('POST', '/api/pdf-history', (req, res, p, body, query, user) => {
 add('DELETE', '/api/pdf-history/:id', (req, res, p, body, query, user) => {
   const s = db().settings; s.pdf_history = (s.pdf_history || []).filter(x => x.id !== +p.id);
   save(); send(res, 200, { ok: true });
+});
+
+/* =============================== MODULE ASSO (loi 1901) =============================== */
+// --- Identité de l'association ---
+const ASSO_FIELDS = ['nom', 'objet', 'adresse', 'code_postal', 'ville', 'telephone', 'email', 'site', 'logo', 'rna', 'siret', 'iban', 'bic', 'mode_paiement', 'president_nom', 'tresorier_nom', 'secretaire_nom', 'lieu', 'statut_article'];
+add('GET', '/api/asso', (req, res, p, body, query, user) => {
+  if (!requireView(user, res)) return;
+  send(res, 200, (db().settings && db().settings.asso) || {});
+});
+add('PUT', '/api/asso', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const s = db().settings; if (!s.asso || typeof s.asso !== 'object') s.asso = {};
+  ASSO_FIELDS.forEach(k => { if (body[k] !== undefined) s.asso[k] = body[k]; });
+  save(); send(res, 200, s.asso);
+});
+
+// --- Campagnes de cotisation (réglages annuels, base des lettres) ---
+const CAMP_FIELDS = ['annee', 'montant', 'ag_date', 'periode_debut', 'periode_fin', 'echeance', 'echeance2', 'mode_paiement', 'statut_article'];
+add('GET', '/api/asso/campagnes', (req, res, p, body, query, user) => {
+  if (!requireView(user, res)) return;
+  send(res, 200, Array.isArray(db().settings.cotisation_campagnes) ? db().settings.cotisation_campagnes : []);
+});
+add('POST', '/api/asso/campagnes', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const s = db().settings; if (!Array.isArray(s.cotisation_campagnes)) s.cotisation_campagnes = [];
+  const annee = String(body.annee || '').trim(); if (!annee) return send(res, 400, { error: 'Année obligatoire.' });
+  let c = s.cotisation_campagnes.find(x => String(x.annee) === annee);
+  if (!c) { c = { annee }; s.cotisation_campagnes.push(c); }
+  CAMP_FIELDS.forEach(k => { if (body[k] !== undefined) c[k] = body[k]; });
+  s.cotisation_campagnes.sort((a, b) => String(b.annee).localeCompare(String(a.annee)));
+  save(); send(res, 200, c);
+});
+add('DELETE', '/api/asso/campagnes/:annee', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const s = db().settings; s.cotisation_campagnes = (s.cotisation_campagnes || []).filter(x => String(x.annee) !== String(p.annee));
+  save(); send(res, 200, { ok: true });
+});
+
+// --- Membres (= comptes utilisateurs, vue étendue) ---
+const MEMBER_FIELDS = ['adresse', 'code_postal', 'ville', 'telephone', 'email', 'date_adhesion', 'date_naissance', 'profession', 'notes_membre'];
+function memberView(u) {
+  return {
+    id: u.id, login: u.login, nom: u.nom || '', prenom: u.prenom || '', role: u.role, photo: u.photo || '',
+    adresse: u.adresse || '', code_postal: u.code_postal || '', ville: u.ville || '', telephone: u.telephone || '',
+    email: u.email || '', date_adhesion: u.date_adhesion || '', date_naissance: u.date_naissance || '',
+    profession: u.profession || '', notes_membre: u.notes_membre || '',
+    cotisations: Array.isArray(u.cotisations) ? u.cotisations : [],
+  };
+}
+add('GET', '/api/membres', (req, res, p, body, query, user) => {
+  if (!requireView(user, res)) return;
+  send(res, 200, db().users.map(memberView));
+});
+add('PUT', '/api/membres/:id', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const u = db().users.find(x => x.id === +p.id); if (!u) return send(res, 404, { error: 'Membre introuvable.' });
+  if (body.nom !== undefined) u.nom = String(body.nom).trim();
+  if (body.prenom !== undefined) u.prenom = String(body.prenom).trim();
+  MEMBER_FIELDS.forEach(k => { if (body[k] !== undefined) u[k] = String(body[k]); });
+  save(); send(res, 200, memberView(u));
+});
+// Ajoute / met à jour la cotisation d'une année pour un membre.
+add('POST', '/api/membres/:id/cotisation', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const u = db().users.find(x => x.id === +p.id); if (!u) return send(res, 404, { error: 'Membre introuvable.' });
+  if (!Array.isArray(u.cotisations)) u.cotisations = [];
+  const annee = String(body.annee || '').trim(); if (!annee) return send(res, 400, { error: 'Année obligatoire.' });
+  let c = u.cotisations.find(x => String(x.annee) === annee);
+  if (!c) { c = { annee }; u.cotisations.push(c); }
+  if (body.paye !== undefined) c.paye = !!body.paye;
+  if (body.date_paiement !== undefined) c.date_paiement = String(body.date_paiement);
+  if (body.montant !== undefined) c.montant = body.montant;
+  if (body.mode !== undefined) c.mode = String(body.mode);
+  u.cotisations.sort((a, b) => String(b.annee).localeCompare(String(a.annee)));
+  save(); send(res, 200, memberView(u));
+});
+add('DELETE', '/api/membres/:id/cotisation/:annee', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const u = db().users.find(x => x.id === +p.id); if (!u) return send(res, 404, { error: 'Membre introuvable.' });
+  u.cotisations = (u.cotisations || []).filter(x => String(x.annee) !== String(p.annee));
+  save(); send(res, 200, memberView(u));
+});
+
+// --- Assemblées générales (historique + PV) ---
+const AG_FIELDS = ['date', 'type', 'titre', 'lieu', 'heure', 'presents', 'representes', 'absents', 'quorum', 'ordre_du_jour', 'resolutions', 'decisions', 'documents', 'president_seance', 'secretaire_seance'];
+add('GET', '/api/ag', (req, res, p, body, query, user) => {
+  if (!requireView(user, res)) return;
+  send(res, 200, Array.isArray(db().settings.ag) ? db().settings.ag : []);
+});
+add('POST', '/api/ag', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const s = db().settings; if (!Array.isArray(s.ag)) s.ag = [];
+  const row = { id: Date.now(), cree_le: new Date().toISOString() };
+  AG_FIELDS.forEach(k => { if (body[k] !== undefined) row[k] = body[k]; });
+  s.ag.unshift(row); save(); send(res, 200, row);
+});
+add('PUT', '/api/ag/:id', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const row = (db().settings.ag || []).find(x => x.id === +p.id); if (!row) return send(res, 404, { error: 'AG introuvable.' });
+  AG_FIELDS.forEach(k => { if (body[k] !== undefined) row[k] = body[k]; });
+  save(); send(res, 200, row);
+});
+add('DELETE', '/api/ag/:id', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const s = db().settings; s.ag = (s.ag || []).filter(x => x.id !== +p.id);
+  save(); send(res, 200, { ok: true });
+});
+
+// --- Documents (fichiers réels, hors /public, servis seulement aux personnes connectées) ---
+const DOC_MIME_EXT = { 'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'application/msword': 'doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'application/vnd.ms-excel': 'xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx', 'text/plain': 'txt', 'application/zip': 'zip' };
+const EXT_MIME = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', txt: 'text/plain', zip: 'application/zip' };
+function saveDocFile(dataUrl, origName) {
+  const m = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl || '');
+  if (!m) throw new Error('Fichier invalide.');
+  let ext = DOC_MIME_EXT[m[1].toLowerCase()] || ((String(origName || '').match(/\.([a-z0-9]{1,6})$/i) || [])[1] || 'bin').toLowerCase();
+  ext = ext.replace(/[^a-z0-9]/g, '') || 'bin';
+  const rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const safe = String(origName || 'doc').replace(/\.[a-z0-9]+$/i, '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'doc';
+  const file = `${rid}-${safe}.${ext}`;
+  fs.mkdirSync(DOCS_DIR, { recursive: true });
+  fs.writeFileSync(path.join(DOCS_DIR, file), Buffer.from(m[2], 'base64'));
+  let size = 0; try { size = fs.statSync(path.join(DOCS_DIR, file)).size; } catch {}
+  return { file, ext, size };
+}
+add('POST', '/api/docs', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  try {
+    const r = saveDocFile(body.data, body.name);
+    send(res, 200, { file: r.file, url: '/api/docs/' + r.file, name: body.name || r.file, size: r.size, ext: r.ext });
+  } catch (e) { send(res, 400, { error: e.message }); }
+});
+// Téléchargement protégé : nécessite une session (pas accessible depuis l'extérieur).
+add('GET', '/api/docs/:file', (req, res, p, body, query, user) => {
+  if (!user) return send(res, 401, { error: 'Non authentifié.' });
+  const file = String(p.file).replace(/[^a-z0-9._-]/gi, '');
+  const full = path.join(DOCS_DIR, file);
+  if (!full.startsWith(DOCS_DIR) || !fs.existsSync(full)) return send(res, 404, { error: 'Document introuvable.' });
+  const ext = (file.match(/\.([a-z0-9]+)$/i) || [])[1] || '';
+  res.writeHead(200, { 'Content-Type': EXT_MIME[ext.toLowerCase()] || 'application/octet-stream', 'Content-Disposition': 'inline; filename="' + file + '"', 'Cache-Control': 'private, no-store' });
+  fs.createReadStream(full).pipe(res);
+});
+add('DELETE', '/api/docs/:file', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const file = String(p.file).replace(/[^a-z0-9._-]/gi, '');
+  const full = path.join(DOCS_DIR, file);
+  if (full.startsWith(DOCS_DIR)) { try { fs.unlinkSync(full); } catch {} }
+  send(res, 200, { ok: true });
 });
 
 /* =============================== MÉDIATHÈQUE (images en fichiers, réutilisables) =============================== */

@@ -2,6 +2,16 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.15 — 14 juin 2026**
+## Nouveau « Module Asso » (loi 1901)
+Accessible depuis **Administration › Module Asso**, en trois onglets :
+- **Association** : identité complète (nom, adresse, téléphone, email, IBAN, président/trésorier/secrétaire, article des statuts…) + **campagnes de cotisation** annuelles (montant fixé par l'AG, période, échéances).
+- **Membres & cotisations** : chaque membre (= compte) avec adresse, téléphone, email et l'**historique de ses cotisations** (année, montant, date, mode, payé/non). Vue par année avec le nombre de membres à jour.
+- **Assemblées générales** : historique des AG (date, type, présents, ordre du jour, **résolutions & votes**, décisions) avec un **espace documents** (fichiers joints **protégés** — non accessibles de l'extérieur — ou liens externes).
+- **Génération PDF** (impression ou téléchargement) : **lettre d'appel à cotisation** (d'après ton modèle), **reçu de cotisation** et **procès-verbal d'AG**.
+
+---
+
 **Version 2.8.14 — 14 juin 2026**
 ## Alerte d'édition à plusieurs étendue
 - Le garde-fou anti-écrasement (bandeau à l'ouverture + avertissement à l'enregistrement avec « Écraser / Annuler ») couvre maintenant aussi les **Devis**, les **Événements** et les **Réparations**, en plus de l'Inventaire.
