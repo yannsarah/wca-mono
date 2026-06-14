@@ -10,6 +10,7 @@ import { handlePublic } from './MODULES/public-api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(__dirname, 'public');
+const MEDIA_DIR = path.join(PUBLIC, 'medias'); // médiathèque : images stockées en fichiers
 const PORT = process.env.PORT || 3000;
 
 // Registre des modules activables (dossier MODULES/modules.json), avec repli intégré.
@@ -898,6 +899,43 @@ add('PUT', '/api/site', (req, res, p, body, query, user) => {
   logActivity(user, 'update', 'site', ''); save(); send(res, 200, s.site);
 });
 
+/* =============================== MÉDIATHÈQUE (images en fichiers, réutilisables) =============================== */
+const MIME_EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
+function mediaUrl(req, file) {
+  const host = req.headers.host || 'gestion.westcoastarcades.fr';
+  const proto = /localhost|127\.0\.0\.1/.test(host) ? 'http' : 'https';
+  return proto + '://' + host + '/medias/' + file;
+}
+function saveMediaFile(dataUrl, origName) {
+  const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataUrl || '');
+  if (!m) throw new Error('Image invalide.');
+  const ext = MIME_EXT[m[1].toLowerCase()] || 'jpg';
+  const id = nextId('medias');
+  const safe = String(origName || 'image').replace(/\.[a-z0-9]+$/i, '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'image';
+  const file = `m${id}-${safe}.${ext}`;
+  try { fs.mkdirSync(MEDIA_DIR, { recursive: true }); } catch {}
+  fs.writeFileSync(path.join(MEDIA_DIR, file), Buffer.from(m[2], 'base64'));
+  return { id, file };
+}
+add('GET', '/api/medias', (req, res) => {
+  send(res, 200, [...(db().medias || [])].sort((a, b) => (b.date || '').localeCompare(a.date || '')));
+});
+add('POST', '/api/medias', (req, res, p, body, query, user) => {
+  try {
+    const r = saveMediaFile(body.data, body.name);
+    const media = { id: r.id, file: r.file, url: mediaUrl(req, r.file), name: body.name || r.file, date: new Date().toISOString() };
+    db().medias.push(media); logActivity(user, 'create', 'medias', media.name); save();
+    send(res, 200, media);
+  } catch (e) { send(res, 400, { error: e.message }); }
+});
+add('DELETE', '/api/medias/:id', (req, res, p, body, query, user) => {
+  const d = db(); const m = (d.medias || []).find(x => x.id === +p.id);
+  if (m) { try { fs.unlinkSync(path.join(MEDIA_DIR, m.file)); } catch {} }
+  d.medias = (d.medias || []).filter(x => x.id !== +p.id);
+  logActivity(user, 'delete', 'medias', m ? m.name : ''); save(); send(res, 200, { ok: true });
+});
+
 /* =============================== PROJETS WIP =============================== */
 const WIP_STATUTS = ['a_venir', 'a_faire', 'en_cours', 'incomplet', 'termine'];
 function manquantArr(v) { return Array.isArray(v) ? v.map(x => String(x).trim()).filter(Boolean) : (v ? [String(v).trim()].filter(Boolean) : []); }
@@ -1358,12 +1396,13 @@ http.createServer((req, res) => {
   // Filet de sécurité : garantit que toutes les collections existent (même si store.js est plus ancien).
   try {
     const d = db();
-    ['materiel', 'devis', 'evenements', 'reparations', 'ventes', 'prets', 'users', 'achats', 'partenaires', 'wip', 'projets', 'absences', 'idees', 'articles'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
+    ['materiel', 'devis', 'evenements', 'reparations', 'ventes', 'prets', 'users', 'achats', 'partenaires', 'wip', 'projets', 'absences', 'idees', 'articles', 'medias'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
     if (!Array.isArray(d.logins)) d.logins = [];
     if (!d.presence || typeof d.presence !== 'object') d.presence = {};
     if (!Array.isArray(d.activity)) d.activity = [];
     save();
   } catch (e) { logFatal('ensureCollections', e); }
+  try { fs.mkdirSync(MEDIA_DIR, { recursive: true }); } catch (e) { logFatal('mediaDir', e); }
   try { migratePartners(); } catch (e) { logFatal('migratePartners', e); }
   try { ensureAdmin(); } catch (e) { logFatal('ensureAdmin', e); }
   try { ensureGuest(); } catch (e) { logFatal('ensureGuest', e); }

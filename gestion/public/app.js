@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.3'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '2.4'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1838,6 +1838,28 @@ async function pretModal(p){
 let USR_ALL = []; const USR = { role:'' };
 let USR_TAB = null;
 /* ============================ SITE INTERNET (blog + affichage) ============================ */
+/* ---- Médiathèque (images réutilisables, stockées en fichiers sur le serveur) ---- */
+let MEDIAS_CACHE=[];
+async function loadMedias(){ try{ MEDIAS_CACHE=await api('/api/medias'); }catch{ MEDIAS_CACHE=[]; } return MEDIAS_CACHE; }
+function mediaPicker(onPick){
+  openModal(`<h3>Médiathèque</h3>
+    <p class="help" style="margin-bottom:10px">${onPick?'Clique sur une image pour la choisir.':'Gère ici tes images réutilisables.'} Ajoute des images (réutilisables partout dans la gestion).</p>
+    <label class="btn" style="cursor:pointer;display:inline-block;margin-bottom:12px">${icon('plus')} Ajouter des images<input type="file" id="med-add" accept="image/*" multiple style="display:none"></label>
+    <div id="med-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:52vh;overflow:auto"><span class="mini">Chargement…</span></div>
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Fermer</button></div>`);
+  function draw(){
+    const g=$('#med-grid'); if(!g) return;
+    g.innerHTML = MEDIAS_CACHE.length ? MEDIAS_CACHE.map(m=>`<div style="position:relative">
+        <img src="${m.url}" data-url="${esc(m.url)}" class="js-med-pick" title="${onPick?'Choisir':''}" style="width:100%;height:92px;object-fit:cover;border-radius:8px;${onPick?'cursor:pointer;':''}border:1px solid var(--line)">
+        <button class="js-med-del" data-id="${m.id}" title="Supprimer" style="position:absolute;top:3px;right:3px;background:#e23b3b;color:#fff;border:0;border-radius:5px;width:22px;height:22px;cursor:pointer;line-height:1">×</button>
+      </div>`).join('') : '<span class="mini" style="grid-column:1/-1">Médiathèque vide — ajoute ta première image ci-dessus.</span>';
+    if(onPick) $$('.js-med-pick').forEach(im=>im.addEventListener('click',()=>{ onPick(im.dataset.url); closeModal(); }));
+    $$('.js-med-del').forEach(b=>b.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.confirm('Supprimer cette image de la médiathèque ?')) return; try{ await api('/api/medias/'+b.dataset.id,{method:'DELETE'}); await loadMedias(); draw(); }catch(err){ toast(err.message); } }));
+  }
+  loadMedias().then(draw);
+  $('#med-add').addEventListener('change',ev=>{ const files=[...ev.target.files]; if(!files.length) return; ev.target.value=''; toast('Ajout en cours…'); let done=0; files.forEach(f=>compressImage(f,async data=>{ try{ await api('/api/medias',{method:'POST',body:JSON.stringify({data,name:f.name})}); }catch(err){ toast(err.message); } if(++done===files.length){ await loadMedias(); draw(); toast('Ajouté à la médiathèque'); } },1600,300*1024)); });
+}
+
 let SITE_TAB = 'blog';
 let ARTICLES = [];
 let SITE_CONTENT = {};
@@ -1848,11 +1870,12 @@ async function renderSiteInternet(){
       <button class="${SITE_TAB==='affichage'?'active':''}" data-t="affichage">${icon('globe')} Affichage du site</button>
       <button class="${SITE_TAB==='modules'?'active':''}" data-t="modules">${icon('box')} Modules accueil</button>
     </div>`;
-  const action = SITE_TAB==='blog' ? `<button class="btn" id="si-new">${icon('plus')} Nouvel article</button>` : '';
+  const action = (SITE_TAB==='blog' ? `<button class="btn" id="si-new">${icon('plus')} Nouvel article</button>` : '') + `<button class="btn grey" id="si-media">🖼 Médiathèque</button>`;
   setTopbar('Site internet', action);
   $('#view').innerHTML = tabs + `<div id="si-body"><p class="help" style="padding:20px">Chargement…</p></div>`;
   $$('#si-tabs button').forEach(b=>b.addEventListener('click',()=>{ SITE_TAB=b.dataset.t; renderSiteInternet(); }));
   $('#si-new')?.addEventListener('click',()=>articleModal(null));
+  $('#si-media')?.addEventListener('click',()=>mediaPicker());
   if(SITE_TAB==='blog') await renderBlogTab();
   else if(SITE_TAB==='affichage') await renderAffichageTab();
   else await renderModulesTab();

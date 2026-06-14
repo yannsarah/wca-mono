@@ -13,6 +13,9 @@ _ARCHIVE/
 gestion/data.json
 **/data.json
 
+# Médiathèque : fichiers images téléversés (vivent sur le serveur, jamais dans Git)
+gestion/public/medias/
+
 # === site/ : secrets & sources à ne jamais publier ===
 .deploy/
 **/.deploy/
