@@ -103,7 +103,7 @@ function ytId(v){ if(!v) return ''; var m=String(v).match(/(?:youtu\.be\/|v=|emb
 (async function(){
   var grid=document.getElementById('postsGrid'), layout=document.getElementById('blogLayout'),
       sidebar=document.getElementById('blogSidebar'), filtersBox=document.getElementById('blogFilters');
-  var all=[], fYear='', fText='';
+  var all=[], fVal='', fKind='year', fText='';
   function card(a){
     var img=a.image?'<img src="'+WCA.esc(a.image)+'" alt="">':'<img src="img/flippers-expo-westcoastarcades.fr_.jpg" alt="">';
     return '<a class="post-card" href="article.html?slug='+encodeURIComponent(a.slug||a.id)+'"><div class="thumb">'+img+'</div>'+
@@ -112,24 +112,32 @@ function ytId(v){ if(!v) return ''; var m=String(v).match(/(?:youtu\.be\/|v=|emb
   }
   function renderPosts(){
     var list=all.filter(function(a){
-      if(fYear && (a.date||'').slice(0,4)!==fYear) return false;
+      if(fVal){ if(fKind==='cat'){ if((a.categorie||'')!==fVal) return false; } else if((a.date||'').slice(0,4)!==fVal) return false; }
       if(fText){ var q=fText.toLowerCase(); if((a.titre||'').toLowerCase().indexOf(q)<0 && (a.extrait||'').toLowerCase().indexOf(q)<0) return false; }
       return true;
     });
     grid.innerHTML = list.length ? list.map(card).join('') : '<p class="blog-empty">Aucun article ne correspond à ta recherche.</p>';
   }
   function renderFilters(){
-    var years=[]; all.forEach(function(a){ var y=(a.date||'').slice(0,4); if(y && years.indexOf(y)<0) years.push(y); });
-    years.sort().reverse();
-    if(years.length<2){ filtersBox.style.display='none'; return; }
+    var cats=[]; all.forEach(function(a){ if(a.categorie && cats.indexOf(a.categorie)<0) cats.push(a.categorie); });
+    var vals;
+    if(cats.length){ fKind='cat'; vals=cats.slice().sort(); }
+    else { fKind='year'; vals=[]; all.forEach(function(a){ var y=(a.date||'').slice(0,4); if(y && vals.indexOf(y)<0) vals.push(y); }); vals.sort().reverse(); }
+    if(vals.length<2){ filtersBox.style.display='none'; return; }
     filtersBox.style.display='flex';
-    filtersBox.innerHTML='<button class="bf-chip '+(fYear===''?'active':'')+'" data-y="">Tous</button>'+years.map(function(y){return '<button class="bf-chip '+(fYear===y?'active':'')+'" data-y="'+y+'">'+y+'</button>';}).join('');
-    Array.prototype.forEach.call(filtersBox.querySelectorAll('.bf-chip'),function(b){ b.onclick=function(){ fYear=b.dataset.y; renderFilters(); renderPosts(); }; });
+    filtersBox.innerHTML='<button class="bf-chip '+(fVal===''?'active':'')+'" data-v="">Tous</button>'+vals.map(function(v){return '<button class="bf-chip '+(fVal===v?'active':'')+'" data-v="'+WCA.esc(v)+'">'+WCA.esc(v)+'</button>';}).join('');
+    Array.prototype.forEach.call(filtersBox.querySelectorAll('.bf-chip'),function(b){ b.onclick=function(){ fVal=b.dataset.v; renderFilters(); renderPosts(); }; });
   }
-  function renderSidebar(cfg){
+  function renderSidebar(cfg, ventes){
     if(!cfg || cfg.mode!=='sidebar') return;
     var w=cfg.widgets||{}, html='';
     if(w.search!==false) html+='<div class="widget"><h3>Recherche</h3><div class="w-search"><input id="wSearch" placeholder="Rechercher un article…"><button type="button">🔍</button></div></div>';
+    if(w.ventes && ventes && ventes.length){
+      html+='<div class="widget"><h3>À vendre</h3>'+ventes.map(function(m){
+        var img=m.photo?'<img src="'+WCA.esc(m.photo)+'" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;flex:0 0 auto">':'';
+        return '<a href="contact.html" style="display:flex;gap:10px;align-items:center;padding:8px 0;color:inherit;border-bottom:1px solid #f0f0f5">'+img+'<span style="flex:1;min-width:0"><span style="font-weight:600;display:block;font-size:14px">'+WCA.esc(m.denomination)+'</span>'+(m.prix?'<span style="color:#467ff7;font-weight:700;font-size:13px">'+WCA.esc(String(m.prix))+'</span>':'')+'</span></a>';
+      }).join('')+'</div>';
+    }
     if(w.pub && cfg.pub && cfg.pub.media){
       var p=cfg.pub, inner='';
       if(p.type==='youtube'){ var id=ytId(p.media); if(id) inner='<div style="position:relative;padding-bottom:56%"><iframe src="https://www.youtube.com/embed/'+id+'" style="position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:8px" allowfullscreen></iframe></div>'; }
@@ -143,7 +151,9 @@ function ytId(v){ if(!v) return ''; var m=String(v).match(/(?:youtu\.be\/|v=|emb
     var home=await WCA.getJSON('home'); var cfg=home&&home.blog;
     if(cfg && cfg.mode==='sidebar') layout.className='blog-layout mode-sidebar side-'+(cfg.sidebar_side==='left'?'left':'right');
     try{ all=await WCA.getJSON('articles'); if(all.length){ renderFilters(); renderPosts(); } }catch(e){}
-    renderSidebar(cfg);
+    var ventes=[];
+    if(cfg && cfg.widgets && cfg.widgets.ventes){ try{ ventes=await WCA.getJSON('a-vendre'); }catch(e){} }
+    renderSidebar(cfg, ventes);
   }catch(err){}
 })();
 </script>

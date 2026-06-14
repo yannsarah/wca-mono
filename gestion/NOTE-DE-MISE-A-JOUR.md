@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 1.8 — 13 juin 2026**
+## Partenaires sur projets/billets + Blog 2ᵉ vague
+- **Partenaires participants** : sur un **projet** et sur un **billet de blog**, on coche les partenaires (base Partenaires). Encart **paysage** en bas de l'article (« Avec la participation de ») et de la page Projets (« Ils participent à nos projets »), logos cliquables vers leur site.
+- **Matériel à vendre** : nouveau réglage « À vendre sur le site » + prix sur la fiche matériel ; widget **« À vendre »** activable dans la sidebar du blog.
+- **Filtres par catégorie** : champ catégorie sur les articles ; les filtres horizontaux du blog passent en **catégories** (sinon par année).
+
+---
+
 **Version 1.7 — 13 juin 2026**
 ## Partenaires enrichis + Affichage repliable
 - Fiche **partenaire** : nouveaux champs **Email**, **Téléphone** (+ « afficher sur le site » o/n), **Site internet**. Récupération automatique de l'existant : l'email saisi dans « Adresse » et le téléphone dans « Notes » sont déplacés dans les bons champs (sans rien perdre).

@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.7'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '1.8'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -674,6 +674,10 @@ function materielModal(m, dup){
       <label class="field"><span>Visible sur le site public</span><select id="f-vissite"><option value="0" ${e.visible_site?'':'selected'}>Non</option><option value="1" ${e.visible_site?'selected':''}>✅ Oui — affichée sur westcoastarcades.fr</option></select></label>
       <label class="field"><span>Description (site public)</span><input id="f-descsite" value="${esc(e.description_site||'')}" placeholder="texte court affiché sur le site"></label>
     </div>
+    <div class="row2">
+      <label class="field"><span>À vendre sur le site</span><select id="f-avendre"><option value="0" ${e.a_vendre?'':'selected'}>Non</option><option value="1" ${e.a_vendre?'selected':''}>🏷️ Oui — proposé à la vente</option></select></label>
+      <label class="field"><span>Prix de vente affiché</span><input id="f-prixvente" value="${esc(e.prix_vente||'')}" placeholder="ex. 1200 € ou Nous consulter"></label>
+    </div>
     <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button>${isEdit?`<button class="btn wipper" id="f-wip" type="button">${icon('calendar')} WIPPER</button>`:''}<button class="btn" id="f-save">Enregistrer</button></div>`);
   $('#f-wip')?.addEventListener('click',()=>wipperModal(m.id, m.denomination));
   $('#f-photo-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ photoData=data; $('#f-photo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
@@ -682,7 +686,7 @@ function materielModal(m, dup){
   quickAddSelect($('#f-etat'), $('#f-etat-add'), { placeholder:'Nouvel état…', create: async txt=>{ await api('/api/etats',{method:'POST',body:JSON.stringify({label:txt})}); if(!ETATS.some(x=>x.label===txt)) ETATS.push({label:txt,bloque:false}); return {value:txt,label:txt}; } });
   quickAddSelect($('#f-prop'), $('#f-prop-add'), { placeholder:'Nouveau propriétaire…', create: async txt=>{ await api('/api/proprietaires',{method:'POST',body:JSON.stringify({value:txt})}); if(!PROPRIETAIRES.includes(txt)) PROPRIETAIRES.push(txt); return {value:txt,label:txt}; } });
   $('#f-save').addEventListener('click',async()=>{
-    const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').value==='1', description_site:$('#f-descsite').value.trim() };
+    const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').value==='1', description_site:$('#f-descsite').value.trim(), a_vendre:$('#f-avendre').value==='1', prix_vente:$('#f-prixvente').value.trim() };
     if(!body.denomination){ toast('La dénomination est obligatoire.'); return; }
     try{ await api(isEdit?'/api/materiel/'+m.id:'/api/materiel',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast(dup?'Copie créée':'Enregistré'); loadMatList(); }catch(err){ toast(err.message); }
   });
@@ -1637,6 +1641,7 @@ async function projetModal(pj){
       <label class="field"><span>Budget estimé (€, optionnel)</span><input id="pj-budget" type="number" min="0" step="0.01" value="${esc(e.budget)}"></label></div>
     <label class="field"><span>Descriptif complet</span><textarea id="pj-desc" rows="4" placeholder="Objectif du projet, contexte, étapes clés…">${esc(e.description)}</textarea></label>
     <label class="field"><span>Consignes</span><textarea id="pj-consignes" rows="3" placeholder="Sécurité, méthode, points d'attention…">${esc(e.consignes)}</textarea></label>
+    <label class="field"><span>Partenaires participants (encart sur le site)</span><div id="pj-parts" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:4px"><span class="mini">Chargement…</span></div></label>
     <label class="field"><span>Intervenants</span><div id="pj-int-box" class="people-picker"></div></label>
     <div class="section-title">Ressources nécessaires</div>
     <div id="pj-res-box"></div>
@@ -1705,10 +1710,12 @@ async function projetModal(pj){
     box.querySelectorAll('.champ-del').forEach(b=>b.addEventListener('click',()=>{ pjChamps.splice(+b.dataset.i,1); renderPjChamps(); }));
   }
   renderPjChamps();
+  loadPartners().then(()=>{ const box=$('#pj-parts'); if(!box) return; const sel=new Set((e.partenaires_ids||[]).map(Number)); box.innerHTML = PARTNERS_CACHE.length ? PARTNERS_CACHE.map(p=>`<label style="display:inline-flex;align-items:center;gap:6px;font-weight:500"><input type="checkbox" class="pj-pt" value="${p.id}" ${sel.has(p.id)?'checked':''}> ${esc(p.nom)}</label>`).join('') : '<span class="mini">Aucun partenaire (Utilisateurs → Partenaires).</span>'; });
   $('#pj-champ-add').addEventListener('click',()=>{ pjChamps.push({label:'',valeur:''}); renderPjChamps(); $('#pj-champs .champ-lbl:last-of-type')?.focus(); });
   $('#pj-save').addEventListener('click',async()=>{
     const body={ nom:$('#pj-nom').value.trim(), date_debut:$('#pj-deb').value, budget:$('#pj-budget').value, notes:$('#pj-notes').value.trim(),
       description:$('#pj-desc').value.trim(), consignes:$('#pj-consignes').value.trim(), photo:pjPhoto,
+      partenaires_ids:[...document.querySelectorAll('.pj-pt:checked')].map(x=>+x.value),
       champs:pjChamps.map(c=>({label:(c.label||'').trim(),valeur:(c.valeur||'').trim()})).filter(c=>c.label||c.valeur),
       intervenants, ressources:ressources.map(x=>(x||'').trim()).filter(Boolean), fichiers,
       taches:taches.filter(s=>(s.texte||'').trim()), rdvs:rdvs.filter(r=>r.date) };
@@ -1861,6 +1868,7 @@ function articleModal(a){
       <label class="field"><span>Date</span><input id="art-date" type="date" value="${esc(a.date||new Date().toISOString().slice(0,10))}"></label>
       <label class="field"><span>Auteur</span><input id="art-auteur" value="${esc(a.auteur||'')}" placeholder="ex. West Coast Arcades"></label>
     </div>
+    <label class="field"><span>Catégorie (pour les filtres du blog)</span><input id="art-cat" value="${esc(a.categorie||'')}" placeholder="ex. Salons, Projets, Coulisses…"></label>
     <label class="field"><span>Extrait (résumé affiché dans la liste du blog)</span><textarea id="art-extrait" rows="2">${esc(a.extrait||'')}</textarea></label>
     <div class="field"><span>Image à la une</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
@@ -1885,7 +1893,9 @@ function articleModal(a){
       <div id="art-contenu" contenteditable="true" style="min-height:220px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#fff;color:var(--navy);overflow:auto;line-height:1.5">${a.contenu||''}</div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:12px;cursor:pointer"><input type="checkbox" id="art-vis" ${a.visible_site!==false?'checked':''}> 🌐 Publié sur le site (visible dans le blog)</label>
+    <div class="field"><span>Partenaires participants (encart en bas de l'article)</span><div id="art-parts" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:4px"><span class="mini">Chargement…</span></div></div>
     <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="art-save">Enregistrer</button></div>`);
+  loadPartners().then(()=>{ const box=$('#art-parts'); if(!box) return; const sel=new Set((a.partenaires_ids||[]).map(Number)); box.innerHTML = PARTNERS_CACHE.length ? PARTNERS_CACHE.map(p=>`<label style="display:inline-flex;align-items:center;gap:6px;font-weight:500"><input type="checkbox" class="art-pt" value="${p.id}" ${sel.has(p.id)?'checked':''}> ${esc(p.nom)}</label>`).join('') : '<span class="mini">Aucun partenaire (Utilisateurs → Partenaires).</span>'; });
   const ed=$('#art-contenu');
   $$('.wysi-toolbar [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); }));
   $$('.wysi-toolbar [data-block]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand('formatBlock',false,b.dataset.block); }));
@@ -1894,7 +1904,7 @@ function articleModal(a){
   $('#art-cover-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ cover=data; $('#art-cover-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
   $('#art-cover-clear').addEventListener('click',()=>{ cover=''; $('#art-cover-prev').style.backgroundImage=''; });
   $('#art-save').addEventListener('click',async()=>{
-    const body={ titre:$('#art-titre').value.trim(), date:$('#art-date').value, auteur:$('#art-auteur').value.trim(), extrait:$('#art-extrait').value.trim(), contenu:$('#art-contenu').innerHTML.trim(), image:cover, visible_site:$('#art-vis').checked };
+    const body={ titre:$('#art-titre').value.trim(), date:$('#art-date').value, auteur:$('#art-auteur').value.trim(), extrait:$('#art-extrait').value.trim(), contenu:$('#art-contenu').innerHTML.trim(), image:cover, visible_site:$('#art-vis').checked, categorie:$('#art-cat').value.trim(), partenaires_ids:[...document.querySelectorAll('.art-pt:checked')].map(x=>+x.value) };
     if(!body.titre){ toast('Le titre est obligatoire.'); return; }
     try{ await api(isEdit?'/api/articles/'+a.id:'/api/articles',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast('Enregistré'); renderBlogTab(); }catch(e){ toast(e.message); }
   });
@@ -2076,7 +2086,7 @@ function blogDisplayModal(){
     <div class="section-title">Widgets de la sidebar</div>
     <label style="${ck}"><input type="checkbox" id="bl-w-search" ${w.search!==false?'checked':''}> 🔍 Recherche sur le blog</label>
     <label style="${ck}"><input type="checkbox" id="bl-w-pub" ${w.pub?'checked':''}> 📢 Encart publicitaire</label>
-    <label style="${ck};opacity:.55;cursor:not-allowed"><input type="checkbox" disabled> 🏷️ Matériel à vendre <span class="mini">— bientôt</span></label>
+    <label style="${ck}"><input type="checkbox" id="bl-w-ventes" ${w.ventes?'checked':''}> 🏷️ Matériel à vendre (depuis l'inventaire « à vendre »)</label>
     <div class="card" id="bl-pub-cfg" style="margin-top:8px;padding:12px;${w.pub?'':'display:none'}">
       <div style="font-weight:700;color:var(--navy);margin-bottom:8px">Encart publicitaire</div>
       <label class="field"><span>Type</span><select id="bl-pub-type"><option value="image" ${pubType==='image'?'selected':''}>Image / GIF</option><option value="youtube" ${pubType==='youtube'?'selected':''}>Vidéo YouTube</option></select></label>
@@ -2093,7 +2103,7 @@ function blogDisplayModal(){
   $('#bl-pub-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ pubMedia=data; $('#bl-pub-prev').style.backgroundImage=`url('${data}')`; },150*1024); });
   $('#bl-save').addEventListener('click',async()=>{
     if(pubType==='youtube') pubMedia=$('#bl-pub-ytid').value.trim();
-    const blog={ mode, sidebar_side:side, widgets:{ search:$('#bl-w-search').checked, pub:$('#bl-w-pub').checked }, pub:{ type:pubType, media:pubMedia, link:$('#bl-pub-link').value.trim(), titre:$('#bl-pub-titre').value.trim() } };
+    const blog={ mode, sidebar_side:side, widgets:{ search:$('#bl-w-search').checked, pub:$('#bl-w-pub').checked, ventes:$('#bl-w-ventes').checked }, pub:{ type:pubType, media:pubMedia, link:$('#bl-pub-link').value.trim(), titre:$('#bl-pub-titre').value.trim() } };
     try{ await api('/api/site',{method:'PUT',body:JSON.stringify({blog})}); closeModal(); toast('Affichage du blog enregistré'); renderModulesTab(); }catch(e){ toast(e.message); }
   });
 }

@@ -41,6 +41,8 @@
 
 <div class="pj-grid" id="projList"><p style="grid-column:1/-1;text-align:center;color:#5d6b85;padding:30px">Chargement des projets…</p></div>
 
+<div id="projParts"></div>
+
 <section class="need"><div class="container"><h2>Vous souhaitez organiser un évènement autour de l'arcade et des flippers ?</h2><a class="btn btn-orange" href="contact.html">Contactez-nous !</a></div></section>
 <div class="foot-copy">© 2026 Tous droits réservés</div>
 <div class="foot-legal"><a class="btn btn-legal" href="politique-de-confidentialite.html">Politique de confidentialité</a><a class="btn btn-legal" href="rgpd.html">RGPD</a></div>
@@ -56,6 +58,11 @@
       var img=p.photo?'<div class="ph"><img src="'+p.photo+'" alt=""></div>':'';
       return '<article class="pjcard">'+img+'<div class="bd"><h2>'+WCA.esc(p.nom)+'</h2><p>'+WCA.esc(p.description||'')+'</p></div></article>';
     }).join('');
+    var seen={}, parts=[];
+    list.forEach(function(p){ (p.partenaires||[]).forEach(function(pt){ if(!seen[pt.id]){ seen[pt.id]=1; parts.push(pt); } }); });
+    if(parts.length){
+      document.getElementById('projParts').innerHTML='<div style="max-width:1100px;margin:10px auto 40px;padding:24px 16px;background:#f6f7fb;border-radius:14px"><div style="text-align:center;font-family:var(--poppins);font-weight:700;color:var(--navy,#1c244b);text-transform:uppercase;letter-spacing:1.5px;font-size:14px;margin-bottom:18px">Ils participent à nos projets</div><div style="display:flex;flex-wrap:wrap;gap:22px;justify-content:center;align-items:center">'+parts.map(function(pt){var logo=pt.logo?'<img src="'+WCA.esc(pt.logo)+'" alt="'+WCA.esc(pt.nom)+'" style="max-height:66px;max-width:150px;object-fit:contain;display:block">':'<span style="font-weight:700;color:var(--navy,#1c244b)">'+WCA.esc(pt.nom)+'</span>';return pt.site_internet?'<a href="'+WCA.esc(pt.site_internet)+'" target="_blank" rel="noopener" title="'+WCA.esc(pt.nom)+'">'+logo+'</a>':'<span title="'+WCA.esc(pt.nom)+'">'+logo+'</span>';}).join('')+'</div></div>';
+    }
   }catch(err){ box.innerHTML='<p style="grid-column:1/-1;text-align:center;color:#a32d2d;padding:30px">Projets momentanément indisponibles.</p>'; }
 })();
 </script>

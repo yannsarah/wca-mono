@@ -48,6 +48,14 @@ const today = () => new Date().toISOString().slice(0, 10);
 const shown = (x) => x && x.visible_site !== false && !x.archive;
 // "opt-in" : visible seulement si explicitement true (pour données sensibles)
 const optIn = (x) => x && x.visible_site === true && !x.archive;
+// Partenaires participants (liés à un projet ou un article), nettoyés pour l'affichage public.
+function partnersOf(d, ids) {
+  if (!Array.isArray(ids) || !ids.length) return [];
+  return ids.map(Number)
+    .map(id => (d.partenaires || []).find(p => p.id === id))
+    .filter(Boolean)
+    .map(p => ({ id: p.id, nom: p.nom, logo: p.logo || '', site_internet: p.site_internet || '' }));
+}
 
 // ---------------------------------------------------------------------
 // Point d'entrée : renvoie true si la requête a été traitée.
@@ -79,6 +87,7 @@ export function handlePublic(req, res, pathname, searchParams) {
       .map(p => ({
         id: p.id, nom: p.nom, description: p.description || '',
         photo: p.photo || '', date_debut: p.date_debut || '',
+        partenaires: partnersOf(d, p.partenaires_ids),
       }));
     return sendJSON(res, 200, list), true;
   }
@@ -123,6 +132,14 @@ export function handlePublic(req, res, pathname, searchParams) {
     return sendJSON(res, 200, list), true;
   }
 
+  // ----- Matériel à vendre (opt-in : materiel.a_vendre === true) -----
+  if (pathname === '/api/public/a-vendre') {
+    const list = (d.materiel || [])
+      .filter(m => m && m.a_vendre === true)
+      .map(m => ({ id: m.id, denomination: m.denomination, categorie: m.categorie || '', photo: m.photo || '', prix: m.prix_vente || '' }));
+    return sendJSON(res, 200, list), true;
+  }
+
   // ----- Articles / Blog (publiés) -----
   if (pathname === '/api/public/articles') {
     const list = (d.articles || [])
@@ -131,6 +148,7 @@ export function handlePublic(req, res, pathname, searchParams) {
       .map(a => ({
         id: a.id, slug: a.slug || String(a.id), titre: a.titre || '',
         date: a.date || '', extrait: a.extrait || '', image: a.image || '',
+        categorie: a.categorie || '',
       }));
     return sendJSON(res, 200, list), true;
   }
@@ -142,6 +160,8 @@ export function handlePublic(req, res, pathname, searchParams) {
     return sendJSON(res, 200, {
       id: a.id, slug: a.slug || String(a.id), titre: a.titre || '', date: a.date || '',
       extrait: a.extrait || '', image: a.image || '', contenu: a.contenu || '', auteur: a.auteur || '',
+      categorie: a.categorie || '',
+      partenaires: partnersOf(d, a.partenaires_ids),
     }), true;
   }
 

@@ -261,7 +261,7 @@ function dispoPour(materielId, from, to, excludeDevis, excludeEvent) {
 }
 
 /* =============================== MATÉRIEL (inventaire) =============================== */
-const MF = ['denomination', 'categorie', 'numero_serie', 'emplacement', 'valeur', 'notes', 'photo', 'etat', 'proprietaire', 'proprietaire_nom', 'tarifs', 'visible_site', 'description_site', 'titre_site', 'sous_titre_site', 'sens_site'];
+const MF = ['denomination', 'categorie', 'numero_serie', 'emplacement', 'valeur', 'notes', 'photo', 'etat', 'proprietaire', 'proprietaire_nom', 'tarifs', 'visible_site', 'description_site', 'titre_site', 'sous_titre_site', 'sens_site', 'a_vendre', 'prix_vente'];
 // Vrai si le matériel est dans un projet WIP actif (non terminé, non archivé).
 function inActiveWip(id) {
   return (db().wip || []).some(w => !w.archive && w.statut !== 'termine' && (w.equipes || []).some(e => (e.materiel_ids || []).map(Number).includes(+id)));
@@ -289,6 +289,7 @@ add('POST', '/api/materiel', (req, res, p, body, query, user) => {
   const row = { id: nextId('materiel'), fonctionnel: body.fonctionnel !== false };
   MF.forEach(f => row[f] = body[f] ?? '');
   row.visible_site = body.visible_site === true; // publié sur le site : booléen strict (opt-in)
+  row.a_vendre = body.a_vendre === true;         // proposé à la vente sur le site
   db().materiel.push(row); logActivity(user, 'create', 'materiel', row.denomination); save();
   send(res, 200, row);
 });
@@ -299,6 +300,7 @@ add('PUT', '/api/materiel/:id', (req, res, p, body, query, user) => {
   MF.forEach(f => { if (body[f] !== undefined) row[f] = body[f]; });
   if (body.fonctionnel !== undefined) row.fonctionnel = !!body.fonctionnel;
   if (body.visible_site !== undefined) row.visible_site = !!body.visible_site;
+  if (body.a_vendre !== undefined) row.a_vendre = !!body.a_vendre;
   logActivity(user, 'update', 'materiel', row.denomination); save(); send(res, 200, row);
 });
 
@@ -839,7 +841,7 @@ add('DELETE', '/api/partenaires/:id', (req, res, p) => {
 });
 
 /* =============================== BLOG / ARTICLES =============================== */
-const ARTF = ['titre', 'slug', 'date', 'image', 'extrait', 'contenu', 'auteur', 'visible_site', 'archive'];
+const ARTF = ['titre', 'slug', 'date', 'image', 'extrait', 'contenu', 'auteur', 'visible_site', 'archive', 'partenaires_ids', 'categorie'];
 function slugify(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
@@ -976,7 +978,7 @@ add('GET', '/api/projets', (req, res) => {
   const list = [...(db().projets || [])].sort((a, b) => (a.date_debut || '').localeCompare(b.date_debut || ''));
   send(res, 200, list.map(enrichProjet));
 });
-const PJF = ['nom', 'date_debut', 'budget', 'notes', 'description', 'consignes', 'photo', 'visible_site'];
+const PJF = ['nom', 'date_debut', 'budget', 'notes', 'description', 'consignes', 'photo', 'visible_site', 'partenaires_ids'];
 add('POST', '/api/projets', (req, res, p, body, query, user) => {
   if (!body.nom) return send(res, 400, { error: 'Le nom du projet est obligatoire.' });
   const row = {
