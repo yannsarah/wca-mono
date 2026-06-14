@@ -2,6 +2,12 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.14 — 14 juin 2026**
+## Alerte d'édition à plusieurs étendue
+- Le garde-fou anti-écrasement (bandeau à l'ouverture + avertissement à l'enregistrement avec « Écraser / Annuler ») couvre maintenant aussi les **Devis**, les **Événements** et les **Réparations**, en plus de l'Inventaire.
+
+---
+
 **Version 2.8.13 — 14 juin 2026**
 ## Inventaire : alerte d'édition à plusieurs
 - En ouvrant une fiche matériel **modifiée par quelqu'un d'autre**, un bandeau prévient : « ⚠️ Fiche modifiée par X, il y a … ».

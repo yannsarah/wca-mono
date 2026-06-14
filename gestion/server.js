@@ -118,6 +118,14 @@ function stampModif(row, user) {
   row.modif_par_id = user.id;
   row.modif_le = new Date().toISOString();
 }
+// Vrai si la fiche a changé depuis l'ouverture, par quelqu'un d'autre (et pas de forçage).
+function conflictHit(row, body, user) {
+  return !!(body.base_modif_le && row.modif_le && row.modif_le !== body.base_modif_le
+    && row.modif_par_id !== (user && user.id) && !body.force);
+}
+function conflictResponse(res, row) {
+  return send(res, 409, { error: 'Fiche modifiée entre-temps', conflict: { par: row.modif_par || 'un autre utilisateur', le: row.modif_le } });
+}
 function logActivity(user, action, entity, label) {
   if (!user) return;
   const d = db();
@@ -540,6 +548,7 @@ add('POST', '/api/devis', (req, res, p, body, query, user) => {
   };
   DVF.forEach(f => { if (body[f] !== undefined) row[f] = body[f]; });
   row.evenement_id = body.evenement_id ? +body.evenement_id : null;
+  stampModif(row, user);
   db().devis.push(row); logActivity(user, 'create', 'devis', archiveLabel('devis', row)); save();
   send(res, 200, enrichDevis(row));
 });
@@ -547,10 +556,12 @@ add('POST', '/api/devis', (req, res, p, body, query, user) => {
 add('PUT', '/api/devis/:id', (req, res, p, body, query, user) => {
   const row = db().devis.find(x => x.id === +p.id);
   if (!row) return send(res, 404, { error: 'Devis introuvable.' });
+  if (conflictHit(row, body, user)) return conflictResponse(res, row);
   DVF.forEach(f => { if (body[f] !== undefined) row[f] = body[f]; });
   if (body.evenement_id !== undefined) row.evenement_id = body.evenement_id ? +body.evenement_id : null;
   if (Array.isArray(body.lignes))
     row.lignes = body.lignes.map(l => ({ materiel_id: +l.materiel_id, prix: +l.prix || 0, quantite: +l.quantite || 1, designation: l.designation || '' }));
+  stampModif(row, user);
   logActivity(user, 'update', 'devis', archiveLabel('devis', row)); save(); send(res, 200, enrichDevis(row));
 });
 
@@ -600,17 +611,20 @@ add('POST', '/api/evenements', (req, res, p, body, query, user) => {
   };
   EF.forEach(f => row[f] = body[f] ?? '');
   row.champs = cleanChamps(body.champs);
+  stampModif(row, user);
   db().evenements.push(row); logActivity(user, 'create', 'evenements', row.nom); save();
   send(res, 200, enrichEvent(row));
 });
 add('PUT', '/api/evenements/:id', (req, res, p, body, query, user) => {
   const row = db().evenements.find(x => x.id === +p.id);
   if (!row) return send(res, 404, { error: 'Événement introuvable.' });
+  if (conflictHit(row, body, user)) return conflictResponse(res, row);
   EF.forEach(f => { if (body[f] !== undefined) row[f] = body[f]; });
   if (body.champs !== undefined) row.champs = cleanChamps(body.champs);
   if (Array.isArray(body.materiel_ids)) row.materiel_ids = body.materiel_ids.map(Number);
   if (body.valide !== undefined) row.valide = !!body.valide;
   if (body.partenaire_id !== undefined) row.partenaire_id = body.partenaire_id ? +body.partenaire_id : null;
+  stampModif(row, user);
   logActivity(user, 'update', 'evenements', row.nom); save(); send(res, 200, enrichEvent(row));
 });
 // Bascule l'état « validé et complet » (OUI/NON cliquable).
@@ -662,14 +676,17 @@ add('POST', '/api/reparations', (req, res, p, body, query, user) => {
   const row = { id: nextId('reparations'), statut: body.statut || 'a_faire', date_entree: body.date_entree || new Date().toISOString().slice(0, 10) };
   RF.forEach(f => { if (body[f] !== undefined) row[f] = f === 'materiel_id' || f === 'technicien_id' ? (body[f] ? +body[f] : null) : body[f]; });
   row.etapes = sanitizeEtapes(body.etapes);
+  stampModif(row, user);
   db().reparations.push(row); logActivity(user, 'create', 'reparations', archiveLabel('reparations', row)); save();
   send(res, 200, enrichRep(row));
 });
 add('PUT', '/api/reparations/:id', (req, res, p, body, query, user) => {
   const row = db().reparations.find(x => x.id === +p.id);
   if (!row) return send(res, 404, { error: 'Réparation introuvable.' });
+  if (conflictHit(row, body, user)) return conflictResponse(res, row);
   RF.forEach(f => { if (body[f] !== undefined) row[f] = f === 'materiel_id' || f === 'technicien_id' ? (body[f] ? +body[f] : null) : body[f]; });
   if (Array.isArray(body.etapes)) row.etapes = sanitizeEtapes(body.etapes);
+  stampModif(row, user);
   logActivity(user, 'update', 'reparations', archiveLabel('reparations', row)); save(); send(res, 200, enrichRep(row));
 });
 add('DELETE', '/api/reparations/:id', (req, res, p, body, query, user) => {

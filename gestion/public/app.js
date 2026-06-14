@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.13'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.14'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -128,6 +128,23 @@ function confirmChoice(msg, yesLabel, noLabel, onYes){
   ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
   ov.querySelector('.cc-no').addEventListener('click',close);
   ov.querySelector('.cc-yes').addEventListener('click',()=>{ close(); onYes(); });
+}
+// Bandeau « fiche modifiée par X » (édition concurrente) — commun à plusieurs modales.
+function modifBanner(e, isEdit){
+  if(!(isEdit && e && e.modif_le && e.modif_par_id !== (CURRENT_USER&&CURRENT_USER.id))) return '';
+  return `<div class="card" style="background:var(--amber-l,#fdf3da);border-color:#f0dca6;margin-bottom:10px;padding:10px 12px"><strong>⚠️ Fiche modifiée par ${esc(e.modif_par||'un autre utilisateur')}</strong><p class="help" style="margin:2px 0 0">Dernière modification ${esc(relTime(e.modif_le))}. Vérifie avant d'enregistrer pour ne pas écraser ses changements.</p></div>`;
+}
+// Enregistre avec détection d'édition concurrente. onDone(result) appelé à la réussite ; les erreurs sont signalées (toast / confirmation d'écrasement).
+async function saveWithConcurrency(url, method, body, baseModifLe, onDone){
+  if(method==='PUT' && baseModifLe) body.base_modif_le=baseModifLe;
+  const attempt=async(force)=>{ if(force) body.force=true; const r=await api(url,{method,body:JSON.stringify(body)}); await onDone(r); };
+  try{ await attempt(false); }
+  catch(err){
+    if(err.status===409 && err.data && err.data.conflict){
+      const c=err.data.conflict;
+      confirmChoice(`Cette fiche a été modifiée par ${esc(c.par)} ${esc(relTime(c.le))}, depuis que tu l'as ouverte.\n\nSi tu enregistres, tu écraseras ses changements.`,'Écraser quand même','Annuler',async()=>{ try{ await attempt(true); }catch(e2){ toast(e2.message); } });
+    } else { toast(err.message); }
+  }
 }
 
 /* ------------------------------- Archives (commun) ------------------------------- */
@@ -874,7 +891,8 @@ async function loadDevisList(){
 async function devisModal(dv, prefill){
   await loadMateriel();
   const e=dv||prefill||{}; let lignes=(e.lignes||[]).map(l=>({materiel_id:l.materiel_id,prix:l.prix,quantite:l.quantite||1}));
-  openModal(`<h3>${dv?'Modifier le devis':'Nouveau devis'}</h3>
+  const baseModifLe = (dv && e.modif_le) ? e.modif_le : null;
+  openModal(`<h3>${dv?'Modifier le devis':'Nouveau devis'}</h3>${modifBanner(e, !!dv)}
     <div class="row2">
       <label class="field"><span>Client *</span><input id="d-client" value="${esc(e.client_nom)}"></label>
       <label class="field"><span>Contact</span><input id="d-contact" value="${esc(e.client_contact)}" placeholder="tél. / email"></label>
@@ -928,7 +946,7 @@ async function devisModal(dv, prefill){
       date_debut:$('#d-deb').value, date_fin:$('#d-fin').value, remise:$('#d-remise').value, statut:$('#d-statut').value, notes:$('#d-notes').value.trim(),
       lignes:lignes.filter(l=>l.materiel_id) };
     if(!body.client_nom){ toast('Le nom du client est obligatoire.'); return; }
-    try{ await api(dv?'/api/devis/'+dv.id:'/api/devis',{method:dv?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast('Devis enregistré'); loadDevisList(); }catch(err){ toast(err.message); }
+    saveWithConcurrency(dv?'/api/devis/'+dv.id:'/api/devis', dv?'PUT':'POST', body, baseModifLe, ()=>{ closeModal(); toast('Devis enregistré'); loadDevisList(); });
   });
 }
 
@@ -1317,7 +1335,8 @@ function evenementModal(ev){
   let evMat=new Set((e.materiel_ids||[]).map(Number));
   let evPhoto=e.photo||'';
   let evChamps=(e.champs||[]).map(c=>({label:c.label||'',valeur:c.valeur||''}));
-  openModal(`<h3>${ev?'Modifier l\'événement':'Nouvel événement'}</h3>
+  const baseModifLe = (ev && e.modif_le) ? e.modif_le : null;
+  openModal(`<h3>${ev?'Modifier l\'événement':'Nouvel événement'}</h3>${modifBanner(e, !!ev)}
     ${ev&&e.cree_par_nom?`<p class="help" style="margin:-6px 0 10px">Créé par <strong>${esc(e.cree_par_nom)}</strong>${e.date_creation?' le '+dateTimeShort(e.date_creation):''}</p>`:''}
     <label class="field"><span>Nom *</span><input id="e-nom" value="${esc(e.nom)}" placeholder="ex. Festival rétro Marseille"></label>
     <label class="field"><span>Photo de présentation</span>
@@ -1378,16 +1397,17 @@ function evenementModal(ev){
   }
   renderChamps();
   $('#e-champ-add').addEventListener('click',()=>{ evChamps.push({label:'',valeur:''}); renderChamps(); $('#e-champs .champ-lbl:last-of-type')?.focus(); });
-  async function saveEvent(){
+  function buildEventBody(){
     const body={ nom:$('#e-nom').value.trim(), lieu:$('#e-lieu').value.trim(), partenaire:$('#e-part').value.trim(), contact:$('#e-contact').value.trim(),
       partenaire_id:$('#e-partid')?.value||null,
       date_debut:$('#e-deb').value, date_fin:$('#e-fin').value, notes:$('#e-notes').value.trim(), materiel_ids:[...evMat],
       description:$('#e-desc').value.trim(), consignes:$('#e-consignes').value.trim(), photo:evPhoto,
       champs:evChamps.map(c=>({label:(c.label||'').trim(),valeur:(c.valeur||'').trim()})).filter(c=>c.label||c.valeur) };
     if(!body.nom){ toast('Le nom est obligatoire.'); return null; }
-    return api(ev?'/api/evenements/'+ev.id:'/api/evenements',{method:ev?'PUT':'POST',body:JSON.stringify(body)});
+    return body;
   }
-  $('#e-save').addEventListener('click',async()=>{ try{ const r=await saveEvent(); if(!r) return; closeModal(); toast('Enregistré'); loadEvenements(); }catch(err){ toast(err.message); } });
+  async function saveEvent(){ const body=buildEventBody(); if(!body) return null; if(ev&&baseModifLe) body.base_modif_le=baseModifLe; return api(ev?'/api/evenements/'+ev.id:'/api/evenements',{method:ev?'PUT':'POST',body:JSON.stringify(body)}); }
+  $('#e-save').addEventListener('click',()=>{ const body=buildEventBody(); if(!body) return; saveWithConcurrency(ev?'/api/evenements/'+ev.id:'/api/evenements', ev?'PUT':'POST', body, baseModifLe, ()=>{ closeModal(); toast('Enregistré'); loadEvenements(); }); });
   $('#e-devis').addEventListener('click',async()=>{ try{ const r=await saveEvent(); if(!r) return; toast('Événement enregistré'); devisModal(null, evtPrefill(r)); }catch(err){ toast(err.message); } });
   quickAddSelect($('#e-partid'), $('#e-partadd'), { placeholder:'Nom du partenaire…', create: async txt=>{ const r=await api('/api/partenaires',{method:'POST',body:JSON.stringify({nom:txt})}); await loadPartners(); return {value:r.id,label:r.nom}; } });
 }
@@ -1512,7 +1532,8 @@ async function reparationModal(r){
   let techs=[]; try{ techs = CURRENT_USER?.role==='admin' ? await api('/api/users') : []; }catch{}
   const e=r||{};
   let etapes=(e.etapes||[]).map(s=>({id:s.id,texte:s.texte,fait:!!s.fait}));
-  openModal(`<h3>${r?'Modifier la réparation':'Nouvelle réparation'}</h3>
+  const baseModifLe = (r && e.modif_le) ? e.modif_le : null;
+  openModal(`<h3>${r?'Modifier la réparation':'Nouvelle réparation'}</h3>${modifBanner(e, !!r)}
     <label class="field"><span>Matériel *</span><select id="r-mat">${matOptions(e.materiel_id)}</select></label>
     <label class="field"><span>Panne / description</span><textarea id="r-panne">${esc(e.panne)}</textarea></label>
     <div class="row2"><label class="field"><span>Statut</span><select id="r-statut">${Object.entries(REP_STATUTS).map(([k,v])=>`<option value="${k}" ${(e.statut||'a_faire')===k?'selected':''}>${v}</option>`).join('')}</select></label>
@@ -1544,7 +1565,7 @@ async function reparationModal(r){
     const body={ materiel_id:$('#r-mat').value, panne:$('#r-panne').value.trim(), statut:$('#r-statut').value, cout:$('#r-cout').value,
       date_entree:$('#r-deb').value, date_sortie:$('#r-fin').value, notes:$('#r-notes').value.trim(), technicien_id:$('#r-tech')?.value||null,
       etapes:etapes.filter(s=>(s.texte||'').trim()) };
-    try{ await api(r?'/api/reparations/'+r.id:'/api/reparations',{method:r?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast('Enregistré'); loadReparations(); }catch(err){ toast(err.message); }
+    saveWithConcurrency(r?'/api/reparations/'+r.id:'/api/reparations', r?'PUT':'POST', body, baseModifLe, ()=>{ closeModal(); toast('Enregistré'); loadReparations(); });
   });
 }
 
