@@ -29,22 +29,24 @@
 <a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="WCA"></a></div></header>
 
 <section class="intro">
-  <h1>Contact avec l'association WCA</h1>
-  <p>Pour nous contacter, merci de passer par ce formulaire, nous vous répondrons aussitôt que possible. N'oubliez pas d'être le plus précis possible !</p>
+  <h1 id="ctTitle">Contact avec l'association WCA</h1>
+  <p id="ctIntro">Pour nous contacter, merci de passer par ce formulaire, nous vous répondrons aussitôt que possible. N'oubliez pas d'être le plus précis possible !</p>
 </section>
 
 <div class="form">
   <div id="formMsg" style="display:none;border-radius:6px;padding:14px 16px;margin-bottom:18px;font-size:15px;"></div>
-  <form action="contact.php" method="post">
+  <form action="contact.php" method="post" id="ctForm">
     <!-- champ piège anti-spam (ne pas remplir / masqué) -->
     <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true">
-    <div class="row">
-      <div class="field"><label>Nom</label><input type="text" name="nom" required></div>
-      <div class="field"><label>Email</label><input type="email" name="email" required></div>
+    <div id="ctFields">
+      <div class="row">
+        <div class="field"><label>Nom</label><input type="text" name="nom" required></div>
+        <div class="field"><label>Email</label><input type="email" name="email" required></div>
+      </div>
+      <div class="field"><label>Sujet</label><input type="text" name="sujet"></div>
+      <div class="field"><label>Message</label><textarea name="message" required></textarea></div>
     </div>
-    <div class="field"><label>Sujet</label><input type="text" name="sujet"></div>
-    <div class="field"><label>Message</label><textarea name="message" required></textarea></div>
-    <button class="send" type="submit">Envoyer</button>
+    <button class="send" type="submit" id="ctSubmit">Envoyer</button>
   </form>
 </div>
 <script>
@@ -55,6 +57,33 @@
   if(p==='1'){box.style.background='#e7f7ee';box.style.color='#16794b';box.textContent='Merci, votre message a bien été envoyé ! Nous vous répondrons au plus vite.';}
   else{box.style.background='#fcebeb';box.style.color='#a32d2d';box.textContent='Une erreur est survenue. Vérifiez les champs et réessayez, ou écrivez à westcoastarcades.fr@gmail.com.';}
   box.scrollIntoView({behavior:'smooth',block:'center'});
+})();
+</script>
+
+<script src="assets/js/wca-api.js"></script>
+<script>
+/* Formulaire de contact piloté depuis la gestion (Site internet → Contact).
+   Tant qu'aucune config n'existe, on garde le formulaire statique ci-dessus. */
+(async function(){
+  if(!window.WCA) return;
+  var cfg;
+  try{ var home=await WCA.getJSON('home'); cfg=home&&home.contact_page; }catch(e){ return; }
+  if(!cfg||!Array.isArray(cfg.fields)||!cfg.fields.length) return;
+  if(cfg.title){ var t=document.getElementById('ctTitle'); if(t) t.textContent=cfg.title; document.title=cfg.title+' - West Coast Arcades'; }
+  if(cfg.intro){ var ip=document.getElementById('ctIntro'); if(ip) ip.textContent=cfg.intro; }
+  if(cfg.submit_label){ var sb=document.getElementById('ctSubmit'); if(sb) sb.textContent=cfg.submit_label; }
+  function fieldHtml(f){
+    var req=f.required?' required':'';
+    var lbl='<label>'+WCA.esc(f.label||'')+(f.required?' *':'')+'</label>';
+    if(f.type==='textarea') return '<div class="field">'+lbl+'<textarea name="'+WCA.esc(f.key)+'"'+req+'></textarea></div>';
+    if(f.type==='select'){ var opts=(f.options||[]).map(function(o){return '<option value="'+WCA.esc(o)+'">'+WCA.esc(o)+'</option>';}).join(''); return '<div class="field">'+lbl+'<select name="'+WCA.esc(f.key)+'"'+req+'><option value="">— Choisir —</option>'+opts+'</select></div>'; }
+    var type=f.type==='email'?'email':(f.type==='tel'?'tel':'text');
+    return '<div class="field">'+lbl+'<input type="'+type+'" name="'+WCA.esc(f.key)+'"'+req+'></div>';
+  }
+  document.getElementById('ctFields').innerHTML=cfg.fields.map(fieldHtml).join('');
+  var meta=document.createElement('input'); meta.type='hidden'; meta.name='__fields';
+  meta.value=JSON.stringify(cfg.fields.map(function(f){return {key:f.key,label:f.label,type:f.type,required:!!f.required};}));
+  document.getElementById('ctForm').appendChild(meta);
 })();
 </script>
 

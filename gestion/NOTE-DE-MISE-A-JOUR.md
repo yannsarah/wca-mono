@@ -2,6 +2,16 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.10 — 14 juin 2026**
+## Page Contact dynamique + onglets réordonnables
+- Nouvel onglet **Contact** dans Site internet : le **formulaire de contact** est entièrement modifiable (titre, intro, bouton, et **les champs**).
+- Chaque champ se règle : libellé, **type** (texte, email, téléphone, message long, ou **liste de choix « Objet »**), et requis ou non. On **ajoute / supprime / réordonne** les champs au glisser-déposer. Le champ **Objet** propose plusieurs choix modifiables à volonté.
+- L'onglet **« Modules accueil » est renommé « Accueil »**.
+- Les **onglets de Site internet se réordonnent** au glisser-déposer (Blog, Affichage, Nos machines, Accueil, Contact).
+- *(Le destinataire de l'email reste défini dans contact.php, par sécurité.)*
+
+---
+
 **Version 2.8.9 — 14 juin 2026**
 ## Nouvel onglet « Nos machines » (Site internet)
 - Nouvel onglet **Nos machines** dans Site internet, pilotable en dynamique.

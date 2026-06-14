@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.9'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.10'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1980,22 +1980,31 @@ let SITE_TAB = 'blog';
 let ARTICLES = [];
 let SITE_CONTENT = {};
 
+const SI_TAB_DEFS = [
+  {k:'blog', l:()=>`${icon('doc')} Blog`},
+  {k:'affichage', l:()=>`${icon('globe')} Affichage du site`},
+  {k:'machines', l:()=>`🕹 Nos machines`},
+  {k:'modules', l:()=>`${icon('box')} Accueil`},
+  {k:'contact', l:()=>`✉️ Contact`},
+];
+function siTabOrder(){ let o; try{ o=JSON.parse(localStorage.getItem('wca_si_taborder')||'[]'); }catch{ o=[]; } o=o.filter(k=>SI_TAB_DEFS.some(t=>t.k===k)); SI_TAB_DEFS.forEach(t=>{ if(!o.includes(t.k)) o.push(t.k); }); return o; }
 async function renderSiteInternet(){
-  const tabs = `<div class="tabs-row" id="si-tabs">
-      <button class="${SITE_TAB==='blog'?'active':''}" data-t="blog">${icon('doc')} Blog</button>
-      <button class="${SITE_TAB==='affichage'?'active':''}" data-t="affichage">${icon('globe')} Affichage du site</button>
-      <button class="${SITE_TAB==='machines'?'active':''}" data-t="machines">🕹 Nos machines</button>
-      <button class="${SITE_TAB==='modules'?'active':''}" data-t="modules">${icon('box')} Modules accueil</button>
-    </div>`;
+  const order=siTabOrder();
+  const tabsHtml=()=>`<div class="tabs-row" id="si-tabs">`+order.map((k,i)=>{ const t=SI_TAB_DEFS.find(x=>x.k===k); return `<button class="${SITE_TAB===k?'active':''}" draggable="true" data-i="${i}" data-t="${k}" title="Glisse pour réordonner">${t.l()}</button>`; }).join('')+`</div>`;
   const action = (SITE_TAB==='blog' ? `<button class="btn" id="si-new">${icon('plus')} Nouvel article</button>` : '') + `<button class="btn" id="si-media" style="background:var(--purple,#7c5cff)">🖼 Médiathèque</button>`;
   setTopbar('Site internet', action);
-  $('#view').innerHTML = tabs + `<div id="si-body"><p class="help" style="padding:20px">Chargement…</p></div>`;
-  $$('#si-tabs button').forEach(b=>b.addEventListener('click',()=>{ SITE_TAB=b.dataset.t; renderSiteInternet(); }));
+  $('#view').innerHTML = tabsHtml() + `<div id="si-body"><p class="help" style="padding:20px">Chargement…</p></div>`;
+  function wireTabs(){
+    $$('#si-tabs button').forEach(b=>b.addEventListener('click',()=>{ SITE_TAB=b.dataset.t; renderSiteInternet(); }));
+    wireDnd($('#si-tabs'),'button',order,()=>{ localStorage.setItem('wca_si_taborder',JSON.stringify(order)); const el=$('#si-tabs'); el.outerHTML=tabsHtml(); wireTabs(); });
+  }
+  wireTabs();
   $('#si-new')?.addEventListener('click',()=>articleModal(null));
   $('#si-media')?.addEventListener('click',()=>mediaPicker());
   if(SITE_TAB==='blog') await renderBlogTab();
   else if(SITE_TAB==='affichage') await renderAffichageTab();
   else if(SITE_TAB==='machines') await renderMachinesTab();
+  else if(SITE_TAB==='contact') await renderContactTab();
   else await renderModulesTab();
 }
 
@@ -2239,6 +2248,62 @@ function vitrineModal(m){
     try{ await put({ photo, titre_site:$('#vit-titre').value.trim(), sous_titre_site:$('#vit-sous').value.trim(), sens_site:$('#vit-sens').value, visible_site:$('#vit-vis').value==='1' }); closeModal(); toast('Fiche vitrine enregistrée'); renderAffichageTab(); }catch(e){ toast(e.message); }
   });
   $('#vit-del').addEventListener('click',()=>{ confirmModal('Vider la fiche vitrine de cette borne et la retirer du site ? (la photo de l’inventaire est conservée)', async()=>{ try{ await put({ titre_site:'', sous_titre_site:'', sens_site:'auto', visible_site:false }); closeModal(); toast('Fiche vitrine vidée'); renderAffichageTab(); }catch(e){ toast(e.message); } }); });
+}
+
+/* ============ Onglet CONTACT : formulaire de la page contact.html (dynamique) ============ */
+const CT_TYPE_LABEL = { text:'Texte court', email:'Email', tel:'Téléphone', textarea:'Message (long)', select:'Liste de choix (Objet)' };
+function defaultContactFields(){ return [
+  {key:'nom',label:'Nom',type:'text',required:true},
+  {key:'email',label:'Email',type:'email',required:true},
+  {key:'sujet',label:'Objet',type:'select',required:false,options:['Demande de location','Question','Devis','Autre']},
+  {key:'message',label:'Message',type:'textarea',required:true},
+]; }
+function ctSlug(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,''); }
+async function renderContactTab(){
+  const body=$('#si-body');
+  try{ SITE_CONTENT = await api('/api/site'); }catch{ SITE_CONTENT=SITE_CONTENT||{}; }
+  const c = (SITE_CONTENT.contact_page)||{};
+  let fields = (Array.isArray(c.fields)&&c.fields.length)? c.fields.map(f=>({...f, options:(f.options||[]).slice()})) : defaultContactFields();
+  body.innerHTML = bubbleCSS()
+    + `<p class="help" style="margin-bottom:10px">Réglages de la page <strong>Contact</strong>. Ajoute, supprime ou réordonne les champs (glisse la poignée ⠿). Le formulaire sert à <strong>envoyer un email</strong> à l'association.</p>`
+    + bubble('📝','Textes de la page','Titre, introduction et bouton',
+        `<label class="field"><span>Titre de la page</span><input id="ct-title" value="${esc(c.title||'Contact')}"></label>
+         <label class="field"><span>Texte d'introduction</span><textarea id="ct-intro" rows="3">${esc(c.intro||'')}</textarea></label>
+         <label class="field"><span>Texte du bouton d'envoi</span><input id="ct-submit" value="${esc(c.submit_label||'Envoyer')}"></label>`, {open:true})
+    + bubble('🧩','Champs du formulaire','Chaque champ : libellé, type, requis. « Liste de choix » = champ Objet à choix multiples.',
+        `<div id="ct-fields"></div>
+         <button type="button" class="btn small grey" id="ct-add" style="margin-top:6px">${icon('plus')} Ajouter un champ</button>`)
+    + `<p class="help" style="margin:10px 0 0">📧 L'adresse <strong>destinataire</strong> de l'email se règle dans le fichier <code>contact.php</code> (pour des raisons de sécurité, elle n'est pas modifiable depuis le navigateur).</p>`
+    + `<div class="buttons" style="margin-top:12px"><button class="btn" id="ct-save">${icon('check')} Enregistrer la page Contact</button></div>`;
+  const fbox=$('#ct-fields');
+  function rowHtml(f,i){ return `<div class="ctf-row" draggable="true" data-i="${i}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--card)">
+      <span class="ctf-drag" title="Glisser" style="cursor:grab;color:var(--muted)">⠿</span>
+      <input class="ctf-label" value="${esc(f.label||'')}" placeholder="Libellé du champ" style="flex:1;min-width:130px">
+      <select class="ctf-type" style="width:auto">${Object.keys(CT_TYPE_LABEL).map(t=>`<option value="${t}" ${f.type===t?'selected':''}>${CT_TYPE_LABEL[t]}</option>`).join('')}</select>
+      <label class="mini" style="display:flex;align-items:center;gap:4px"><input type="checkbox" class="ctf-req" ${f.required?'checked':''}> requis</label>
+      <button type="button" class="iconbtn ghost ctf-del" title="Supprimer" style="color:#e23b3b">${icon('trash')}</button>
+      ${f.type==='select'?`<input class="ctf-opts" value="${esc((f.options||[]).join(', '))}" placeholder="Choix de l'objet, séparés par des virgules" style="flex:1 1 100%;margin-top:6px">`:''}
+    </div>`; }
+  function drawFields(){
+    fbox.innerHTML = fields.length ? fields.map(rowHtml).join('') : '<p class="mini">Aucun champ. Clique « Ajouter un champ ».</p>';
+    fields.forEach((f,i)=>{
+      const row=fbox.querySelector(`.ctf-row[data-i="${i}"]`); if(!row) return;
+      row.querySelector('.ctf-label').addEventListener('input',e=>{ f.label=e.target.value; });
+      row.querySelector('.ctf-type').addEventListener('change',e=>{ f.type=e.target.value; if(f.type==='select'&&!f.options) f.options=[]; drawFields(); });
+      row.querySelector('.ctf-req').addEventListener('change',e=>{ f.required=e.target.checked; });
+      const opt=row.querySelector('.ctf-opts'); if(opt) opt.addEventListener('input',e=>{ f.options=e.target.value.split(',').map(s=>s.trim()).filter(Boolean); });
+      row.querySelector('.ctf-del').addEventListener('click',()=>{ fields.splice(i,1); drawFields(); });
+    });
+    wireDnd(fbox,'.ctf-row',fields,drawFields);
+  }
+  drawFields();
+  $('#ct-add').addEventListener('click',()=>{ fields.push({key:'',label:'Nouveau champ',type:'text',required:false}); drawFields(); });
+  $('#ct-save').addEventListener('click',async()=>{
+    const used=new Set();
+    fields.forEach((f,i)=>{ let k=f.key||ctSlug(f.label)||('champ'+i); k=k.replace(/[^a-z0-9_]/g,'_')||('champ'+i); while(used.has(k)) k=k+'_'+i; used.add(k); f.key=k; if(f.type!=='select') delete f.options; });
+    const payload={ contact_page:{ title:$('#ct-title').value.trim(), intro:$('#ct-intro').value.trim(), submit_label:$('#ct-submit').value.trim()||'Envoyer', fields } };
+    try{ await api('/api/site',{method:'PUT',body:JSON.stringify(payload)}); SITE_CONTENT.contact_page=payload.contact_page; toast('Page Contact enregistrée'); renderContactTab(); }catch(e){ toast(e.message); }
+  });
 }
 
 /* ---- Onglet MODULES : sections de la page d'accueil (hero, photos, équipe) ---- */
