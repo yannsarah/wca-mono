@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.5 — 14 juin 2026**
+## Compléments Contact accueil + glisser-déposer généralisé
+- **Contact accueil** : on peut maintenant changer la **couleur de fond de la bande** (bleu pétrole par défaut) et choisir si le bouton **ouvre dans la même fenêtre ou un nouvel onglet**.
+- Le **glisser-déposer** pour réordonner les rubriques est désormais disponible **partout où il y a ce système** : Affichage du site, **Modules accueil** et **Administration**.
+
+---
+
 **Version 2.8.4 — 14 juin 2026**
 ## Accueil du site : icônes & bande contact pilotables
 - Nouveau module **« Liens icônes »** (Site internet › Modules accueil) : gère la rangée d'icônes cliquables sous le hero. On peut **ajouter / modifier / supprimer / réordonner** (glisser-déposer) chaque lien. Pour chacun : **choix de l'icône** (3 bibliothèques — icônes maison, Google Material Symbols, émojis), **couleur**, **titre** et **description** activables ou non, et le **lien** de destination.

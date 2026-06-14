@@ -359,10 +359,13 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
     if(h && h.contact_home){
       var ch=h.contact_home, el2;
       if(ch.title && (el2=document.getElementById('needTitle'))) el2.textContent=ch.title;
+      var nsec=document.querySelector('.need');
+      if(nsec && ch.bg_color) nsec.style.background=ch.bg_color;
       var nb=document.getElementById('needBtn');
       if(nb){
         if(ch.btn_url) nb.href=ch.btn_url;
         if(ch.btn_color) nb.style.background=ch.btn_color;
+        if(ch.btn_target==='_blank'){ nb.target='_blank'; nb.rel='noopener'; } else { nb.removeAttribute('target'); nb.removeAttribute('rel'); }
         var ic=ch.btn_icon?WCA.iconHTML(ch.btn_icon_type,ch.btn_icon):'';
         nb.innerHTML=(ic?ic+' ':'')+WCA.esc(ch.btn_text||'CONTACTEZ-NOUS DÈS MAINTENANT');
       }

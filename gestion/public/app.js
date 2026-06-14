@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.4'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.5'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2091,15 +2091,23 @@ async function renderModulesTab(){
   try{ SITE_CONTENT = await api('/api/site'); }catch(e){ SITE_CONTENT={}; }
   const h=SITE_CONTENT.hero||{}; const ph=SITE_CONTENT.photos||[]; const eq=SITE_CONTENT.equipe||[]; const bl=SITE_CONTENT.blog||{};
   const il=iconLinksItems(); const ch=SITE_CONTENT.contact_home||{};
-  const card=(key,titre,desc,resume)=>`<div class="tablecard" style="padding:16px 18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:16px">
-    <div><div style="font-weight:800;color:var(--navy);font-size:16px">${titre}</div><div class="help" style="margin-top:2px">${desc}</div><div class="mini" style="margin-top:4px">${resume}</div></div>
+  const card=(key,titre,desc,resume,i)=>`<div class="tablecard mod-card" draggable="true" data-i="${i}" style="padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;gap:14px">
+    <span class="mod-drag" title="Glisser pour réordonner" style="cursor:grab;color:var(--muted);font-size:18px;line-height:1">⠿</span>
+    <div style="flex:1;min-width:0"><div style="font-weight:800;color:var(--navy);font-size:16px">${titre}</div><div class="help" style="margin-top:2px">${desc}</div><div class="mini" style="margin-top:4px">${resume}</div></div>
     <button class="btn js-mod-edit" data-k="${key}" style="white-space:nowrap">${icon('edit')} Éditer</button></div>`;
-  body.innerHTML = `<p class="help" style="margin-bottom:10px">Chaque module est une section de la page d'accueil du site. Tu modifies le contenu ici ; tant qu'un module n'est pas configuré, le site garde son contenu actuel (aucun risque).</p>`
-    + card('hero','🎬 Hero (haut de page)','Grand titre, texte d’accroche, image, bouton.', h.titre?('Titre : '+esc(h.titre)):'Non configuré.')
-    + card('iconlinks','🔗 Liens icônes',"La rangée d'icônes cliquables sous le hero (Nos machines, Agenda…).", il.length?(il.length+' lien(s)'):'Liens par défaut du site.')
-    + card('contact','📞 Contact accueil',"La bande « Vous avez besoin de nous ? » et son bouton.", ch.title?('Titre : '+esc(ch.title)):'Contenu par défaut du site.')
-    + card('photos','🖼 Photos asso',"La galerie « L’association en quelques images… ».", ph.length?(ph.length+' photo(s)'):'Aucune photo.')
-    + card('equipe','👥 L’équipe',"La section « La fine équipe » (photo, nom, description).", eq.length?(eq.length+' membre(s)'):'Aucun membre.');
+  const MODS={
+    hero:(i)=>card('hero','🎬 Hero (haut de page)','Grand titre, texte d’accroche, image, bouton.', h.titre?('Titre : '+esc(h.titre)):'Non configuré.',i),
+    iconlinks:(i)=>card('iconlinks','🔗 Liens icônes',"La rangée d'icônes cliquables sous le hero (Nos machines, Agenda…).", il.length?(il.length+' lien(s)'):'Liens par défaut du site.',i),
+    contact:(i)=>card('contact','📞 Contact accueil',"La bande « Vous avez besoin de nous ? » et son bouton.", ch.title?('Titre : '+esc(ch.title)):'Contenu par défaut du site.',i),
+    photos:(i)=>card('photos','🖼 Photos asso',"La galerie « L’association en quelques images… ».", ph.length?(ph.length+' photo(s)'):'Aucune photo.',i),
+    equipe:(i)=>card('equipe','👥 L’équipe',"La section « La fine équipe » (photo, nom, description).", eq.length?(eq.length+' membre(s)'):'Aucun membre.',i),
+  };
+  const DEFAULT_ORDER=['hero','iconlinks','contact','photos','equipe'];
+  let order; try{ order=JSON.parse(localStorage.getItem('wca_mod_order')||'[]'); }catch{ order=[]; }
+  order=order.filter(k=>MODS[k]); DEFAULT_ORDER.forEach(k=>{ if(!order.includes(k)) order.push(k); });
+  body.innerHTML = `<p class="help" style="margin-bottom:10px">Chaque module est une section de la page d'accueil du site. Glisse la poignée ⠿ pour réordonner. Tant qu'un module n'est pas configuré, le site garde son contenu actuel (aucun risque).</p>`
+    + `<div id="mod-list">` + order.map((k,i)=>MODS[k](i)).join('') + `</div>`;
+  wireDnd($('#mod-list'),'.mod-card',order,()=>{ localStorage.setItem('wca_mod_order',JSON.stringify(order)); renderModulesTab(); });
   $$('.js-mod-edit').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.k; if(k==='hero') heroModal(); else if(k==='photos') photosModal(); else if(k==='equipe') equipeModal(); else if(k==='iconlinks') iconLinksModal(); else if(k==='contact') contactHomeModal(); }));
 }
 
@@ -2280,6 +2288,8 @@ function contactHomeModal(){
   ov.innerHTML=`<div class="modal"><h3>Module « Contact accueil »</h3>
     <p class="help" style="margin:-4px 0 12px">La bande « Vous avez besoin de nous ? » sous les icônes. Même design, contenu modifiable.</p>
     <label class="field"><span>Titre de la bande</span><input class="ch-title" value="${esc(d.title||'Vous avez besoin de nous ?')}"></label>
+    <label class="field"><span>Couleur de fond de la bande</span>
+      <span style="display:flex;align-items:center;gap:8px;margin-top:4px"><input type="color" class="ch-bg" value="${/^#([0-9a-f]{6})$/i.test(d.bg_color||'')?d.bg_color:'#122E35'}" style="width:48px;height:32px;padding:0;border:1px solid var(--line);border-radius:6px"><span class="mini">Par défaut : bleu pétrole (#122E35)</span></span></label>
     <div class="field"><span>Bouton (pilule)</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
         <span class="ch-prev" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px;color:#fff;background:${d.btn_color||'#E2590F'}">${iconHTML(it.btn_icon_type,it.btn_icon)}</span>
@@ -2289,6 +2299,7 @@ function contactHomeModal(){
     </div>
     <label class="field"><span>Texte du bouton</span><input class="ch-btext" value="${esc(d.btn_text||'CONTACTEZ-NOUS DÈS MAINTENANT')}"></label>
     <label class="field"><span>Lien du bouton</span><input class="ch-burl" value="${esc(d.btn_url||'contact.html')}" placeholder="ex. contact.html"></label>
+    <label class="field"><span>Ouverture du lien</span><select class="ch-target"><option value="_self" ${d.btn_target!=='_blank'?'selected':''}>Même fenêtre</option><option value="_blank" ${d.btn_target==='_blank'?'selected':''}>Nouvel onglet</option></select></label>
     <div class="buttons" style="margin-top:12px"><button type="button" class="btn grey ch-cancel">Annuler</button><button type="button" class="btn ch-save">Enregistrer</button></div></div>`;
   document.body.appendChild(ov);
   const sel=s=>ov.querySelector(s); const close=()=>ov.remove();
@@ -2298,7 +2309,7 @@ function contactHomeModal(){
   sel('.ch-pick').addEventListener('click',()=>iconPicker({type:it.btn_icon_type,icon:it.btn_icon},r=>{ it.btn_icon_type=r.type; it.btn_icon=r.icon; refreshPrev(); }));
   sel('.ch-color').addEventListener('input',refreshPrev);
   sel('.ch-save').addEventListener('click',async()=>{
-    const obj={ title:sel('.ch-title').value.trim(), btn_text:sel('.ch-btext').value.trim(), btn_url:sel('.ch-burl').value.trim(), btn_color:sel('.ch-color').value, btn_icon_type:it.btn_icon_type, btn_icon:it.btn_icon };
+    const obj={ title:sel('.ch-title').value.trim(), bg_color:sel('.ch-bg').value, btn_text:sel('.ch-btext').value.trim(), btn_url:sel('.ch-burl').value.trim(), btn_target:sel('.ch-target').value, btn_color:sel('.ch-color').value, btn_icon_type:it.btn_icon_type, btn_icon:it.btn_icon };
     try{ await api('/api/site',{method:'PUT',body:JSON.stringify({contact_home:obj})}); SITE_CONTENT.contact_home=obj; close(); toast('Contact accueil enregistré'); renderModulesTab(); }catch(e){ toast(e.message); }
   });
 }
@@ -2651,10 +2662,8 @@ async function renderReglages(){
   const isAdmin=isAdminUser();
   const canActivite=(isAdmin||isReadonly()) && moduleOn('activite');
   let mePhoto=u.photo||'';
-  view().innerHTML = bubbleCSS()
-    + (isReadonly()?`<div class="card" style="background:var(--amber-l);border-color:#f0dca6;margin-bottom:10px"><strong>${icon('lock')} Mode invité — lecture seule</strong><p class="help">Vous pouvez tout consulter ; les modifications sont désactivées.</p></div>`:'')
-    + `<p class="help" style="margin-bottom:10px">Clique sur une rubrique pour la déplier.</p>`
-    + bubble('👤','Mon compte','Photo de profil, prénom et nom',
+  const ADMIN_SECS = {}; let ADMIN_I = 0;
+  ADMIN_SECS.moncompte=()=>bubble('👤','Mon compte','Photo de profil, prénom et nom',
         `<label class="field"><span>Photo de profil</span>
           <div class="photo-edit"><div class="photo-prev" id="me-photo-prev">${mePhoto?`<img src="${mePhoto}" alt="">`:`<span class="ph">${icon('users','ic')}</span>`}</div>
             <div class="photo-btns"><label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="me-photo-file" accept="image/*" style="display:none"></label>
@@ -2662,33 +2671,43 @@ async function renderReglages(){
               <span class="help">Carré, compressée. S'affiche dans les disponibilités.</span></div></div></label>
         <div class="row2"><label class="field"><span>Prénom</span><input id="me-prenom" value="${esc(u.prenom)}"></label>
           <label class="field"><span>Nom</span><input id="me-nom" value="${esc(u.nom)}"></label></div>
-        <button class="btn small" id="me-save">Enregistrer</button>`, {open:true})
-    + bubble('🎨','Apparence','Thème de couleurs (mémorisé sur cet appareil)',
+        <button class="btn small" id="me-save">Enregistrer</button>`, {open:true, dragIndex:ADMIN_I++});
+  ADMIN_SECS.apparence=()=>bubble('🎨','Apparence','Thème de couleurs (mémorisé sur cet appareil)',
         `<div class="theme-grid">${THEMES.map(t=>`<button class="theme-opt ${currentTheme()===t.key?'on':''}" data-theme="${t.key}">
             <span class="theme-swatch sw-${t.key}"></span>
             <span class="theme-meta"><strong>${t.label}</strong><small>${esc(t.desc)}</small></span>
             ${currentTheme()===t.key?`<span class="theme-check">${icon('check','ic')}</span>`:''}
-          </button>`).join('')}</div>`)
-    + bubble('🔑','Mot de passe','Changer mon mot de passe',
+          </button>`).join('')}</div>`, {dragIndex:ADMIN_I++});
+  ADMIN_SECS.motdepasse=()=>bubble('🔑','Mot de passe','Changer mon mot de passe',
         `<label class="field"><span>Mot de passe actuel</span><input id="me-cur" type="password"></label>
         <label class="field"><span>Nouveau mot de passe</span><input id="me-new" type="password"></label>
-        <button class="btn small" id="me-pw">Modifier le mot de passe</button>`)
-    + (isAdmin?bubble('🧩','Menus & modules','Activer/désactiver les modules et l’affichage des menus',
+        <button class="btn small" id="me-pw">Modifier le mot de passe</button>`, {dragIndex:ADMIN_I++});
+  if(isAdmin) ADMIN_SECS.menus=()=>bubble('🧩','Menus & modules','Activer/désactiver les modules et l’affichage des menus',
         `<p class="help" style="margin:0 0 10px">Activez ou désactivez les modules. Un module désactivé masque sa page et ses fonctions.</p>
         <div class="watch-list">${MODULE_REGISTRY.map(m=>`<div class="watch-row"><span class="wr-lbl">${esc(m.label)}<br><small style="font-weight:400;color:var(--muted)">${esc(m.desc||'')}</small></span><span class="toggle-oui-non ${moduleOn(m.key)?'on':'off'} js-mod" data-k="${esc(m.key)}"><span class="t-oui">OUI</span><span class="t-non">NON</span></span></div>`).join('')}</div>
         <p class="help" style="margin:16px 0 10px">Affichage des menus de gauche. <strong>Auto</strong> : le menu se cache quand il est vide. Tu peux forcer l'affichage ou le masquage.</p>
-        <div class="watch-list">${NAV.filter(n=>NAV_HIDEABLE[n.id]).map(n=>{ const ov=NAV_VIS[n.id]||'auto'; const cnt=NAV_COUNTS[NAV_HIDEABLE[n.id]]||0; return `<div class="watch-row"><span class="wr-lbl">${icon(n.icon)} ${esc(n.label)} <small style="color:var(--muted)">(${cnt})</small></span><select class="js-navvis" data-id="${esc(n.id)}" style="width:auto"><option value="auto" ${ov==='auto'?'selected':''}>Auto (cacher si vide)</option><option value="show" ${ov==='show'?'selected':''}>Toujours afficher</option><option value="hide" ${ov==='hide'?'selected':''}>Cacher</option></select></div>`; }).join('')}</div>`):'')
-    + (isAdmin?bubble('💾','Sauvegarde & restauration','Exporter ou restaurer toutes les données',
+        <div class="watch-list">${NAV.filter(n=>NAV_HIDEABLE[n.id]).map(n=>{ const ov=NAV_VIS[n.id]||'auto'; const cnt=NAV_COUNTS[NAV_HIDEABLE[n.id]]||0; return `<div class="watch-row"><span class="wr-lbl">${icon(n.icon)} ${esc(n.label)} <small style="color:var(--muted)">(${cnt})</small></span><select class="js-navvis" data-id="${esc(n.id)}" style="width:auto"><option value="auto" ${ov==='auto'?'selected':''}>Auto (cacher si vide)</option><option value="show" ${ov==='show'?'selected':''}>Toujours afficher</option><option value="hide" ${ov==='hide'?'selected':''}>Cacher</option></select></div>`; }).join('')}</div>`, {dragIndex:ADMIN_I++});
+  if(isAdmin) ADMIN_SECS.sauvegarde=()=>bubble('💾','Sauvegarde & restauration','Exporter ou restaurer toutes les données',
         `<p class="help" style="margin-bottom:12px">Exportez toutes vos données (matériel, devis, ventes…) dans un fichier, ou restaurez une sauvegarde.</p>
         <div class="buttons">
           <button class="btn small navy" id="bk-export">${icon('download')} Télécharger la sauvegarde</button>
           <label class="btn small grey" style="cursor:pointer">${icon('share')} Restaurer<input type="file" id="bk-file" accept="application/json" style="display:none"></label>
-        </div>`):'')
-    + (canActivite?bubble('📊','Activité de l’équipe','Connexions, présence et contributions',
-        `<div id="act-box"><p class="mini">Chargement…</p></div>`):'')
-    + bubble('ℹ️','À propos','Informations & déconnexion',
+        </div>`, {dragIndex:ADMIN_I++});
+  if(canActivite) ADMIN_SECS.activite=()=>bubble('📊','Activité de l’équipe','Connexions, présence et contributions',
+        `<div id="act-box"><p class="mini">Chargement…</p></div>`, {dragIndex:ADMIN_I++});
+  ADMIN_SECS.apropos=()=>bubble('ℹ️','À propos','Informations & déconnexion',
         `<strong>West Coast Arcades — Gestion</strong><p class="help">Inventaire, devis, événements, réparations, ventes et prêts. <a href="https://www.westcoastarcades.fr" target="_blank" style="color:var(--teal-d);font-weight:700">westcoastarcades.fr</a></p>
-        <button class="btn small red" id="me-logout" style="margin-top:10px">${icon('logout')} Se déconnecter</button>`);
+        <button class="btn small red" id="me-logout" style="margin-top:10px">${icon('logout')} Se déconnecter</button>`, {dragIndex:ADMIN_I++});
+  const ADMIN_DEFAULT=['moncompte','apparence','motdepasse','menus','sauvegarde','activite','apropos'].filter(k=>ADMIN_SECS[k]);
+  let adOrder; try{ adOrder=JSON.parse(localStorage.getItem('wca_admin_order')||'[]'); }catch{ adOrder=[]; }
+  adOrder=adOrder.filter(k=>ADMIN_SECS[k]); ADMIN_DEFAULT.forEach(k=>{ if(!adOrder.includes(k)) adOrder.push(k); });
+  view().innerHTML = bubbleCSS()
+    + (isReadonly()?`<div class="card" style="background:var(--amber-l);border-color:#f0dca6;margin-bottom:10px"><strong>${icon('lock')} Mode invité — lecture seule</strong><p class="help">Vous pouvez tout consulter ; les modifications sont désactivées.</p></div>`:'')
+    + `<p class="help" style="margin-bottom:10px">Clique sur une rubrique pour la déplier. Glisse la poignée ⠿ pour réordonner.</p>`
+    + `<div id="admin-list">` + adOrder.map(k=>ADMIN_SECS[k]()).join('') + `</div>`;
+  // Réindexe les data-i selon l'ordre réel (les dragIndex sont attribués à la création, pas à l'ordre d'affichage)
+  $$('#admin-list > .bubble-sec').forEach((el,i)=>el.dataset.i=i);
+  wireDnd($('#admin-list'),'.bubble-sec',adOrder,()=>{ localStorage.setItem('wca_admin_order',JSON.stringify(adOrder)); renderReglages(); });
   $$('.theme-opt').forEach(b=>b.addEventListener('click',()=>{ applyTheme(b.dataset.theme); toast('Thème appliqué'); renderReglages(); }));
   $('#me-photo-file')?.addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ mePhoto=data; $('#me-photo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
   $('#me-photo-clear')?.addEventListener('click',()=>{ mePhoto=''; $('#me-photo-prev').innerHTML=`<span class="ph">${icon('users','ic')}</span>`; });
