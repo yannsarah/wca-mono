@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.2'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.3'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1856,20 +1856,27 @@ function wireMedia(btnId,onPick){ const b=document.getElementById(btnId); if(b) 
 function fmtSize(b){ if(!b) return ''; return b>=1048576?(b/1048576).toFixed(1)+' Mo':Math.round(b/1024)+' Ko'; }
 function mediaPicker(onPick){
   let q='', folder='';
-  openModal(`<h3>Médiathèque</h3>
+  // Overlay indépendant : la médiathèque se superpose sans détruire la fenêtre en dessous (ex. « Modifier le matériel »).
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1200';
+  ov.innerHTML=`<div class="modal modal-wide"><h3>Médiathèque</h3>
     <p class="help" style="margin:0 0 10px">${onPick?'Clique sur une image pour la choisir, ou ajoutes-en une nouvelle.':'Gère tes images réutilisables.'}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <input id="med-q" placeholder="🔍 Rechercher…" style="flex:1;min-width:150px">
-      <select id="med-folder" style="width:auto"></select>
-      <label class="btn" style="cursor:pointer">${icon('plus')} Ajouter<input type="file" id="med-add" accept="image/*" multiple style="display:none"></label>
-      ${isAdminUser()?`<button type="button" class="btn grey" id="med-migrate" title="Importer les images déjà utilisées dans le site/la gestion">${icon('download')} Importer l'existant</button>`:''}
+      <input class="med-q" placeholder="🔍 Rechercher…" style="flex:1;min-width:150px">
+      <select class="med-folder" style="width:auto"></select>
+      <label class="btn" style="cursor:pointer">${icon('plus')} Ajouter<input type="file" class="med-add" accept="image/*" multiple style="display:none"></label>
+      ${isAdminUser()?`<button type="button" class="btn grey med-migrate" title="Importer les images déjà utilisées dans le site/la gestion">${icon('download')} Importer l'existant</button>`:''}
     </div>
-    <div id="med-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-height:50vh;overflow:auto"><span class="mini">Chargement…</span></div>
-    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Fermer</button></div>`);
+    <div class="med-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-height:50vh;overflow:auto"><span class="mini">Chargement…</span></div>
+    <div class="buttons" style="margin-top:12px"><button type="button" class="btn grey med-close">Fermer</button></div></div>`;
+  document.body.appendChild(ov);
+  const sel=s=>ov.querySelector(s), selAll=s=>[...ov.querySelectorAll(s)];
+  const close=()=>{ ov.remove(); };
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  sel('.med-close').addEventListener('click',close);
   function folders(){ const s=new Set(); MEDIAS_CACHE.forEach(m=>{ if(m.folder) s.add(m.folder); }); return [...s].sort(); }
-  function drawFolders(){ const sel=$('#med-folder'); if(!sel) return; sel.innerHTML='<option value="">Tous les dossiers</option>'+folders().map(f=>`<option value="${esc(f)}" ${folder===f?'selected':''}>${esc(f)}</option>`).join(''); }
+  function drawFolders(){ const fs=sel('.med-folder'); if(!fs) return; fs.innerHTML='<option value="">Tous les dossiers</option>'+folders().map(f=>`<option value="${esc(f)}" ${folder===f?'selected':''}>${esc(f)}</option>`).join(''); }
   function draw(){
-    const g=$('#med-grid'); if(!g) return;
+    const g=sel('.med-grid'); if(!g) return;
     const list=MEDIAS_CACHE.filter(m=>(!q||(m.name||'').toLowerCase().includes(q.toLowerCase()))&&(!folder||m.folder===folder));
     g.innerHTML = list.length ? list.map(m=>`<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)">
         <img src="${m.url}" data-url="${esc(m.url)}" class="js-med-pick" title="${onPick?'Choisir':''}" style="width:100%;height:88px;object-fit:cover;display:block;${onPick?'cursor:pointer':''}">
@@ -1883,17 +1890,31 @@ function mediaPicker(onPick){
           </div>
         </div>
       </div>`).join('') : '<span class="mini" style="grid-column:1/-1">Aucune image. Clique « Ajouter » pour en téléverser.</span>';
-    if(onPick) $$('.js-med-pick').forEach(im=>im.addEventListener('click',()=>{ onPick(im.dataset.url); closeModal(); }));
-    $$('.js-med-ren').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Nom de l’image :', m?m.name:''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({name:nv})}); await loadMedias(); draw(); }catch(e){ toast(e.message); } }));
-    $$('.js-med-fold').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Dossier (laisser vide pour aucun) :', m?(m.folder||''):''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({folder:nv})}); await loadMedias(); drawFolders(); draw(); }catch(e){ toast(e.message); } }));
-    $$('.js-med-del').forEach(b=>b.addEventListener('click',async()=>{ if(!window.confirm('Supprimer cette image de la médiathèque ?')) return; try{ await api('/api/medias/'+b.dataset.id,{method:'DELETE'}); await loadMedias(); drawFolders(); draw(); }catch(e){ toast(e.message); } }));
+    if(onPick) selAll('.js-med-pick').forEach(im=>im.addEventListener('click',()=>{ onPick(im.dataset.url); close(); }));
+    selAll('.js-med-ren').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Nom de l’image :', m?m.name:''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({name:nv})}); await loadMedias(); draw(); }catch(e){ toast(e.message); } }));
+    selAll('.js-med-fold').forEach(b=>b.addEventListener('click',async()=>{ const m=MEDIAS_CACHE.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Dossier (laisser vide pour aucun) :', m?(m.folder||''):''); if(nv==null) return; try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({folder:nv})}); await loadMedias(); drawFolders(); draw(); }catch(e){ toast(e.message); } }));
+    selAll('.js-med-del').forEach(b=>b.addEventListener('click',async()=>{ if(!window.confirm('Supprimer cette image de la médiathèque ?')) return; try{ await api('/api/medias/'+b.dataset.id,{method:'DELETE'}); await loadMedias(); drawFolders(); draw(); }catch(e){ toast(e.message); } }));
   }
   loadMedias().then(()=>{ drawFolders(); draw(); });
-  $('#med-q').addEventListener('input',()=>{ q=$('#med-q').value; draw(); });
-  $('#med-folder').addEventListener('change',()=>{ folder=$('#med-folder').value; draw(); });
-  $('#med-add').addEventListener('change',ev=>{ const files=[...ev.target.files]; if(!files.length) return; ev.target.value=''; toast('Ajout en cours…'); let done=0; files.forEach(f=>compressImage(f,async data=>{ try{ await api('/api/medias',{method:'POST',body:JSON.stringify({data,name:f.name})}); }catch(e){ toast(e.message); } if(++done===files.length){ await loadMedias(); drawFolders(); draw(); toast('Ajouté à la médiathèque'); } },1600,300*1024)); });
-  $('#med-migrate')?.addEventListener('click',async()=>{ if(!window.confirm('Importer dans la médiathèque toutes les images déjà utilisées (matériel, articles, accueil, partenaires…) ? Elles deviennent des fichiers réutilisables.')) return; toast('Importation en cours…'); try{ const r=await api('/api/medias/migrate',{method:'POST',body:'{}'}); await loadMedias(); drawFolders(); draw(); toast(r.migrated+' image(s) importée(s)'); }catch(e){ toast(e.message); } });
+  sel('.med-q').addEventListener('input',e=>{ q=e.target.value; draw(); });
+  sel('.med-folder').addEventListener('change',e=>{ folder=e.target.value; draw(); });
+  sel('.med-add').addEventListener('change',ev=>{ const files=[...ev.target.files]; if(!files.length) return; ev.target.value=''; toast('Ajout en cours…'); let done=0; files.forEach(f=>compressImage(f,async data=>{ try{ await api('/api/medias',{method:'POST',body:JSON.stringify({data,name:f.name})}); }catch(e){ toast(e.message); } if(++done===files.length){ await loadMedias(); drawFolders(); draw(); toast('Ajouté à la médiathèque'); } },1600,300*1024)); });
+  sel('.med-migrate')?.addEventListener('click',async()=>{ if(!window.confirm('Importer dans la médiathèque toutes les images déjà utilisées (matériel, articles, accueil, partenaires…) ? Elles deviennent des fichiers réutilisables.')) return; toast('Importation en cours…'); try{ const r=await api('/api/medias/migrate',{method:'POST',body:'{}'}); await loadMedias(); drawFolders(); draw(); toast(r.migrated+' image(s) importée(s)'); }catch(e){ toast(e.message); } });
 }
+
+/* ====== NORME DESIGN : bulles horizontales ouvrables (rubriques pliables) ======
+   Réutilisable dans tous les modules du même type (Affichage du site, Administration, …).
+   bubble(emoji, titre, description, contenuHTML, {open, badge}) */
+function bubbleCSS(){ return `<style>.bubble-sec{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--card)}.bubble-sec>summary{cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;list-style:none}.bubble-sec>summary::-webkit-details-marker{display:none}.bubble-sec>summary:hover{background:rgba(0,0,0,.02)}.bubble-emo{font-size:22px;line-height:1}.bubble-ttl{font-weight:800;color:var(--navy)}.bubble-desc{display:block}.bubble-chev{display:inline-block;transition:.15s;color:var(--muted)}.bubble-sec[open]>summary .bubble-chev{transform:rotate(90deg)}.bubble-body{padding:0 16px 16px}</style>`; }
+function bubble(emoji, title, desc, body, opts){ opts=opts||{}; return `<details class="bubble-sec"${opts.open?' open':''}>
+    <summary>
+      <span class="bubble-emo">${emoji}</span>
+      <span style="flex:1;min-width:0"><span class="bubble-ttl">${title}</span>${desc?`<span class="mini bubble-desc">${desc}</span>`:''}</span>
+      ${opts.badge!=null?`<span class="statut" style="background:var(--line);color:var(--navy)">${opts.badge}</span>`:''}
+      <span class="bubble-chev">▸</span>
+    </summary>
+    <div class="bubble-body">${body}</div>
+  </details>`; }
 
 let SITE_TAB = 'blog';
 let ARTICLES = [];
@@ -2006,33 +2027,18 @@ async function renderAffichageTab(){
       const vit = optIn ? `<button class="btn small light js-vitrine" data-id="${x.id}" style="margin-right:10px">${icon('edit')} Fiche vitrine</button>` : '';
       return `<tr><td>${esc(x[nameKey]||'(sans nom)')}</td><td class="actions" style="white-space:nowrap;text-align:right">${vit}<span class="toggle-oui-non ${on?'on':'off'} js-vis" data-coll="${coll}" data-id="${x.id}" style="cursor:pointer"><span class="t-oui">${icon('check')} Publié</span><span class="t-non">Masqué</span></span></td></tr>`;
     }).join('') || `<tr><td colspan="2" class="help" style="padding:10px">Aucun élément.</td></tr>`;
-    return `<details class="aff-sec" style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--card)">
-      <summary style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px">
-        <span style="font-size:22px;line-height:1">${emo}</span>
-        <span style="flex:1;min-width:0"><span style="font-weight:800;color:var(--navy)">${title}</span><span class="mini" style="display:block">${desc}</span></span>
-        <span class="statut" style="background:var(--line);color:var(--navy)">${n}</span>
-        <span class="aff-chev">▸</span>
-      </summary>
-      <div style="padding:0 12px 12px"><div class="tablecard" style="box-shadow:none;border:1px solid var(--line,#eee);margin:0"><table class="grid"><tbody>${rows}</tbody></table></div></div>
-    </details>`;
+    const inner=`<div class="tablecard" style="box-shadow:none;border:1px solid var(--line,#eee);margin:0"><table class="grid"><tbody>${rows}</tbody></table></div>`;
+    return bubble(emo, title, desc, inner, {badge:n});
   }
-  body.innerHTML = `<style>.aff-sec summary{list-style:none}.aff-sec summary::-webkit-details-marker{display:none}.aff-chev{display:inline-block;transition:.15s;color:var(--muted)}.aff-sec[open] .aff-chev{transform:rotate(90deg)}</style>`
+  body.innerHTML = bubbleCSS()
     + `<p class="help" style="margin-bottom:10px">Clique sur une rubrique pour la déplier. Les <strong>machines</strong> sont masquées par défaut (l'inventaire reste privé) ; événements, projets et partenaires sont visibles sauf si tu les masques.</p>`
     + section('📅','Événements',"Affichés sur l'agenda du site",evs,'evenements','nom',false)
     + section('🕹','Machines (inventaire)','Vitrine « Nos Machines » — masquées par défaut',mats,'materiel','denomination',true)
     + section('📌','Projets','Affichés sur la page Projets',projs,'projets','nom',false)
     + section('🤝','Partenaires',"Encart partenaires du site",parts,'partenaires','nom',false)
-    + `<details class="aff-sec" style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--card)">
-        <summary style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px">
-          <span style="font-size:22px;line-height:1">📰</span>
-          <span style="flex:1;min-width:0"><span style="font-weight:800;color:var(--navy)">Blog</span><span class="mini" style="display:block">Tous les réglages du blog (affichage, widgets, bannières, image de fond)</span></span>
-          <span class="aff-chev">▸</span>
-        </summary>
-        <div style="padding:0 14px 14px">
-          <p class="mini" style="margin-bottom:10px">Disposition (grille / sidebar), widgets, encart pub, bannière des articles et image de fond du hero — tout est regroupé ici.</p>
-          <button type="button" class="btn js-blog-cfg">${icon('edit')} Configurer le blog</button>
-        </div>
-      </details>`;
+    + bubble('📰','Blog','Tous les réglages du blog (affichage, widgets, bannières, image de fond)',
+        `<p class="mini" style="margin-bottom:10px">Disposition (grille / sidebar), widgets, encart pub, bannière des articles et image de fond du hero — tout est regroupé ici.</p>
+         <button type="button" class="btn js-blog-cfg">${icon('edit')} Configurer le blog</button>`);
   $('.js-blog-cfg')?.addEventListener('click',()=>blogDisplayModal());
   $$('.js-vis').forEach(t=>t.addEventListener('click',async()=>{
     const next=!t.classList.contains('on');
@@ -2425,53 +2431,44 @@ async function renderReglages(){
   const isAdmin=isAdminUser();
   const canActivite=(isAdmin||isReadonly()) && moduleOn('activite');
   let mePhoto=u.photo||'';
-  view().innerHTML = `
-    ${isReadonly()?`<div class="card" style="background:var(--amber-l);border-color:#f0dca6;margin-bottom:6px"><strong>${icon('lock')} Mode invité — lecture seule</strong><p class="help">Vous pouvez tout consulter ; les modifications sont désactivées.</p></div>`:''}
-    <div class="section-title" style="margin-top:0">Mon compte</div>
-    <div class="card">
-      <label class="field"><span>Photo de profil</span>
-        <div class="photo-edit"><div class="photo-prev" id="me-photo-prev">${mePhoto?`<img src="${mePhoto}" alt="">`:`<span class="ph">${icon('users','ic')}</span>`}</div>
-          <div class="photo-btns"><label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="me-photo-file" accept="image/*" style="display:none"></label>
-            <button type="button" class="btn small red" id="me-photo-clear">${icon('trash')} Retirer</button>
-            <span class="help">Carré, compressée. S'affiche dans les disponibilités.</span></div></div></label>
-      <div class="row2"><label class="field"><span>Prénom</span><input id="me-prenom" value="${esc(u.prenom)}"></label>
-        <label class="field"><span>Nom</span><input id="me-nom" value="${esc(u.nom)}"></label></div>
-      <button class="btn small" id="me-save">Enregistrer</button>
-    </div>
-    <div class="section-title">Apparence</div>
-    <div class="card"><p class="help" style="margin:0 0 12px">Le thème est mémorisé sur cet appareil pour votre compte.</p>
-      <div class="theme-grid">${THEMES.map(t=>`<button class="theme-opt ${currentTheme()===t.key?'on':''}" data-theme="${t.key}">
-          <span class="theme-swatch sw-${t.key}"></span>
-          <span class="theme-meta"><strong>${t.label}</strong><small>${esc(t.desc)}</small></span>
-          ${currentTheme()===t.key?`<span class="theme-check">${icon('check','ic')}</span>`:''}
-        </button>`).join('')}</div>
-    </div>
-    <div class="section-title">Changer mon mot de passe</div>
-    <div class="card">
-      <label class="field"><span>Mot de passe actuel</span><input id="me-cur" type="password"></label>
-      <label class="field"><span>Nouveau mot de passe</span><input id="me-new" type="password"></label>
-      <button class="btn small" id="me-pw">Modifier le mot de passe</button>
-    </div>
-    ${isAdmin?`<div class="section-title">Menus & modules</div>
-    <div class="card"><p class="help" style="margin:0 0 10px">Activez ou désactivez les modules. Un module désactivé masque sa page et ses fonctions.</p>
-      <div class="watch-list">${MODULE_REGISTRY.map(m=>`<div class="watch-row"><span class="wr-lbl">${esc(m.label)}<br><small style="font-weight:400;color:var(--muted)">${esc(m.desc||'')}</small></span><span class="toggle-oui-non ${moduleOn(m.key)?'on':'off'} js-mod" data-k="${esc(m.key)}"><span class="t-oui">OUI</span><span class="t-non">NON</span></span></div>`).join('')}</div>
-    </div>
-    <div class="card" style="margin-top:10px"><p class="help" style="margin:0 0 10px">Affichage des menus de gauche. <strong>Auto</strong> : le menu se cache quand il est vide. Tu peux forcer l'affichage ou le masquage.</p>
-      <div class="watch-list">${NAV.filter(n=>NAV_HIDEABLE[n.id]).map(n=>{ const ov=NAV_VIS[n.id]||'auto'; const cnt=NAV_COUNTS[NAV_HIDEABLE[n.id]]||0; return `<div class="watch-row"><span class="wr-lbl">${icon(n.icon)} ${esc(n.label)} <small style="color:var(--muted)">(${cnt})</small></span><select class="js-navvis" data-id="${esc(n.id)}" style="width:auto"><option value="auto" ${ov==='auto'?'selected':''}>Auto (cacher si vide)</option><option value="show" ${ov==='show'?'selected':''}>Toujours afficher</option><option value="hide" ${ov==='hide'?'selected':''}>Cacher</option></select></div>`; }).join('')}</div>
-    </div>`:''}
-    ${isAdmin?`<div class="section-title">Sauvegarde & restauration</div>
-    <div class="card">
-      <p class="help" style="margin-bottom:12px">Exportez toutes vos données (matériel, devis, ventes…) dans un fichier, ou restaurez une sauvegarde.</p>
-      <div class="buttons">
-        <button class="btn small navy" id="bk-export">${icon('download')} Télécharger la sauvegarde</button>
-        <label class="btn small grey" style="cursor:pointer">${icon('share')} Restaurer<input type="file" id="bk-file" accept="application/json" style="display:none"></label>
-      </div>
-    </div>`:''}
-    ${canActivite?`<div class="section-title">Activité de l'équipe</div>
-    <div id="act-box"><div class="card"><p class="mini">Chargement…</p></div></div>`:''}
-    <div class="section-title">À propos</div>
-    <div class="card"><strong>West Coast Arcades — Gestion</strong><p class="help">Inventaire, devis, événements, réparations, ventes et prêts. <a href="https://www.westcoastarcades.fr" target="_blank" style="color:var(--teal-d);font-weight:700">westcoastarcades.fr</a></p>
-      <button class="btn small red" id="me-logout" style="margin-top:10px">${icon('logout')} Se déconnecter</button></div>`;
+  view().innerHTML = bubbleCSS()
+    + (isReadonly()?`<div class="card" style="background:var(--amber-l);border-color:#f0dca6;margin-bottom:10px"><strong>${icon('lock')} Mode invité — lecture seule</strong><p class="help">Vous pouvez tout consulter ; les modifications sont désactivées.</p></div>`:'')
+    + `<p class="help" style="margin-bottom:10px">Clique sur une rubrique pour la déplier.</p>`
+    + bubble('👤','Mon compte','Photo de profil, prénom et nom',
+        `<label class="field"><span>Photo de profil</span>
+          <div class="photo-edit"><div class="photo-prev" id="me-photo-prev">${mePhoto?`<img src="${mePhoto}" alt="">`:`<span class="ph">${icon('users','ic')}</span>`}</div>
+            <div class="photo-btns"><label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="me-photo-file" accept="image/*" style="display:none"></label>
+              <button type="button" class="btn small red" id="me-photo-clear">${icon('trash')} Retirer</button>
+              <span class="help">Carré, compressée. S'affiche dans les disponibilités.</span></div></div></label>
+        <div class="row2"><label class="field"><span>Prénom</span><input id="me-prenom" value="${esc(u.prenom)}"></label>
+          <label class="field"><span>Nom</span><input id="me-nom" value="${esc(u.nom)}"></label></div>
+        <button class="btn small" id="me-save">Enregistrer</button>`, {open:true})
+    + bubble('🎨','Apparence','Thème de couleurs (mémorisé sur cet appareil)',
+        `<div class="theme-grid">${THEMES.map(t=>`<button class="theme-opt ${currentTheme()===t.key?'on':''}" data-theme="${t.key}">
+            <span class="theme-swatch sw-${t.key}"></span>
+            <span class="theme-meta"><strong>${t.label}</strong><small>${esc(t.desc)}</small></span>
+            ${currentTheme()===t.key?`<span class="theme-check">${icon('check','ic')}</span>`:''}
+          </button>`).join('')}</div>`)
+    + bubble('🔑','Mot de passe','Changer mon mot de passe',
+        `<label class="field"><span>Mot de passe actuel</span><input id="me-cur" type="password"></label>
+        <label class="field"><span>Nouveau mot de passe</span><input id="me-new" type="password"></label>
+        <button class="btn small" id="me-pw">Modifier le mot de passe</button>`)
+    + (isAdmin?bubble('🧩','Menus & modules','Activer/désactiver les modules et l’affichage des menus',
+        `<p class="help" style="margin:0 0 10px">Activez ou désactivez les modules. Un module désactivé masque sa page et ses fonctions.</p>
+        <div class="watch-list">${MODULE_REGISTRY.map(m=>`<div class="watch-row"><span class="wr-lbl">${esc(m.label)}<br><small style="font-weight:400;color:var(--muted)">${esc(m.desc||'')}</small></span><span class="toggle-oui-non ${moduleOn(m.key)?'on':'off'} js-mod" data-k="${esc(m.key)}"><span class="t-oui">OUI</span><span class="t-non">NON</span></span></div>`).join('')}</div>
+        <p class="help" style="margin:16px 0 10px">Affichage des menus de gauche. <strong>Auto</strong> : le menu se cache quand il est vide. Tu peux forcer l'affichage ou le masquage.</p>
+        <div class="watch-list">${NAV.filter(n=>NAV_HIDEABLE[n.id]).map(n=>{ const ov=NAV_VIS[n.id]||'auto'; const cnt=NAV_COUNTS[NAV_HIDEABLE[n.id]]||0; return `<div class="watch-row"><span class="wr-lbl">${icon(n.icon)} ${esc(n.label)} <small style="color:var(--muted)">(${cnt})</small></span><select class="js-navvis" data-id="${esc(n.id)}" style="width:auto"><option value="auto" ${ov==='auto'?'selected':''}>Auto (cacher si vide)</option><option value="show" ${ov==='show'?'selected':''}>Toujours afficher</option><option value="hide" ${ov==='hide'?'selected':''}>Cacher</option></select></div>`; }).join('')}</div>`):'')
+    + (isAdmin?bubble('💾','Sauvegarde & restauration','Exporter ou restaurer toutes les données',
+        `<p class="help" style="margin-bottom:12px">Exportez toutes vos données (matériel, devis, ventes…) dans un fichier, ou restaurez une sauvegarde.</p>
+        <div class="buttons">
+          <button class="btn small navy" id="bk-export">${icon('download')} Télécharger la sauvegarde</button>
+          <label class="btn small grey" style="cursor:pointer">${icon('share')} Restaurer<input type="file" id="bk-file" accept="application/json" style="display:none"></label>
+        </div>`):'')
+    + (canActivite?bubble('📊','Activité de l’équipe','Connexions, présence et contributions',
+        `<div id="act-box"><p class="mini">Chargement…</p></div>`):'')
+    + bubble('ℹ️','À propos','Informations & déconnexion',
+        `<strong>West Coast Arcades — Gestion</strong><p class="help">Inventaire, devis, événements, réparations, ventes et prêts. <a href="https://www.westcoastarcades.fr" target="_blank" style="color:var(--teal-d);font-weight:700">westcoastarcades.fr</a></p>
+        <button class="btn small red" id="me-logout" style="margin-top:10px">${icon('logout')} Se déconnecter</button>`);
   $$('.theme-opt').forEach(b=>b.addEventListener('click',()=>{ applyTheme(b.dataset.theme); toast('Thème appliqué'); renderReglages(); }));
   $('#me-photo-file')?.addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ mePhoto=data; $('#me-photo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
   $('#me-photo-clear')?.addEventListener('click',()=>{ mePhoto=''; $('#me-photo-prev').innerHTML=`<span class="ph">${icon('users','ic')}</span>`; });

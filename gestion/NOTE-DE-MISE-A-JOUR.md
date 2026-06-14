@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.3 — 14 juin 2026**
+## Administration en rubriques pliables + correctif médiathèque
+- **Administration** adopte le même design que **Site internet › Affichage du site** : chaque réglage (Mon compte, Apparence, Mot de passe, Menus & modules, Sauvegarde, Activité, À propos) est désormais une **bulle horizontale qui s'ouvre d'un clic**. Plus clair, moins de scroll. *(Ce style devient la norme pour les futurs modules du même type.)*
+- **Correctif médiathèque** : quand on ouvre la médiathèque depuis un formulaire (ex. « Choisir une photo » sur une borne) et qu'on clique **Fermer** sans rien choisir, seule la médiathèque se ferme — la fenêtre d'édition reste ouverte (avant, tout se fermait).
+
+---
+
 **Version 2.8.2 — 14 juin 2026**
 ## Médiathèque façon WordPress
 - **Recherche** par nom et **filtre par dossier** dans la médiathèque.
