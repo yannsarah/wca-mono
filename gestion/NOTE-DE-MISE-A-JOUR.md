@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.6 — 14 juin 2026**
+## Utilisateurs : édition au clic + photo via médiathèque
+- Dans **Utilisateurs › Comptes**, on peut désormais **cliquer directement sur une ligne** pour modifier le compte (le crayon reste disponible).
+- Le bouton **« Choisir »** la photo d'un compte ouvre maintenant la **médiathèque** (au lieu d'un fichier local).
+
+---
+
 **Version 2.8.5 — 14 juin 2026**
 ## Compléments Contact accueil + glisser-déposer généralisé
 - **Contact accueil** : on peut maintenant changer la **couleur de fond de la bande** (bleu pétrole par défaut) et choisir si le bouton **ouvre dans la même fenêtre ou un nouvel onglet**.

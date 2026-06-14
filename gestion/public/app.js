@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.5'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.6'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2590,12 +2590,13 @@ function renderUsrList(){
   const list=USR_ALL.filter(u=>!USR.role || u.role===USR.role);
   el.innerHTML = `<div class="tablecard"><table class="grid">
     <thead><tr><th>Nom</th><th>Identifiant</th><th>Rôle</th><th></th></tr></thead>
-    <tbody>${list.map(u=>`<tr>
+    <tbody>${list.map(u=>`<tr class="js-u-row" data-id="${u.id}" style="cursor:pointer" title="Cliquer pour modifier">
       <td data-label="Nom"><div class="pcell">${u.photo?`<img class="avatar avatar-sm" src="${u.photo}" alt="">`:`<span class="avatar avatar-sm avatar-ph">${esc(((u.prenom||u.nom||u.login||'?')[0]||'?').toUpperCase())}</span>`}<strong>${esc((u.prenom+' '+u.nom).trim()||'—')}</strong></div></td>
       <td data-label="Identifiant">${esc(u.login)}</td>
       <td data-label="Rôle"><span class="tag ${u.niveau==='admin'?'purple':(u.niveau==='lecture'?'gray':'blue')}">${esc(roleLabel(u.role))}${u.niveau==='lecture'?' · lecture':''}</span></td>
       <td data-label="" class="cell-actions"><div class="row-actions"><button class="iconbtn ghost js-u-pw" data-id="${u.id}" title="Mot de passe">${icon('lock')}</button><button class="iconbtn ghost js-u-edit" data-id="${u.id}">${icon('edit')}</button>${u.id!==CURRENT_USER.id?`<button class="iconbtn ghost js-u-del" data-id="${u.id}">${icon('trash')}</button>`:''}</div></td></tr>`).join('')}</tbody></table></div>`;
-  $$('.js-u-edit').forEach(b=>b.addEventListener('click',()=>userModal(USR_ALL.find(x=>x.id===+b.dataset.id))));
+  $$('.js-u-edit').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); userModal(USR_ALL.find(x=>x.id===+b.dataset.id)); }));
+  $$('.js-u-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('.row-actions')) return; userModal(USR_ALL.find(x=>x.id===+r.dataset.id)); }));
   $$('.js-u-pw').forEach(b=>b.addEventListener('click',()=>userPwModal(+b.dataset.id)));
   $$('.js-u-del').forEach(b=>b.addEventListener('click',()=>confirmModal('Supprimer ce compte ?', async()=>{ try{ await api('/api/users/'+b.dataset.id,{method:'DELETE'}); toast('Supprimé'); loadUsers(); }catch(e){ toast(e.message); } })));
 }
@@ -2625,7 +2626,7 @@ function userModal(u){
   let uPhoto=e.photo||'';
   openModal(`<h3>${u?'Modifier l\'utilisateur':'Nouvel utilisateur'}</h3>
     <label class="field"><span>Photo</span><div class="photo-edit"><div class="photo-prev" id="u-photo-prev">${uPhoto?`<img src="${uPhoto}" alt="">`:`<span class="ph">${icon('users','ic')}</span>`}</div>
-      <div class="photo-btns"><label class="btn small grey" style="cursor:pointer">${icon('plus')} Choisir<input type="file" id="u-photo-file" accept="image/*" style="display:none"></label>
+      <div class="photo-btns">${mediaBtn('u-photo-pick','Choisir')}
         <button type="button" class="btn small red" id="u-photo-clear">${icon('trash')} Retirer</button></div></div></label>
     <div class="row2"><label class="field"><span>Prénom</span><input id="u-prenom" value="${esc(e.prenom)}"></label>
       <label class="field"><span>Nom</span><input id="u-nom" value="${esc(e.nom)}"></label></div>
@@ -2633,7 +2634,7 @@ function userModal(u){
     ${u?'':`<label class="field"><span>Mot de passe *</span><input id="u-pw" type="text" placeholder="mot de passe initial"></label>`}
     <label class="field"><span>Rôle</span><select id="u-role">${ROLES.map(r=>`<option value="${esc(r.key)}" ${(e.role||'technicien')===r.key?'selected':''}>${esc(r.label)} — ${NIVEAUX[r.niveau]||r.niveau}</option>`).join('')}</select></label>
     <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="u-save">Enregistrer</button></div>`);
-  $('#u-photo-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ uPhoto=data; $('#u-photo-prev').innerHTML=`<img src="${data}" alt="">`; }); });
+  wireMedia('u-photo-pick',url=>{ uPhoto=url; $('#u-photo-prev').innerHTML=`<img src="${url}" alt="">`; });
   $('#u-photo-clear').addEventListener('click',()=>{ uPhoto=''; $('#u-photo-prev').innerHTML=`<span class="ph">${icon('users','ic')}</span>`; });
   $('#u-save').addEventListener('click',async()=>{
     if(u){ try{ await api('/api/users/'+u.id,{method:'PUT',body:JSON.stringify({nom:$('#u-nom').value,prenom:$('#u-prenom').value,role:$('#u-role').value,photo:uPhoto})}); closeModal(); toast('Enregistré'); loadUsers(); }catch(e){ toast(e.message); } }
