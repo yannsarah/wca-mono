@@ -2,6 +2,12 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.7 — 14 juin 2026**
+## Éditeur d'article plus confortable
+- La fenêtre de rédaction d'un article s'ouvre maintenant en **mode paysage (large)** et est **redimensionnable** (glisse le coin en bas à droite) — fini le scroll interminable sur les longs articles.
+
+---
+
 **Version 2.6 — 14 juin 2026**
 ## Réorganisation : Administration & Utilisateurs
 - **Paramètres → renommé « Administration »**. Nouvelle section **« Menus & modules »** : activer/désactiver les fonctions, **et** régler l'affichage des menus de gauche (**Auto** = caché si vide / **Toujours afficher** / **Cacher**). Les menus vides (Projets, Ventes, Prêts…) se **cachent automatiquement** pour alléger le menu.

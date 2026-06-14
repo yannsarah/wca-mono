@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.6'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '2.7'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -124,7 +124,7 @@ function wireSegArch(viewId,reload){ $$('.arch-seg button').forEach(b=>b.addEven
 const archFilter = (list, viewId) => list.filter(x => ARCH[viewId] ? x.archive : !x.archive);
 
 /* ------------------------------- Modale ------------------------------- */
-function openModal(html,opts){ opts=opts||{}; $('#modal-root').innerHTML=`<div class="modal-overlay" id="ov"><div class="modal">${html}</div></div>`; if(opts.closeOnOutside===true){ $('#ov').addEventListener('click',e=>{ if(e.target.id==='ov') closeModal(); }); } }
+function openModal(html,opts){ opts=opts||{}; $('#modal-root').innerHTML=`<div class="modal-overlay" id="ov"><div class="modal${opts.wide?' modal-wide':''}">${html}</div></div>`; if(opts.closeOnOutside===true){ $('#ov').addEventListener('click',e=>{ if(e.target.id==='ov') closeModal(); }); } }
 function closeModal(){ $('#modal-root').innerHTML=''; }
 window.closeModal = closeModal;
 
@@ -1948,7 +1948,7 @@ function articleModal(a){
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:12px;cursor:pointer"><input type="checkbox" id="art-vis" ${a.visible_site!==false?'checked':''}> 🌐 Publié sur le site (visible dans le blog)</label>
     <div class="field"><span>Partenaires participants (encart en bas de l'article)</span><div id="art-parts" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:4px"><span class="mini">Chargement…</span></div></div>
-    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="art-save">Enregistrer</button></div>`);
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="art-save">Enregistrer</button></div>`, {wide:true});
   loadPartners().then(()=>{ const box=$('#art-parts'); if(!box) return; const sel=new Set((a.partenaires_ids||[]).map(Number)); box.innerHTML = PARTNERS_CACHE.length ? PARTNERS_CACHE.map(p=>`<label style="display:inline-flex;align-items:center;gap:6px;font-weight:500"><input type="checkbox" class="art-pt" value="${p.id}" ${sel.has(p.id)?'checked':''}> ${esc(p.nom)}</label>`).join('') : '<span class="mini">Aucun partenaire (Utilisateurs → Partenaires).</span>'; });
   const ed=$('#art-contenu');
   $$('.wysi-toolbar [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); }));
