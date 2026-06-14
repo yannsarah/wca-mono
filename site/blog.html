@@ -7,6 +7,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/site.css">
 <link rel="stylesheet" href="assets/css/blog.css">
+<style>
+.blog-filters{max-width:1200px;margin:0 auto 22px;padding:0 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+.blog-filters .bf-chip{border:1px solid #dfe3ee;background:#fff;color:#5d6b85;border-radius:999px;padding:7px 17px;font-weight:600;font-size:14px;cursor:pointer}
+.blog-filters .bf-chip.active{background:var(--navy,#1c244b);color:#fff;border-color:var(--navy,#1c244b)}
+.blog-layout{max-width:1200px;margin:0 auto;padding:0 16px}
+.blog-layout.mode-sidebar{display:grid;grid-template-columns:1fr 300px;gap:36px;align-items:start}
+.blog-layout.mode-sidebar.side-left{grid-template-columns:300px 1fr}
+.blog-layout.mode-sidebar.side-left .blog-main{order:2}
+.blog-layout.mode-sidebar.side-left .blog-sidebar{order:1}
+.blog-sidebar{display:none}
+.blog-layout.mode-sidebar .blog-sidebar{display:block}
+.blog-layout.mode-sidebar .posts-grid{grid-template-columns:1fr 1fr}
+.widget{background:#fff;border:1px solid #ebebeb;border-radius:12px;padding:16px 18px;margin-bottom:18px}
+.widget h3{font-family:var(--poppins,inherit);font-weight:700;font-size:14px;color:var(--navy,#1c244b);margin-bottom:12px;text-transform:uppercase;letter-spacing:1.5px}
+.widget .w-search{display:flex;border:1px solid #dfe3ee;border-radius:8px;overflow:hidden}
+.widget .w-search input{flex:1;border:0;padding:10px 12px;font-size:14px;outline:none;background:transparent}
+.widget .w-search button{border:0;background:var(--navy,#1c244b);color:#fff;padding:0 15px;cursor:pointer;font-size:15px}
+.widget.w-pub img{width:100%;border-radius:8px;display:block}
+.blog-empty{text-align:center;color:#5d6b85;padding:30px;grid-column:1/-1}
+@media(max-width:900px){.blog-layout.mode-sidebar,.blog-layout.mode-sidebar.side-left{grid-template-columns:1fr}.blog-layout.mode-sidebar .posts-grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <div class="sfm-overlay" id="sfmOverlay"></div>
@@ -18,6 +39,9 @@
 
 <div class="blog-wrap">
   <div class="blog-head"><h1>Le Blog</h1><p>Les actus de l'association : comptes-rendus de salons, projets et coulisses.</p></div>
+  <div class="blog-filters" id="blogFilters" style="display:none"></div>
+  <div class="blog-layout" id="blogLayout">
+    <main class="blog-main">
   <div class="posts-grid" id="postsGrid">
       <a class="post-card" href="blog/salon-du-flipper-et-arcade-breizh-retro-legends.html">
         <div class="thumb"><img src="img/breizh-retro-legends-2026-westcoastarcades.fr_-735x1024.webp" alt=""></div>
@@ -65,6 +89,9 @@
         <p>Games in Cholet revient en 2025 pour sa deuxième convention du jeu sous toutes ses formes les 3 et 4 Mai prochains.…</p><span class="more">Lire l'article &#8594;</span></div>
       </a>
   </div>
+    </main>
+    <aside class="blog-sidebar" id="blogSidebar"></aside>
+  </div>
 </div>
 
 <div class="foot-copy">© 2026 Tous droits réservés</div>
@@ -72,19 +99,52 @@
 <script>(function(){var ov=document.getElementById('sfmOverlay'),pn=document.getElementById('sfmPanel');document.getElementById('burger').onclick=function(){pn.classList.add('open');ov.classList.add('open');};document.getElementById('sfmClose').onclick=ov.onclick=function(){pn.classList.remove('open');ov.classList.remove('open');};})();</script>
 <script src="assets/js/wca-api.js"></script>
 <script>
+function ytId(v){ if(!v) return ''; var m=String(v).match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/); return m?m[1]:(/^[\w-]{11}$/.test(String(v))?v:''); }
 (async function(){
-  var grid=document.getElementById('postsGrid'); if(!grid) return;
+  var grid=document.getElementById('postsGrid'), layout=document.getElementById('blogLayout'),
+      sidebar=document.getElementById('blogSidebar'), filtersBox=document.getElementById('blogFilters');
+  var all=[], fYear='', fText='';
+  function card(a){
+    var img=a.image?'<img src="'+WCA.esc(a.image)+'" alt="">':'<img src="img/flippers-expo-westcoastarcades.fr_.jpg" alt="">';
+    return '<a class="post-card" href="article.html?slug='+encodeURIComponent(a.slug||a.id)+'"><div class="thumb">'+img+'</div>'+
+      '<div class="pc-body"><span class="date">'+WCA.dateRange(a.date)+'</span><h2>'+WCA.esc(a.titre)+'</h2>'+
+      '<p>'+WCA.esc(a.extrait||'')+'</p><span class="more">Lire l\'article &#8594;</span></div></a>';
+  }
+  function renderPosts(){
+    var list=all.filter(function(a){
+      if(fYear && (a.date||'').slice(0,4)!==fYear) return false;
+      if(fText){ var q=fText.toLowerCase(); if((a.titre||'').toLowerCase().indexOf(q)<0 && (a.extrait||'').toLowerCase().indexOf(q)<0) return false; }
+      return true;
+    });
+    grid.innerHTML = list.length ? list.map(card).join('') : '<p class="blog-empty">Aucun article ne correspond à ta recherche.</p>';
+  }
+  function renderFilters(){
+    var years=[]; all.forEach(function(a){ var y=(a.date||'').slice(0,4); if(y && years.indexOf(y)<0) years.push(y); });
+    years.sort().reverse();
+    if(years.length<2){ filtersBox.style.display='none'; return; }
+    filtersBox.style.display='flex';
+    filtersBox.innerHTML='<button class="bf-chip '+(fYear===''?'active':'')+'" data-y="">Tous</button>'+years.map(function(y){return '<button class="bf-chip '+(fYear===y?'active':'')+'" data-y="'+y+'">'+y+'</button>';}).join('');
+    Array.prototype.forEach.call(filtersBox.querySelectorAll('.bf-chip'),function(b){ b.onclick=function(){ fYear=b.dataset.y; renderFilters(); renderPosts(); }; });
+  }
+  function renderSidebar(cfg){
+    if(!cfg || cfg.mode!=='sidebar') return;
+    var w=cfg.widgets||{}, html='';
+    if(w.search!==false) html+='<div class="widget"><h3>Recherche</h3><div class="w-search"><input id="wSearch" placeholder="Rechercher un article…"><button type="button">🔍</button></div></div>';
+    if(w.pub && cfg.pub && cfg.pub.media){
+      var p=cfg.pub, inner='';
+      if(p.type==='youtube'){ var id=ytId(p.media); if(id) inner='<div style="position:relative;padding-bottom:56%"><iframe src="https://www.youtube.com/embed/'+id+'" style="position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:8px" allowfullscreen></iframe></div>'; }
+      else { inner='<img src="'+WCA.esc(p.media)+'" alt="">'; if(p.link) inner='<a href="'+WCA.esc(p.link)+'" target="_blank" rel="noopener">'+inner+'</a>'; }
+      if(inner) html+='<div class="widget w-pub">'+(p.titre?'<h3>'+WCA.esc(p.titre)+'</h3>':'')+inner+'</div>';
+    }
+    sidebar.innerHTML=html;
+    var ws=document.getElementById('wSearch'); if(ws) ws.addEventListener('input',function(){ fText=ws.value; renderPosts(); });
+  }
   try{
-    var arts=await WCA.getJSON('articles');
-    if(!arts.length) return; // pas d'article dans gestion → on garde les articles existants
-    grid.innerHTML=arts.map(function(a){
-      var img=a.image?'<img src="'+a.image+'" alt="">':'<img src="img/flippers-expo-westcoastarcades.fr_.jpg" alt="">';
-      return '<a class="post-card" href="article.html?slug='+encodeURIComponent(a.slug||a.id)+'">'+
-        '<div class="thumb">'+img+'</div>'+
-        '<div class="pc-body"><span class="date">'+WCA.dateRange(a.date)+'</span><h2>'+WCA.esc(a.titre)+'</h2>'+
-        '<p>'+WCA.esc(a.extrait||'')+'</p><span class="more">Lire l\'article &#8594;</span></div></a>';
-    }).join('');
-  }catch(err){ /* API indispo → on garde les articles existants */ }
+    var home=await WCA.getJSON('home'); var cfg=home&&home.blog;
+    if(cfg && cfg.mode==='sidebar') layout.className='blog-layout mode-sidebar side-'+(cfg.sidebar_side==='left'?'left':'right');
+    try{ all=await WCA.getJSON('articles'); if(all.length){ renderFilters(); renderPosts(); } }catch(e){}
+    renderSidebar(cfg);
+  }catch(err){}
 })();
 </script>
 </body>

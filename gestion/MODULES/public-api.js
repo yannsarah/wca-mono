@@ -147,6 +147,7 @@ export function handlePublic(req, res, pathname, searchParams) {
       hero: s.hero || null,
       photos: Array.isArray(s.photos) ? s.photos : [],
       equipe: Array.isArray(s.equipe) ? s.equipe : [],
+      blog: s.blog || null,
     }), true;
   }
 

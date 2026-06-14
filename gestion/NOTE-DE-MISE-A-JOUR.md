@@ -2,6 +2,16 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 1.6 — 13 juin 2026**
+## Blog du site — modes d'affichage + widgets (1ʳᵉ vague)
+- Page **Blog** du site refondue : **2 modes** au choix dans l'appli (Site internet → Modules → Blog) — **Grille** ou **Sidebar** (à gauche ou à droite).
+- **Widgets** activables : **Recherche** d'articles, **Encart publicitaire** (image/GIF ou vidéo YouTube + lien + titre).
+- **Filtres horizontaux** par année en haut de la page.
+- **« Blog »** ajouté au menu de toutes les pages du site.
+- À venir (2ᵉ vague) : widget « Matériel à vendre » et filtres par catégorie (nécessitent de nouveaux champs).
+
+---
+
 **Version 1.5 — 13 juin 2026**
 ## Partenaires dans la page Utilisateurs
 - La gestion des **partenaires** est désormais un **onglet** dans la page **Utilisateurs** (à côté de « Comptes » et « Disponibilités »), au lieu d'une fenêtre popup. Liste, ajout, modification, suppression et réglages de l'encart au même endroit.

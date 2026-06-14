@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.5'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '1.6'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1958,15 +1958,16 @@ function vitrineModal(m){
 async function renderModulesTab(){
   const body=$('#si-body');
   try{ SITE_CONTENT = await api('/api/site'); }catch(e){ SITE_CONTENT={}; }
-  const h=SITE_CONTENT.hero||{}; const ph=SITE_CONTENT.photos||[]; const eq=SITE_CONTENT.equipe||[];
+  const h=SITE_CONTENT.hero||{}; const ph=SITE_CONTENT.photos||[]; const eq=SITE_CONTENT.equipe||[]; const bl=SITE_CONTENT.blog||{};
   const card=(key,titre,desc,resume)=>`<div class="tablecard" style="padding:16px 18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:16px">
     <div><div style="font-weight:800;color:var(--navy);font-size:16px">${titre}</div><div class="help" style="margin-top:2px">${desc}</div><div class="mini" style="margin-top:4px">${resume}</div></div>
     <button class="btn js-mod-edit" data-k="${key}" style="white-space:nowrap">${icon('edit')} Éditer</button></div>`;
   body.innerHTML = `<p class="help" style="margin-bottom:10px">Chaque module est une section de la page d'accueil du site. Tu modifies le contenu ici ; tant qu'un module n'est pas configuré, le site garde son contenu actuel (aucun risque).</p>`
     + card('hero','🎬 Hero (haut de page)','Grand titre, texte d’accroche, image, bouton.', h.titre?('Titre : '+esc(h.titre)):'Non configuré.')
     + card('photos','🖼 Photos asso',"La galerie « L’association en quelques images… ».", ph.length?(ph.length+' photo(s)'):'Aucune photo.')
-    + card('equipe','👥 L’équipe',"La section « La fine équipe » (photo, nom, description).", eq.length?(eq.length+' membre(s)'):'Aucun membre.');
-  $$('.js-mod-edit').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.k; if(k==='hero') heroModal(); else if(k==='photos') photosModal(); else equipeModal(); }));
+    + card('equipe','👥 L’équipe',"La section « La fine équipe » (photo, nom, description).", eq.length?(eq.length+' membre(s)'):'Aucun membre.')
+    + card('blog','📰 Blog (affichage)','Mode grille ou sidebar, position, widgets, encart pub.', 'Mode : '+(bl.mode==='sidebar'?('Sidebar '+(bl.sidebar_side==='left'?'gauche':'droite')):'Grille'));
+  $$('.js-mod-edit').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.k; if(k==='hero') heroModal(); else if(k==='photos') photosModal(); else if(k==='equipe') equipeModal(); else if(k==='blog') blogDisplayModal(); }));
 }
 
 function heroModal(){
@@ -2037,6 +2038,48 @@ function equipeModal(){
   draw();
   $('#eq-add').addEventListener('click',()=>{ team.push({nom:'',description:'',photo:''}); draw(); });
   $('#eq-save').addEventListener('click',async()=>{ try{ await api('/api/site',{method:'PUT',body:JSON.stringify({equipe:team})}); closeModal(); toast('Équipe enregistrée'); renderModulesTab(); }catch(e){ toast(e.message); } });
+}
+
+function blogDisplayModal(){
+  const b=SITE_CONTENT.blog||{}; const w=b.widgets||{}; const pub=b.pub||{};
+  let mode=b.mode||'grid'; let side=b.sidebar_side||'right'; let pubType=pub.type||'image'; let pubMedia=pub.media||'';
+  const ck='display:flex;align-items:center;gap:8px;margin:7px 0;cursor:pointer;font-weight:600';
+  openModal(`<h3>Blog — affichage</h3>
+    <div class="field"><span>Disposition de la page blog</span>
+      <div class="seg" id="bl-mode" style="width:100%;margin-top:4px">
+        <button class="${mode==='grid'?'active':''}" data-m="grid" style="flex:1">▦ Grille</button>
+        <button class="${mode==='sidebar'?'active':''}" data-m="sidebar" style="flex:1">▤ Avec sidebar</button>
+      </div>
+    </div>
+    <div class="field" id="bl-side-wrap" style="${mode==='sidebar'?'':'display:none'}"><span>Position de la sidebar</span>
+      <div class="seg" id="bl-side" style="width:100%;margin-top:4px">
+        <button class="${side==='left'?'active':''}" data-s="left" style="flex:1">◧ À gauche</button>
+        <button class="${side==='right'?'active':''}" data-s="right" style="flex:1">◨ À droite</button>
+      </div>
+    </div>
+    <div class="section-title">Widgets de la sidebar</div>
+    <label style="${ck}"><input type="checkbox" id="bl-w-search" ${w.search!==false?'checked':''}> 🔍 Recherche sur le blog</label>
+    <label style="${ck}"><input type="checkbox" id="bl-w-pub" ${w.pub?'checked':''}> 📢 Encart publicitaire</label>
+    <label style="${ck};opacity:.55;cursor:not-allowed"><input type="checkbox" disabled> 🏷️ Matériel à vendre <span class="mini">— bientôt</span></label>
+    <div class="card" id="bl-pub-cfg" style="margin-top:8px;padding:12px;${w.pub?'':'display:none'}">
+      <div style="font-weight:700;color:var(--navy);margin-bottom:8px">Encart publicitaire</div>
+      <label class="field"><span>Type</span><select id="bl-pub-type"><option value="image" ${pubType==='image'?'selected':''}>Image / GIF</option><option value="youtube" ${pubType==='youtube'?'selected':''}>Vidéo YouTube</option></select></label>
+      <div id="bl-pub-img" style="${pubType==='image'?'':'display:none'}"><div style="display:flex;gap:10px;align-items:center;margin:4px 0"><div id="bl-pub-prev" style="width:130px;height:84px;border-radius:6px;background:#0b0b0d;background-size:cover;background-position:center;${pubMedia&&pubType==='image'?`background-image:url('${pubMedia}')`:''}"></div><label class="btn small grey" style="cursor:pointer">${icon('plus')} Image<input type="file" id="bl-pub-file" accept="image/*" style="display:none"></label></div></div>
+      <label class="field" id="bl-pub-yt" style="${pubType==='youtube'?'':'display:none'}"><span>ID ou lien YouTube</span><input id="bl-pub-ytid" value="${pubType==='youtube'?esc(pubMedia):''}" placeholder="ex. W3NuWfFUITM"></label>
+      <label class="field"><span>Lien au clic (optionnel)</span><input id="bl-pub-link" value="${esc(pub.link||'')}" placeholder="https://…"></label>
+      <label class="field"><span>Titre de l'encart (optionnel)</span><input id="bl-pub-titre" value="${esc(pub.titre||'')}" placeholder="ex. Nos partenaires"></label>
+    </div>
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="bl-save">Enregistrer</button></div>`);
+  $$('#bl-mode button').forEach(x=>x.addEventListener('click',()=>{ mode=x.dataset.m; $$('#bl-mode button').forEach(y=>y.classList.toggle('active',y===x)); $('#bl-side-wrap').style.display=mode==='sidebar'?'':'none'; }));
+  $$('#bl-side button').forEach(x=>x.addEventListener('click',()=>{ side=x.dataset.s; $$('#bl-side button').forEach(y=>y.classList.toggle('active',y===x)); }));
+  $('#bl-w-pub').addEventListener('change',()=>{ $('#bl-pub-cfg').style.display=$('#bl-w-pub').checked?'':'none'; });
+  $('#bl-pub-type').addEventListener('change',()=>{ pubType=$('#bl-pub-type').value; $('#bl-pub-img').style.display=pubType==='image'?'':'none'; $('#bl-pub-yt').style.display=pubType==='youtube'?'':'none'; });
+  $('#bl-pub-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ pubMedia=data; $('#bl-pub-prev').style.backgroundImage=`url('${data}')`; },150*1024); });
+  $('#bl-save').addEventListener('click',async()=>{
+    if(pubType==='youtube') pubMedia=$('#bl-pub-ytid').value.trim();
+    const blog={ mode, sidebar_side:side, widgets:{ search:$('#bl-w-search').checked, pub:$('#bl-w-pub').checked }, pub:{ type:pubType, media:pubMedia, link:$('#bl-pub-link').value.trim(), titre:$('#bl-pub-titre').value.trim() } };
+    try{ await api('/api/site',{method:'PUT',body:JSON.stringify({blog})}); closeModal(); toast('Affichage du blog enregistré'); renderModulesTab(); }catch(e){ toast(e.message); }
+  });
 }
 
 async function renderUsers(){
