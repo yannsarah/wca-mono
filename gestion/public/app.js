@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.12'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.13'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -110,13 +110,24 @@ function dateShort(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-').map
 function dateTimeShort(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return dateShort((iso+'').slice(0,10)); return `${dateShort((iso+'').slice(0,10))} à ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 function esc(s){ return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function euros(n){ return (Number(n)||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR'}); }
-async function api(url, opts){ const r=await fetch(url,{headers:{'Content-Type':'application/json'},credentials:'same-origin',...opts}); if(r.status===401){ if(typeof showLogin==='function'){ CURRENT_USER=null; showLogin(); } throw new Error('Session expirée, reconnectez-vous.'); } if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'Erreur serveur');} return r.status===204?null:r.json(); }
+async function api(url, opts){ const r=await fetch(url,{headers:{'Content-Type':'application/json'},credentials:'same-origin',...opts}); if(r.status===401){ if(typeof showLogin==='function'){ CURRENT_USER=null; showLogin(); } throw new Error('Session expirée, reconnectez-vous.'); } if(!r.ok){const e=await r.json().catch(()=>({}));const err=new Error(e.error||'Erreur serveur');err.status=r.status;err.data=e;throw err;} return r.status===204?null:r.json(); }
 let toastTimer;
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2400); }
 function confirmModal(msg, onYes){
   openModal(`<h3>Confirmation</h3><p style="color:var(--muted)">${esc(msg)}</p>
     <div class="buttons" style="margin-top:16px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn red" id="cf-yes">Supprimer</button></div>`);
   $('#cf-yes').addEventListener('click',()=>{ closeModal(); onYes(); });
+}
+// Confirmation générique (libellés personnalisés), en surcouche indépendante : ne détruit pas la fenêtre en dessous.
+function confirmChoice(msg, yesLabel, noLabel, onYes){
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1400';
+  ov.innerHTML=`<div class="modal"><h3>Attention</h3><p style="color:var(--muted);white-space:pre-line">${esc(msg)}</p>
+    <div class="buttons" style="margin-top:16px"><button type="button" class="btn grey cc-no">${esc(noLabel||'Annuler')}</button><button type="button" class="btn red cc-yes">${esc(yesLabel||'Confirmer')}</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  ov.querySelector('.cc-no').addEventListener('click',close);
+  ov.querySelector('.cc-yes').addEventListener('click',()=>{ close(); onYes(); });
 }
 
 /* ------------------------------- Archives (commun) ------------------------------- */
@@ -669,7 +680,10 @@ function materielModal(m, dup){
   const isEdit = m && !dup;
   const e=m||{};
   let photoData=e.photo||'';
-  openModal(`<h3>${dup?'Dupliquer le matériel':(isEdit?'Modifier le matériel':'Nouveau matériel')}</h3>
+  const baseModifLe = (isEdit && e.modif_le) ? e.modif_le : null;
+  const otherModif = isEdit && e.modif_le && e.modif_par_id !== (CURRENT_USER&&CURRENT_USER.id);
+  const concBanner = otherModif ? `<div class="card" style="background:var(--amber-l,#fdf3da);border-color:#f0dca6;margin-bottom:10px;padding:10px 12px"><strong>⚠️ Fiche modifiée par ${esc(e.modif_par||'un autre utilisateur')}</strong><p class="help" style="margin:2px 0 0">Dernière modification ${esc(relTime(e.modif_le))}. Vérifie avant d'enregistrer pour ne pas écraser ses changements.</p></div>` : '';
+  openModal(`<h3>${dup?'Dupliquer le matériel':(isEdit?'Modifier le matériel':'Nouveau matériel')}</h3>${concBanner}
     <label class="field"><span>Photo (recadrée en carré)</span>
       <div class="photo-edit">
         <div class="photo-prev" id="f-photo-prev">${photoData?`<img src="${photoData}" alt="">`:`<span class="ph">${icon('box','ic')}</span>`}</div>
@@ -725,7 +739,17 @@ function materielModal(m, dup){
   $('#f-save').addEventListener('click',async()=>{
     const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').value==='1', description_site:$('#f-descsite-rt').innerHTML.trim(), a_vendre:$('#f-avendre').value==='1', prix_vente:$('#f-prixvente').value.trim() };
     if(!body.denomination){ toast('La dénomination est obligatoire.'); return; }
-    try{ await api(isEdit?'/api/materiel/'+m.id:'/api/materiel',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast(dup?'Copie créée':'Enregistré'); loadMatList(); }catch(err){ toast(err.message); }
+    if(isEdit && baseModifLe) body.base_modif_le = baseModifLe;
+    const doSave = async(force)=>{ if(force) body.force=true; await api(isEdit?'/api/materiel/'+m.id:'/api/materiel',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast(dup?'Copie créée':'Enregistré'); loadMatList(); };
+    try{ await doSave(false); }
+    catch(err){
+      if(err.status===409 && err.data && err.data.conflict){
+        const c=err.data.conflict;
+        confirmChoice(`Cette fiche a été modifiée par ${esc(c.par)} ${esc(relTime(c.le))}, depuis que tu l'as ouverte.\n\nSi tu enregistres, tu écraseras ses changements.`,
+          'Écraser quand même', 'Annuler',
+          async()=>{ try{ await doSave(true); }catch(e2){ toast(e2.message); } });
+      } else { toast(err.message); }
+    }
   });
 }
 

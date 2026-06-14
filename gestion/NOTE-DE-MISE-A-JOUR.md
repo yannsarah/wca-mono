@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.13 — 14 juin 2026**
+## Inventaire : alerte d'édition à plusieurs
+- En ouvrant une fiche matériel **modifiée par quelqu'un d'autre**, un bandeau prévient : « ⚠️ Fiche modifiée par X, il y a … ».
+- Surtout : **au moment d'enregistrer**, si la fiche a changé depuis que tu l'as ouverte, un message t'avertit (« modifiée par X depuis que tu l'as ouverte ») et te laisse **écraser ou annuler** — fini les modifications perdues sans le savoir.
+- Chaque fiche garde désormais **qui l'a modifiée en dernier et quand**.
+
+---
+
 **Version 2.8.12 — 14 juin 2026**
 ## Petits conforts : recherche + Tarifs pliables
 - Les **champs de recherche** ont un **bouton « × »** pour tout effacer d'un clic.

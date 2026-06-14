@@ -111,6 +111,13 @@ function ensureGuest() {
 /* =============================== SUIVI D'ACTIVITÉ =============================== */
 const PRESENCE_WINDOW = 5 * 60 * 1000; // « en ligne » si actif dans les 5 dernières minutes
 // Journalise une contribution (création/modif/suppression) sur l'inventaire ou les réparations.
+// Marque qui a modifié une fiche et quand (pour l'alerte d'édition concurrente).
+function stampModif(row, user) {
+  if (!user) return;
+  row.modif_par = (user.prenom && user.prenom.trim()) ? user.prenom : user.login;
+  row.modif_par_id = user.id;
+  row.modif_le = new Date().toISOString();
+}
 function logActivity(user, action, entity, label) {
   if (!user) return;
   const d = db();
@@ -291,6 +298,7 @@ add('POST', '/api/materiel', (req, res, p, body, query, user) => {
   MF.forEach(f => row[f] = body[f] ?? '');
   row.visible_site = body.visible_site === true; // publié sur le site : booléen strict (opt-in)
   row.a_vendre = body.a_vendre === true;         // proposé à la vente sur le site
+  stampModif(row, user);
   db().materiel.push(row); logActivity(user, 'create', 'materiel', row.denomination); save();
   send(res, 200, row);
 });
@@ -298,10 +306,16 @@ add('POST', '/api/materiel', (req, res, p, body, query, user) => {
 add('PUT', '/api/materiel/:id', (req, res, p, body, query, user) => {
   const row = db().materiel.find(x => x.id === +p.id);
   if (!row) return send(res, 404, { error: 'Matériel introuvable.' });
+  // Détection d'édition concurrente : si la fiche a changé depuis l'ouverture (par quelqu'un d'autre).
+  if (body.base_modif_le && row.modif_le && row.modif_le !== body.base_modif_le
+      && row.modif_par_id !== (user && user.id) && !body.force) {
+    return send(res, 409, { error: 'Fiche modifiée entre-temps', conflict: { par: row.modif_par || 'un autre utilisateur', le: row.modif_le } });
+  }
   MF.forEach(f => { if (body[f] !== undefined) row[f] = body[f]; });
   if (body.fonctionnel !== undefined) row.fonctionnel = !!body.fonctionnel;
   if (body.visible_site !== undefined) row.visible_site = !!body.visible_site;
   if (body.a_vendre !== undefined) row.a_vendre = !!body.a_vendre;
+  stampModif(row, user);
   logActivity(user, 'update', 'materiel', row.denomination); save(); send(res, 200, row);
 });
 
@@ -310,6 +324,7 @@ add('POST', '/api/materiel/:id/fonctionnel', (req, res, p, body, query, user) =>
   const row = db().materiel.find(x => x.id === +p.id);
   if (!row) return send(res, 404, { error: 'Matériel introuvable.' });
   row.fonctionnel = body.fonctionnel !== undefined ? !!body.fonctionnel : !row.fonctionnel;
+  stampModif(row, user);
   logActivity(user, 'update', 'materiel', row.denomination); save(); send(res, 200, { ...row, blocages: blocages(row.id) });
 });
 
