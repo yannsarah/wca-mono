@@ -174,6 +174,8 @@ export function handlePublic(req, res, pathname, searchParams) {
       equipe: Array.isArray(s.equipe) ? s.equipe : [],
       blog: s.blog || null,
       blog_hero: s.blog_hero || '',
+      icon_links: Array.isArray(s.icon_links) ? s.icon_links : (s.icon_links && Array.isArray(s.icon_links.items) ? s.icon_links.items : []),
+      contact_home: s.contact_home || null,
     }), true;
   }
 

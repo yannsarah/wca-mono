@@ -2,6 +2,15 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.4 — 14 juin 2026**
+## Accueil du site : icônes & bande contact pilotables
+- Nouveau module **« Liens icônes »** (Site internet › Modules accueil) : gère la rangée d'icônes cliquables sous le hero. On peut **ajouter / modifier / supprimer / réordonner** (glisser-déposer) chaque lien. Pour chacun : **choix de l'icône** (3 bibliothèques — icônes maison, Google Material Symbols, émojis), **couleur**, **titre** et **description** activables ou non, et le **lien** de destination.
+- Nouveau module **« Contact accueil »** : la bande « Vous avez besoin de nous ? » devient modifiable (titre, **texte du bouton**, **icône**, **couleur de la pilule**, lien) — même design qu'avant.
+- « Calendrier » renommé **« Agenda »** sur l'accueil.
+- **Affichage du site** : les rubriques se **réordonnent par glisser-déposer** (poignée ⠿).
+
+---
+
 **Version 2.8.3 — 14 juin 2026**
 ## Administration en rubriques pliables + correctif médiathèque
 - **Administration** adopte le même design que **Site internet › Affichage du site** : chaque réglage (Mon compte, Apparence, Mot de passe, Menus & modules, Sauvegarde, Activité, À propos) est désormais une **bulle horizontale qui s'ouvre d'un clic**. Plus clair, moins de scroll. *(Ce style devient la norme pour les futurs modules du même type.)*

@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.3'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.4'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1906,8 +1906,9 @@ function mediaPicker(onPick){
    Réutilisable dans tous les modules du même type (Affichage du site, Administration, …).
    bubble(emoji, titre, description, contenuHTML, {open, badge}) */
 function bubbleCSS(){ return `<style>.bubble-sec{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--card)}.bubble-sec>summary{cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;list-style:none}.bubble-sec>summary::-webkit-details-marker{display:none}.bubble-sec>summary:hover{background:rgba(0,0,0,.02)}.bubble-emo{font-size:22px;line-height:1}.bubble-ttl{font-weight:800;color:var(--navy)}.bubble-desc{display:block}.bubble-chev{display:inline-block;transition:.15s;color:var(--muted)}.bubble-sec[open]>summary .bubble-chev{transform:rotate(90deg)}.bubble-body{padding:0 16px 16px}</style>`; }
-function bubble(emoji, title, desc, body, opts){ opts=opts||{}; return `<details class="bubble-sec"${opts.open?' open':''}>
+function bubble(emoji, title, desc, body, opts){ opts=opts||{}; const drag = opts.dragIndex!=null; return `<details class="bubble-sec"${opts.open?' open':''}${drag?` draggable="true" data-i="${opts.dragIndex}"`:''}>
     <summary>
+      ${drag?`<span class="bubble-drag" title="Glisser pour réordonner" style="cursor:grab;color:var(--muted);font-size:18px;line-height:1">⠿</span>`:''}
       <span class="bubble-emo">${emoji}</span>
       <span style="flex:1;min-width:0"><span class="bubble-ttl">${title}</span>${desc?`<span class="mini bubble-desc">${desc}</span>`:''}</span>
       ${opts.badge!=null?`<span class="statut" style="background:var(--line);color:var(--navy)">${opts.badge}</span>`:''}
@@ -2020,25 +2021,28 @@ async function renderAffichageTab(){
     api('/api/projets').catch(()=>[]), api('/api/partenaires').catch(()=>[]), api('/api/site').catch(()=>({}))
   ]);
   let blogHero = siteC.blog_hero||'';
-  function section(emo, title, desc, list, coll, nameKey, optIn){
-    const n=(list||[]).length;
+  function sectionInner(list, coll, nameKey, optIn){
     const rows=(list||[]).map(x=>{
       const on = optIn ? (x.visible_site===true) : (x.visible_site!==false);
       const vit = optIn ? `<button class="btn small light js-vitrine" data-id="${x.id}" style="margin-right:10px">${icon('edit')} Fiche vitrine</button>` : '';
       return `<tr><td>${esc(x[nameKey]||'(sans nom)')}</td><td class="actions" style="white-space:nowrap;text-align:right">${vit}<span class="toggle-oui-non ${on?'on':'off'} js-vis" data-coll="${coll}" data-id="${x.id}" style="cursor:pointer"><span class="t-oui">${icon('check')} Publié</span><span class="t-non">Masqué</span></span></td></tr>`;
     }).join('') || `<tr><td colspan="2" class="help" style="padding:10px">Aucun élément.</td></tr>`;
-    const inner=`<div class="tablecard" style="box-shadow:none;border:1px solid var(--line,#eee);margin:0"><table class="grid"><tbody>${rows}</tbody></table></div>`;
-    return bubble(emo, title, desc, inner, {badge:n});
+    return `<div class="tablecard" style="box-shadow:none;border:1px solid var(--line,#eee);margin:0"><table class="grid"><tbody>${rows}</tbody></table></div>`;
   }
+  const SECS = {
+    evenements:{emo:'📅',title:'Événements',desc:"Affichés sur l'agenda du site",badge:evs.length,html:()=>sectionInner(evs,'evenements','nom',false)},
+    materiel:{emo:'🕹',title:'Machines (inventaire)',desc:'Vitrine « Nos Machines » — masquées par défaut',badge:mats.length,html:()=>sectionInner(mats,'materiel','denomination',true)},
+    projets:{emo:'📌',title:'Projets',desc:'Affichés sur la page Projets',badge:projs.length,html:()=>sectionInner(projs,'projets','nom',false)},
+    partenaires:{emo:'🤝',title:'Partenaires',desc:"Encart partenaires du site",badge:parts.length,html:()=>sectionInner(parts,'partenaires','nom',false)},
+    blog:{emo:'📰',title:'Blog',desc:'Tous les réglages du blog (affichage, widgets, bannières, image de fond)',badge:null,html:()=>`<p class="mini" style="margin-bottom:10px">Disposition (grille / sidebar), widgets, encart pub, bannière des articles et image de fond du hero — tout est regroupé ici.</p><button type="button" class="btn js-blog-cfg">${icon('edit')} Configurer le blog</button>`},
+  };
+  const DEFAULT_ORDER=['evenements','materiel','projets','partenaires','blog'];
+  let order; try{ order=JSON.parse(localStorage.getItem('wca_aff_order')||'[]'); }catch{ order=[]; }
+  order=order.filter(k=>SECS[k]); DEFAULT_ORDER.forEach(k=>{ if(!order.includes(k)) order.push(k); });
   body.innerHTML = bubbleCSS()
-    + `<p class="help" style="margin-bottom:10px">Clique sur une rubrique pour la déplier. Les <strong>machines</strong> sont masquées par défaut (l'inventaire reste privé) ; événements, projets et partenaires sont visibles sauf si tu les masques.</p>`
-    + section('📅','Événements',"Affichés sur l'agenda du site",evs,'evenements','nom',false)
-    + section('🕹','Machines (inventaire)','Vitrine « Nos Machines » — masquées par défaut',mats,'materiel','denomination',true)
-    + section('📌','Projets','Affichés sur la page Projets',projs,'projets','nom',false)
-    + section('🤝','Partenaires',"Encart partenaires du site",parts,'partenaires','nom',false)
-    + bubble('📰','Blog','Tous les réglages du blog (affichage, widgets, bannières, image de fond)',
-        `<p class="mini" style="margin-bottom:10px">Disposition (grille / sidebar), widgets, encart pub, bannière des articles et image de fond du hero — tout est regroupé ici.</p>
-         <button type="button" class="btn js-blog-cfg">${icon('edit')} Configurer le blog</button>`);
+    + `<p class="help" style="margin-bottom:10px">Clique sur une rubrique pour la déplier. Glisse la poignée ⠿ pour réordonner. Les <strong>machines</strong> sont masquées par défaut (l'inventaire reste privé) ; événements, projets et partenaires sont visibles sauf si tu les masques.</p>`
+    + `<div id="aff-list">` + order.map((k,i)=>{ const s=SECS[k]; return bubble(s.emo,s.title,s.desc,s.html(),{badge:s.badge,dragIndex:i}); }).join('') + `</div>`;
+  wireDnd($('#aff-list'),'.bubble-sec',order,()=>{ localStorage.setItem('wca_aff_order',JSON.stringify(order)); renderAffichageTab(); });
   $('.js-blog-cfg')?.addEventListener('click',()=>blogDisplayModal());
   $$('.js-vis').forEach(t=>t.addEventListener('click',async()=>{
     const next=!t.classList.contains('on');
@@ -2086,14 +2090,230 @@ async function renderModulesTab(){
   const body=$('#si-body');
   try{ SITE_CONTENT = await api('/api/site'); }catch(e){ SITE_CONTENT={}; }
   const h=SITE_CONTENT.hero||{}; const ph=SITE_CONTENT.photos||[]; const eq=SITE_CONTENT.equipe||[]; const bl=SITE_CONTENT.blog||{};
+  const il=iconLinksItems(); const ch=SITE_CONTENT.contact_home||{};
   const card=(key,titre,desc,resume)=>`<div class="tablecard" style="padding:16px 18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:16px">
     <div><div style="font-weight:800;color:var(--navy);font-size:16px">${titre}</div><div class="help" style="margin-top:2px">${desc}</div><div class="mini" style="margin-top:4px">${resume}</div></div>
     <button class="btn js-mod-edit" data-k="${key}" style="white-space:nowrap">${icon('edit')} Éditer</button></div>`;
   body.innerHTML = `<p class="help" style="margin-bottom:10px">Chaque module est une section de la page d'accueil du site. Tu modifies le contenu ici ; tant qu'un module n'est pas configuré, le site garde son contenu actuel (aucun risque).</p>`
     + card('hero','🎬 Hero (haut de page)','Grand titre, texte d’accroche, image, bouton.', h.titre?('Titre : '+esc(h.titre)):'Non configuré.')
+    + card('iconlinks','🔗 Liens icônes',"La rangée d'icônes cliquables sous le hero (Nos machines, Agenda…).", il.length?(il.length+' lien(s)'):'Liens par défaut du site.')
+    + card('contact','📞 Contact accueil',"La bande « Vous avez besoin de nous ? » et son bouton.", ch.title?('Titre : '+esc(ch.title)):'Contenu par défaut du site.')
     + card('photos','🖼 Photos asso',"La galerie « L’association en quelques images… ».", ph.length?(ph.length+' photo(s)'):'Aucune photo.')
     + card('equipe','👥 L’équipe',"La section « La fine équipe » (photo, nom, description).", eq.length?(eq.length+' membre(s)'):'Aucun membre.');
-  $$('.js-mod-edit').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.k; if(k==='hero') heroModal(); else if(k==='photos') photosModal(); else if(k==='equipe') equipeModal(); }));
+  $$('.js-mod-edit').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.k; if(k==='hero') heroModal(); else if(k==='photos') photosModal(); else if(k==='equipe') equipeModal(); else if(k==='iconlinks') iconLinksModal(); else if(k==='contact') contactHomeModal(); }));
+}
+
+/* ====== Bibliothèque d'icônes partagée (même rendu côté site) ====== */
+const ICONLIB = {
+  gamepad:'<rect x="2" y="7" width="20" height="11" rx="3"/><circle cx="8" cy="12.5" r="1.4" fill="currentColor"/><path d="M16 11v3M14.5 12.5h3"/>',
+  joystick:'<circle cx="12" cy="6" r="3"/><path d="M12 9v6"/><rect x="5" y="15" width="14" height="5" rx="2"/>',
+  calendar:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
+  pencil:'<path d="M14 7l3 3-8 8-3 1 1-3 7-9z"/><path d="M13 8l3 3"/>',
+  video:'<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l5 3-5 3z" fill="currentColor"/>',
+  play:'<circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z" fill="currentColor"/>',
+  cart:'<circle cx="9" cy="20" r="1.4" fill="currentColor"/><circle cx="17" cy="20" r="1.4" fill="currentColor"/><path d="M2 3h3l2.4 12h10l2-8H6"/>',
+  bag:'<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
+  tag:'<path d="M3 12l9-9 9 9-9 9z"/><circle cx="8.5" cy="8.5" r="1.4" fill="currentColor"/>',
+  euro:'<circle cx="12" cy="12" r="9"/><path d="M15 8.5a4 4 0 1 0 0 7M7 11h6M7 13.5h5"/>',
+  trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M10 14h4M9 20h6M12 14v3"/>',
+  star:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.8 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
+  heart:'<path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4.7-7 9-7 9z"/>',
+  wrench:'<path d="M14.5 6a3.5 3.5 0 0 1 4.6 4.6l-9 9a2 2 0 0 1-2.8-2.8l9-9z"/><path d="M14.5 6l-3 3"/>',
+  tools:'<path d="M4 20l6-6M14 4l6 6-3 3-6-6 3-3z"/><circle cx="6.5" cy="17.5" r="1" fill="currentColor"/>',
+  users:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.7"/>',
+  user:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/>',
+  phone:'<path d="M6 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L17 14l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z"/>',
+  pin:'<path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>',
+  home:'<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  link:'<path d="M9 15l6-6"/><path d="M10 6l1-1a4 4 0 0 1 6 6l-1 1M14 18l-1 1a4 4 0 0 1-6-6l1-1"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18A14 14 0 0 1 12 3z"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  flag:'<path d="M5 21V4M5 4h12l-2 4 2 4H5"/>',
+  book:'<path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 0-2 2z"/><path d="M5 18a2 2 0 0 1 2-2h11"/>',
+  ticket:'<path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 2 2 0 0 0 0-4z"/><path d="M14 6v10"/>',
+  music:'<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
+  camera:'<rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8 7l1.5-2h5L16 7"/>',
+  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.8"/><path d="M5 18l5-5 4 3 3-3 3 3"/>',
+  gift:'<rect x="3" y="9" width="18" height="11" rx="1"/><path d="M3 13h18M12 9v11M8 9a2.5 2.5 0 1 1 4-2 2.5 2.5 0 1 1 4 2"/>',
+  chat:'<path d="M4 5h16v11H9l-4 3z"/>',
+  search:'<circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+  cup:'<path d="M5 8h11v5a5 5 0 0 1-10 0z"/><path d="M16 9h2a2 2 0 0 1 0 4h-2M5 20h11"/>',
+  facebook:'<path d="M14 8h2V5h-2a3 3 0 0 0-3 3v2H9v3h2v6h3v-6h2l1-3h-3V8a1 1 0 0 1 1-1z"/>',
+  instagram:'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/>',
+  youtube:'<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l5 3-5 3z" fill="currentColor"/>',
+  twitch:'<path d="M4 3h16v11l-4 4h-4l-3 3v-3H4z"/><path d="M11 8v4M15 8v4"/>',
+  discord:'<path d="M7 7a14 14 0 0 1 10 0l2 9a14 14 0 0 1-5 2l-1-2a18 18 0 0 1-4 0l-1 2a14 14 0 0 1-5-2z"/><circle cx="9.5" cy="13" r="1" fill="currentColor"/><circle cx="14.5" cy="13" r="1" fill="currentColor"/>',
+};
+const ICONLIB_LABELS = { gamepad:'Manette',joystick:'Joystick',calendar:'Agenda',pencil:'Crayon',video:'Vidéo',play:'Lecture',cart:'Panier',bag:'Sac',tag:'Étiquette',euro:'Euro',trophy:'Trophée',star:'Étoile',heart:'Cœur',wrench:'Clé',tools:'Outils',users:'Équipe',user:'Personne',mail:'Email',phone:'Téléphone',pin:'Lieu',home:'Maison',info:'Info',link:'Lien',globe:'Web',clock:'Horloge',flag:'Drapeau',book:'Livre',ticket:'Billet',music:'Musique',camera:'Photo',image:'Image',gift:'Cadeau',chat:'Message',search:'Recherche',settings:'Réglages',cup:'Café',facebook:'Facebook',instagram:'Instagram',youtube:'YouTube',twitch:'Twitch',discord:'Discord' };
+const MATERIAL_SUGGEST = ['sports_esports','stadia_controller','videogame_asset','calendar_month','event','edit','smart_display','play_circle','shopping_cart','sell','euro','emoji_events','star','favorite','build','group','person','mail','call','location_on','home','info','link','public','schedule','flag','menu_book','confirmation_number','music_note','photo_camera','image','redeem','chat','search','settings','local_cafe','storefront','map','newspaper','handshake'];
+function iconHTML(type, name, color){
+  const c = color ? `color:${esc(color)}` : '';
+  if(type==='emoji') return `<span style="font-size:1.5em;line-height:1;${c}">${esc(name||'⭐')}</span>`;
+  if(type==='material') return `<span class="material-symbols-outlined" style="font-size:1.6em;line-height:1;${c}">${esc(name||'star')}</span>`;
+  const path = ICONLIB[name] || ICONLIB.star;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:1.6em;height:1.6em;${c}">${path}</svg>`;
+}
+// Sélecteur d'icône (3 onglets). Renvoie via onPick({type,icon}). Overlay indépendant (comme la médiathèque).
+function iconPicker(cur, onPick){
+  cur = cur || {};
+  let tab = cur.type==='material'?'material':(cur.type==='emoji'?'emoji':'lib');
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1300';
+  ov.innerHTML=`<div class="modal"><h3>Choisir une icône</h3>
+    <div class="tabs-row ip-tabs" style="margin-bottom:12px">
+      <button type="button" data-t="lib" class="${tab==='lib'?'active':''}">Icônes</button>
+      <button type="button" data-t="material" class="${tab==='material'?'active':''}">Material (Google)</button>
+      <button type="button" data-t="emoji" class="${tab==='emoji'?'active':''}">Émoji</button>
+    </div>
+    <div class="ip-body"></div>
+    <div class="buttons" style="margin-top:12px"><button type="button" class="btn grey ip-close">Fermer</button></div></div>`;
+  document.body.appendChild(ov);
+  const sel=s=>ov.querySelector(s);
+  const close=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  sel('.ip-close').addEventListener('click',close);
+  const EMOJIS='🎮 🕹️ 📅 🗓️ ✏️ 📺 ▶️ 🛒 🛍️ 🏷️ 💶 🏆 ⭐ ❤️ 🔧 🛠️ 👥 👤 ✉️ 📞 📍 🏠 ℹ️ 🔗 🌐 ⏰ 🚩 📖 🎫 🎵 📷 🖼️ 🎁 💬 🔍 ⚙️ ☕ 📣 🤝 🎯 🔥 🎲 👾 🏁 🎟️'.split(' ');
+  function draw(){
+    const b=sel('.ip-body');
+    if(tab==='lib'){
+      b.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;max-height:46vh;overflow:auto">${
+        Object.keys(ICONLIB).map(k=>`<button type="button" class="ip-it" data-icon="${k}" title="${esc(ICONLIB_LABELS[k]||k)}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer;color:var(--navy)">${iconHTML('lib',k)}<span class="mini" style="font-size:10px">${esc(ICONLIB_LABELS[k]||k)}</span></button>`).join('')}</div>`;
+      b.querySelectorAll('.ip-it').forEach(x=>x.addEventListener('click',()=>{ onPick({type:'lib',icon:x.dataset.icon}); close(); }));
+    } else if(tab==='material'){
+      b.innerHTML=`<p class="mini" style="margin:0 0 8px">Tape le nom exact d'une icône <a href="https://fonts.google.com/icons" target="_blank" style="color:var(--teal-d)">Google Material Symbols</a> (ex. sports_esports), ou choisis une suggestion.</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input class="ip-mat" placeholder="ex. calendar_month" value="${esc(cur.type==='material'?cur.icon:'')}" style="flex:1"><span class="ip-prev" style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;color:var(--navy)">${iconHTML('material',cur.type==='material'?cur.icon:'star')}</span><button type="button" class="btn small ip-mat-ok">OK</button></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;max-height:36vh;overflow:auto">${
+        MATERIAL_SUGGEST.map(k=>`<button type="button" class="ip-it" data-icon="${k}" title="${k}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer;color:var(--navy)">${iconHTML('material',k)}<span class="mini" style="font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64px">${k}</span></button>`).join('')}</div>`;
+      const inp=b.querySelector('.ip-mat'), prev=b.querySelector('.ip-prev');
+      inp.addEventListener('input',()=>{ prev.innerHTML=iconHTML('material',inp.value.trim()||'star'); });
+      const okMat=()=>{ const v=inp.value.trim(); if(v){ onPick({type:'material',icon:v}); close(); } };
+      b.querySelector('.ip-mat-ok').addEventListener('click',okMat);
+      inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); okMat(); } });
+      b.querySelectorAll('.ip-it').forEach(x=>x.addEventListener('click',()=>{ onPick({type:'material',icon:x.dataset.icon}); close(); }));
+    } else {
+      b.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px;max-height:46vh;overflow:auto">${
+        EMOJIS.map(e=>`<button type="button" class="ip-it" data-icon="${e}" style="font-size:24px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer">${e}</button>`).join('')}</div>`;
+      b.querySelectorAll('.ip-it').forEach(x=>x.addEventListener('click',()=>{ onPick({type:'emoji',icon:x.dataset.icon}); close(); }));
+    }
+  }
+  ov.querySelectorAll('.ip-tabs button').forEach(t=>t.addEventListener('click',()=>{ tab=t.dataset.t; ov.querySelectorAll('.ip-tabs button').forEach(x=>x.classList.toggle('active',x===t)); draw(); }));
+  draw();
+}
+
+/* ====== Liens icônes : données + éditeur ====== */
+function iconLinksItems(){ const il=SITE_CONTENT.icon_links; return Array.isArray(il)?il:(il&&Array.isArray(il.items)?il.items:[]); }
+function defaultIconLinks(){ return [
+  {id:Date.now()+1,type:'lib',icon:'gamepad',color:'',title:'NOS MACHINES',show_title:true,desc:'',show_desc:false,url:'nos-machines.html'},
+  {id:Date.now()+2,type:'lib',icon:'calendar',color:'',title:'AGENDA',show_title:true,desc:'',show_desc:false,url:'agenda.html'},
+  {id:Date.now()+3,type:'lib',icon:'pencil',color:'',title:'NOS PROJETS',show_title:true,desc:'',show_desc:false,url:'les-projets.html'},
+  {id:Date.now()+4,type:'lib',icon:'video',color:'',title:'LA CHAÎNE',show_title:true,desc:'',show_desc:false,url:'https://www.youtube.com/@westcoastarcades49'},
+]; }
+function iconLinksModal(){
+  let items = iconLinksItems().map(x=>({...x}));
+  if(!items.length) items = defaultIconLinks();
+  openModal(`<h3>Module « Liens icônes »</h3>
+    <p class="help" style="margin:-4px 0 12px">La rangée d'icônes cliquables sous le hero. Glisse pour réordonner. Chaque lien : icône, couleur, titre/description optionnels et un lien.</p>
+    <div id="il-list"></div>
+    <button type="button" class="btn small grey" id="il-add" style="margin-top:8px">${icon('plus')} Ajouter un lien</button>
+    <div class="buttons" style="margin-top:14px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="il-save">Enregistrer</button></div>`, {wide:true});
+  function rowHtml(it,i){ return `<div class="il-row" draggable="true" data-i="${i}" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card)">
+      <span class="il-drag" title="Glisser pour réordonner" style="cursor:grab;color:var(--muted)">⠿</span>
+      <span style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:${it.color||'var(--navy)'}">${iconHTML(it.type,it.icon,it.color)}</span>
+      <span style="flex:1;min-width:0"><span style="font-weight:700;color:var(--navy)">${esc(it.show_title!==false&&it.title?it.title:'(sans titre)')}</span><span class="mini" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.url||'(pas de lien)')}</span></span>
+      <button type="button" class="iconbtn ghost il-edit" data-i="${i}" title="Modifier">${icon('edit')}</button>
+      <button type="button" class="iconbtn ghost il-del" data-i="${i}" title="Supprimer" style="color:#e23b3b">${icon('trash')}</button>
+    </div>`; }
+  function draw(){
+    const box=$('#il-list');
+    box.innerHTML = items.length ? items.map(rowHtml).join('') : '<p class="mini">Aucun lien. Clique « Ajouter un lien ».</p>';
+    box.querySelectorAll('.il-edit').forEach(b=>b.addEventListener('click',()=>iconLinkEdit(items[+b.dataset.i],saved=>{ items[+b.dataset.i]=saved; draw(); })));
+    box.querySelectorAll('.il-del').forEach(b=>b.addEventListener('click',()=>{ items.splice(+b.dataset.i,1); draw(); }));
+    wireDnd(box,'.il-row',items,draw);
+  }
+  draw();
+  $('#il-add').addEventListener('click',()=>iconLinkEdit(null,saved=>{ items.push(saved); draw(); }));
+  $('#il-save').addEventListener('click',async()=>{ try{ await api('/api/site',{method:'PUT',body:JSON.stringify({icon_links:items})}); SITE_CONTENT.icon_links=items; closeModal(); toast('Liens icônes enregistrés'); renderModulesTab(); }catch(e){ toast(e.message); } });
+}
+function iconLinkEdit(it, onSave){
+  const isNew=!it; it = it ? {...it} : {id:Date.now(),type:'lib',icon:'star',color:'',title:'',show_title:true,desc:'',show_desc:false,url:''};
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1250';
+  ov.innerHTML=`<div class="modal"><h3>${isNew?'Nouveau lien':'Modifier le lien'}</h3>
+    <div class="field"><span>Icône</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <span class="ile-prev" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px;color:${it.color||'var(--navy)'}">${iconHTML(it.type,it.icon,it.color)}</span>
+        <button type="button" class="btn small grey ile-pick">${icon('edit')} Choisir l'icône</button>
+        <label class="mini" style="display:flex;align-items:center;gap:6px">Couleur <input type="color" class="ile-color" value="${/^#([0-9a-f]{6})$/i.test(it.color||'')?it.color:'#467ff7'}" style="width:42px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px"></label>
+        <label class="mini" style="display:flex;align-items:center;gap:4px"><input type="checkbox" class="ile-color-on" ${it.color?'checked':''}> couleur perso</label>
+      </div>
+    </div>
+    <label class="field"><span>Titre</span><input class="ile-title" value="${esc(it.title||'')}" placeholder="ex. NOS MACHINES"></label>
+    <label class="mini" style="display:flex;align-items:center;gap:6px;margin:-6px 0 8px"><input type="checkbox" class="ile-show-title" ${it.show_title!==false?'checked':''}> Afficher le titre</label>
+    <label class="field"><span>Description (optionnelle)</span><input class="ile-desc" value="${esc(it.desc||'')}" placeholder="petit texte sous le titre"></label>
+    <label class="mini" style="display:flex;align-items:center;gap:6px;margin:-6px 0 8px"><input type="checkbox" class="ile-show-desc" ${it.show_desc?'checked':''}> Afficher la description</label>
+    <label class="field"><span>Lien (URL)</span><input class="ile-url" value="${esc(it.url||'')}" placeholder="ex. nos-machines.html ou https://…"></label>
+    <div class="buttons" style="margin-top:12px"><button type="button" class="btn grey ile-cancel">Annuler</button><button type="button" class="btn ile-ok">Valider</button></div></div>`;
+  document.body.appendChild(ov);
+  const sel=s=>ov.querySelector(s); const close=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  sel('.ile-cancel').addEventListener('click',close);
+  function refreshPrev(){ const col=sel('.ile-color-on').checked?sel('.ile-color').value:''; sel('.ile-prev').style.color=col||'var(--navy)'; sel('.ile-prev').innerHTML=iconHTML(it.type,it.icon,col); }
+  sel('.ile-pick').addEventListener('click',()=>iconPicker({type:it.type,icon:it.icon},r=>{ it.type=r.type; it.icon=r.icon; refreshPrev(); }));
+  sel('.ile-color').addEventListener('input',refreshPrev);
+  sel('.ile-color-on').addEventListener('change',refreshPrev);
+  sel('.ile-ok').addEventListener('click',()=>{
+    const colOn=sel('.ile-color-on').checked;
+    onSave({ id:it.id, type:it.type, icon:it.icon, color:colOn?sel('.ile-color').value:'',
+      title:sel('.ile-title').value.trim(), show_title:sel('.ile-show-title').checked,
+      desc:sel('.ile-desc').value.trim(), show_desc:sel('.ile-show-desc').checked,
+      url:sel('.ile-url').value.trim() });
+    close();
+  });
+}
+
+/* ====== Contact accueil : éditeur ====== */
+function contactHomeModal(){
+  const d = SITE_CONTENT.contact_home || {};
+  const it = { btn_icon_type:d.btn_icon_type||'emoji', btn_icon:d.btn_icon||'☎' };
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1200';
+  ov.innerHTML=`<div class="modal"><h3>Module « Contact accueil »</h3>
+    <p class="help" style="margin:-4px 0 12px">La bande « Vous avez besoin de nous ? » sous les icônes. Même design, contenu modifiable.</p>
+    <label class="field"><span>Titre de la bande</span><input class="ch-title" value="${esc(d.title||'Vous avez besoin de nous ?')}"></label>
+    <div class="field"><span>Bouton (pilule)</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <span class="ch-prev" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px;color:#fff;background:${d.btn_color||'#E2590F'}">${iconHTML(it.btn_icon_type,it.btn_icon)}</span>
+        <button type="button" class="btn small grey ch-pick">${icon('edit')} Choisir l'icône</button>
+        <label class="mini" style="display:flex;align-items:center;gap:6px">Couleur pilule <input type="color" class="ch-color" value="${/^#([0-9a-f]{6})$/i.test(d.btn_color||'')?d.btn_color:'#E2590F'}" style="width:42px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px"></label>
+      </div>
+    </div>
+    <label class="field"><span>Texte du bouton</span><input class="ch-btext" value="${esc(d.btn_text||'CONTACTEZ-NOUS DÈS MAINTENANT')}"></label>
+    <label class="field"><span>Lien du bouton</span><input class="ch-burl" value="${esc(d.btn_url||'contact.html')}" placeholder="ex. contact.html"></label>
+    <div class="buttons" style="margin-top:12px"><button type="button" class="btn grey ch-cancel">Annuler</button><button type="button" class="btn ch-save">Enregistrer</button></div></div>`;
+  document.body.appendChild(ov);
+  const sel=s=>ov.querySelector(s); const close=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  sel('.ch-cancel').addEventListener('click',close);
+  function refreshPrev(){ sel('.ch-prev').style.background=sel('.ch-color').value; sel('.ch-prev').innerHTML=iconHTML(it.btn_icon_type,it.btn_icon); }
+  sel('.ch-pick').addEventListener('click',()=>iconPicker({type:it.btn_icon_type,icon:it.btn_icon},r=>{ it.btn_icon_type=r.type; it.btn_icon=r.icon; refreshPrev(); }));
+  sel('.ch-color').addEventListener('input',refreshPrev);
+  sel('.ch-save').addEventListener('click',async()=>{
+    const obj={ title:sel('.ch-title').value.trim(), btn_text:sel('.ch-btext').value.trim(), btn_url:sel('.ch-burl').value.trim(), btn_color:sel('.ch-color').value, btn_icon_type:it.btn_icon_type, btn_icon:it.btn_icon };
+    try{ await api('/api/site',{method:'PUT',body:JSON.stringify({contact_home:obj})}); SITE_CONTENT.contact_home=obj; close(); toast('Contact accueil enregistré'); renderModulesTab(); }catch(e){ toast(e.message); }
+  });
+}
+
+/* ====== Réordonnancement par glisser-déposer (réutilisable) ======
+   Réordonne le tableau `arr` selon le drag des éléments `itemSel` dans `container`, puis redraw(). */
+function wireDnd(container, itemSel, arr, redraw){
+  let from=null;
+  container.querySelectorAll(itemSel).forEach(el=>{
+    el.addEventListener('dragstart',e=>{ from=+el.dataset.i; el.style.opacity='.4'; e.dataTransfer.effectAllowed='move'; });
+    el.addEventListener('dragend',()=>{ el.style.opacity=''; });
+    el.addEventListener('dragover',e=>{ e.preventDefault(); el.style.borderTop='2px solid var(--teal-d,#2a9d8f)'; });
+    el.addEventListener('dragleave',()=>{ el.style.borderTop=''; });
+    el.addEventListener('drop',e=>{ e.preventDefault(); el.style.borderTop=''; const to=+el.dataset.i; if(from==null||from===to) return; const m=arr.splice(from,1)[0]; arr.splice(to,0,m); from=null; redraw(); });
+  });
 }
 
 function heroModal(){
