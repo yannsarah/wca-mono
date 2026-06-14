@@ -159,7 +159,7 @@
       var titre=m.titre||m.denomination||'';
       var img=m.photo?'<div class="mimg"><img src="'+WCA.esc(m.photo)+'" alt="'+WCA.esc(titre)+'"></div>':'<div class="mimg"></div>';
       var sub=m.sous_titre?'<div class="sub">'+WCA.esc(m.sous_titre)+'</div>':(m.categorie?'<div class="sub">'+WCA.esc(m.categorie)+'</div>':'');
-      var desc=m.description?'<p>'+WCA.esc(m.description)+'</p>':'';
+      var desc=m.description?'<div class="mdesc">'+m.description+'</div>':'';
       var cta='<a class="btn btn-rent" href="contact.html">Louer cette borne</a>';
       var block='<div class="mrow'+(rev?' rev':'')+'"><div class="mtext"><h2>'+WCA.esc(titre)+'</h2>'+sub+desc+cta+'</div>'+img+'</div>';
       return block+(i<list.length-1?'<hr class="mdiv">':'');

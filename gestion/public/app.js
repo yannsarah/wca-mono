@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.7'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.8'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -693,24 +693,33 @@ function materielModal(m, dup){
       <label class="field"><span>Propriétaire</span><div class="sel-add"><select id="f-prop"><option value="">— Non précisé</option>${PROPRIETAIRES.map(pr=>`<option ${e.proprietaire===pr?'selected':''}>${esc(pr)}</option>`).join('')}</select><button type="button" class="qa-btn" id="f-prop-add" title="Ajouter un propriétaire" aria-label="Ajouter un propriétaire">${icon('plus')}</button></div></label>
       <label class="field"><span>Nom du propriétaire</span><input id="f-propnom" list="people-dl" value="${esc(e.proprietaire_nom)}" placeholder="utilisateur ou partenaire…">${peopleDatalist('people-dl')}</label>
     </div>
-    <label class="field"><span>Notes</span><textarea id="f-notes">${esc(e.notes)}</textarea></label>
-    <div class="row2">
-      <label class="field"><span>Visible sur le site public</span><select id="f-vissite"><option value="0" ${e.visible_site?'':'selected'}>Non</option><option value="1" ${e.visible_site?'selected':''}>✅ Oui — affichée sur westcoastarcades.fr</option></select></label>
-      <label class="field"><span>Description (site public)</span><input id="f-descsite" value="${esc(e.description_site||'')}" placeholder="texte court affiché sur le site"></label>
+    <div class="field"><span>Description (site public &amp; fiche produit)</span>
+      <div class="wysi-toolbar" id="f-desc-tools" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px">
+        <button type="button" class="btn small grey" data-cmd="bold" title="Gras"><b>G</b></button>
+        <button type="button" class="btn small grey" data-cmd="italic" title="Italique"><i>I</i></button>
+        <button type="button" class="btn small grey" data-cmd="insertUnorderedList" title="Liste à puces">• Liste</button>
+        <button type="button" class="btn small grey" data-cmd="insertOrderedList" title="Liste numérotée">1. Liste</button>
+        <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')}</button>
+      </div>
+      <div id="f-descsite-rt" contenteditable="true" style="height:150px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#ffffff;color:#1a1a1a;overflow:auto;line-height:1.5">${e.description_site||''}</div>
+      <span class="help">Texte enrichi affiché sur le site public et dans la fiche produit (export PDF à venir).</span>
     </div>
+    <label class="field"><span>Notes (interne)</span><textarea id="f-notes">${esc(e.notes)}</textarea></label>
+    <label class="field"><span>Visible sur le site public</span><select id="f-vissite"><option value="0" ${e.visible_site?'':'selected'}>Non</option><option value="1" ${e.visible_site?'selected':''}>✅ Oui — affichée sur westcoastarcades.fr</option></select></label>
     <div class="row2">
       <label class="field"><span>À vendre sur le site</span><select id="f-avendre"><option value="0" ${e.a_vendre?'':'selected'}>Non</option><option value="1" ${e.a_vendre?'selected':''}>🏷️ Oui — proposé à la vente</option></select></label>
       <label class="field"><span>Prix de vente affiché</span><input id="f-prixvente" value="${esc(e.prix_vente||'')}" placeholder="ex. 1200 € ou Nous consulter"></label>
     </div>
     <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button>${isEdit?`<button class="btn wipper" id="f-wip" type="button">${icon('calendar')} WIPPER</button>`:''}<button class="btn" id="f-save">Enregistrer</button></div>`);
   $('#f-wip')?.addEventListener('click',()=>wipperModal(m.id, m.denomination));
+  { const descEd=$('#f-descsite-rt'); $$('#f-desc-tools [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ descEd.focus(); document.execCommand(b.dataset.cmd,false,null); })); }
   wireMedia('f-photo-pick', url=>{ photoData=url; $('#f-photo-prev').innerHTML=`<img src="${url}" alt="">`; });
   $('#f-photo-clear').addEventListener('click',()=>{ photoData=''; $('#f-photo-prev').innerHTML=`<span class="ph">${icon('box','ic')}</span>`; });
   quickAddSelect($('#f-cat'), $('#f-cat-add'), { placeholder:'Nouvelle catégorie…', create: async txt=>{ await api('/api/categories',{method:'POST',body:JSON.stringify({value:txt})}); if(!CATEGORIES.includes(txt)) CATEGORIES.push(txt); return {value:txt,label:txt}; } });
   quickAddSelect($('#f-etat'), $('#f-etat-add'), { placeholder:'Nouvel état…', create: async txt=>{ await api('/api/etats',{method:'POST',body:JSON.stringify({label:txt})}); if(!ETATS.some(x=>x.label===txt)) ETATS.push({label:txt,bloque:false}); return {value:txt,label:txt}; } });
   quickAddSelect($('#f-prop'), $('#f-prop-add'), { placeholder:'Nouveau propriétaire…', create: async txt=>{ await api('/api/proprietaires',{method:'POST',body:JSON.stringify({value:txt})}); if(!PROPRIETAIRES.includes(txt)) PROPRIETAIRES.push(txt); return {value:txt,label:txt}; } });
   $('#f-save').addEventListener('click',async()=>{
-    const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').value==='1', description_site:$('#f-descsite').value.trim(), a_vendre:$('#f-avendre').value==='1', prix_vente:$('#f-prixvente').value.trim() };
+    const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').value==='1', description_site:$('#f-descsite-rt').innerHTML.trim(), a_vendre:$('#f-avendre').value==='1', prix_vente:$('#f-prixvente').value.trim() };
     if(!body.denomination){ toast('La dénomination est obligatoire.'); return; }
     try{ await api(isEdit?'/api/materiel/'+m.id:'/api/materiel',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast(dup?'Copie créée':'Enregistré'); loadMatList(); }catch(err){ toast(err.message); }
   });
@@ -2116,7 +2125,7 @@ function vitrineModal(m){
     </div>
     <label class="field"><span>Grand titre</span><input id="vit-titre" value="${esc(m.titre_site||m.denomination||'')}" placeholder="ex. La Virtua Fighter 2"></label>
     <label class="field"><span>Sous-titre</span><input id="vit-sous" value="${esc(m.sous_titre_site||'')}" placeholder="ex. le jeu de combat par SEGA"></label>
-    <label class="field"><span>Description</span><textarea id="vit-desc" rows="4" placeholder="Présentation de la borne pour les visiteurs…">${esc(m.description_site||'')}</textarea></label>
+    <p class="help" style="margin:-2px 0 10px">ℹ️ La <strong>description</strong> publique se modifie dans la fiche matériel (onglet Inventaire) — elle sert au site et à la fiche produit PDF.</p>
     <div class="row2">
       <label class="field"><span>Sens d'affichage</span><select id="vit-sens">
         <option value="auto" ${sensVal==='auto'?'selected':''}>Auto (zigzag)</option>
@@ -2130,9 +2139,9 @@ function vitrineModal(m){
   $('#vit-photo-clear').addEventListener('click',()=>{ photo=''; $('#vit-prev').style.backgroundImage=''; });
   const put = body => api('/api/materiel/'+m.id,{method:'PUT',body:JSON.stringify(body)});
   $('#vit-save').addEventListener('click',async()=>{
-    try{ await put({ photo, titre_site:$('#vit-titre').value.trim(), sous_titre_site:$('#vit-sous').value.trim(), description_site:$('#vit-desc').value.trim(), sens_site:$('#vit-sens').value, visible_site:$('#vit-vis').value==='1' }); closeModal(); toast('Fiche vitrine enregistrée'); renderAffichageTab(); }catch(e){ toast(e.message); }
+    try{ await put({ photo, titre_site:$('#vit-titre').value.trim(), sous_titre_site:$('#vit-sous').value.trim(), sens_site:$('#vit-sens').value, visible_site:$('#vit-vis').value==='1' }); closeModal(); toast('Fiche vitrine enregistrée'); renderAffichageTab(); }catch(e){ toast(e.message); }
   });
-  $('#vit-del').addEventListener('click',()=>{ confirmModal('Vider la fiche vitrine de cette borne et la retirer du site ? (la photo de l’inventaire est conservée)', async()=>{ try{ await put({ titre_site:'', sous_titre_site:'', description_site:'', sens_site:'auto', visible_site:false }); closeModal(); toast('Fiche vitrine vidée'); renderAffichageTab(); }catch(e){ toast(e.message); } }); });
+  $('#vit-del').addEventListener('click',()=>{ confirmModal('Vider la fiche vitrine de cette borne et la retirer du site ? (la photo de l’inventaire est conservée)', async()=>{ try{ await put({ titre_site:'', sous_titre_site:'', sens_site:'auto', visible_site:false }); closeModal(); toast('Fiche vitrine vidée'); renderAffichageTab(); }catch(e){ toast(e.message); } }); });
 }
 
 /* ---- Onglet MODULES : sections de la page d'accueil (hero, photos, équipe) ---- */

@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.8 — 14 juin 2026**
+## Fiche matériel : description enrichie (site + fiche produit)
+- Nouveau champ **Description** en texte enrichi (gras, italique, listes), hauteur 150 px, **au-dessus des Notes** dans la fiche matériel.
+- Cette description **remplace** l'ancien « Description (site public) » : elle sert à la fois au **site internet** (page Nos Machines) et à la **future fiche produit PDF**.
+- La fiche vitrine renvoie désormais vers la fiche matériel pour la description (une seule source, plus de doublon).
+
+---
+
 **Version 2.8.7 — 14 juin 2026**
 ## Médiathèque : onglets + nettoyage des doublons
 - Nouvelle **barre d'onglets** dans la médiathèque : **Tout voir** (vue actuelle, recherche + filtre dossier), **Par dossier** (images regroupées par dossier, classés par nom), et **Nettoyage** (admin).
