@@ -2,6 +2,16 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.11 — 14 juin 2026**
+## Module « Fiches produit PDF » (page Devis)
+- Nouvel onglet **Fiches PDF** dans la page **Devis** (et ses onglets sont maintenant **réordonnables** au glisser-déposer).
+- On choisit un **produit** (fiche matériel) et on **coche le contenu** à inclure : image, titre, description, lien internet, et n'importe quel champ existant (catégorie, état, prix…). On peut aussi **ajouter des champs et des images** personnalisés.
+- **Entête type courrier** (logo + adresse + téléphone) en haut à gauche, **affichable/modifiable** avant génération, et **mémorisable par défaut**.
+- **Aperçu en direct**, puis génération en **deux façons** : **Imprimer / Enregistrer en PDF** (qualité parfaite) ou **Télécharger le PDF** directement.
+- Onglet **Historique léger** : on garde la trace des fiches générées (sans stocker de PDF, base légère et sécurisée) avec un bouton **Régénérer**.
+
+---
+
 **Version 2.8.10 — 14 juin 2026**
 ## Page Contact dynamique + onglets réordonnables
 - Nouvel onglet **Contact** dans Site internet : le **formulaire de contact** est entièrement modifiable (titre, intro, bouton, et **les champs**).

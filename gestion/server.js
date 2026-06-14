@@ -900,6 +900,42 @@ add('PUT', '/api/site', (req, res, p, body, query, user) => {
   logActivity(user, 'update', 'site', ''); save(); send(res, 200, s.site);
 });
 
+/* =============================== FICHES PRODUIT PDF =============================== */
+// Entête type courrier (logo + adresse + téléphone) — réglages persistants.
+add('GET', '/api/pdf-config', (req, res) => {
+  const s = db().settings || {};
+  send(res, 200, s.pdf_entete || { show: true, nom: '', adresse: '', telephone: '', email: '', site: '', logo: '' });
+});
+add('PUT', '/api/pdf-config', (req, res, p, body, query, user) => {
+  const s = db().settings; if (!s.pdf_entete || typeof s.pdf_entete !== 'object') s.pdf_entete = {};
+  ['show', 'nom', 'adresse', 'telephone', 'email', 'site', 'logo'].forEach(k => { if (body[k] !== undefined) s.pdf_entete[k] = body[k]; });
+  save(); send(res, 200, s.pdf_entete);
+});
+// Historique LÉGER (métadonnées seulement, jamais le PDF). Plafonné à 60 entrées.
+add('GET', '/api/pdf-history', (req, res) => {
+  const s = db().settings || {};
+  send(res, 200, Array.isArray(s.pdf_history) ? s.pdf_history : []);
+});
+add('POST', '/api/pdf-history', (req, res, p, body, query, user) => {
+  const s = db().settings; if (!Array.isArray(s.pdf_history)) s.pdf_history = [];
+  const entry = {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    user: user ? (user.prenom || user.login) : '',
+    materiel_id: body.materiel_id || null,
+    titre: String(body.titre || '').slice(0, 160),
+    include: body.include || {},
+    extras: Array.isArray(body.extras) ? body.extras : [],
+  };
+  s.pdf_history.unshift(entry);
+  if (s.pdf_history.length > 60) s.pdf_history = s.pdf_history.slice(0, 60);
+  save(); send(res, 200, entry);
+});
+add('DELETE', '/api/pdf-history/:id', (req, res, p, body, query, user) => {
+  const s = db().settings; s.pdf_history = (s.pdf_history || []).filter(x => x.id !== +p.id);
+  save(); send(res, 200, { ok: true });
+});
+
 /* =============================== MÉDIATHÈQUE (images en fichiers, réutilisables) =============================== */
 const MIME_EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
 function mediaUrl(req, file) {

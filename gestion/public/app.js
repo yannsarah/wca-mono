@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.10'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.11'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -794,20 +794,28 @@ function renderGerer(){
 /* ============================== DEVIS ============================== */
 const DEVIS_STATUTS = { brouillon:'Brouillon', envoye:'Envoyé', accepte:'Accepté', refuse:'Refusé' };
 let DEV_TAB='devis';
+const DEV_TAB_DEFS = [
+  {k:'devis', l:()=>`${icon('doc')} Devis`},
+  {k:'tarifs', l:()=>`${icon('tag')} Tarifs`},
+  {k:'calc', l:()=>`${icon('settings')} Calculatrice`},
+  {k:'pdf', l:()=>`📄 Fiches PDF`},
+];
+function devTabOrder(){ let o; try{ o=JSON.parse(localStorage.getItem('wca_dev_taborder')||'[]'); }catch{ o=[]; } o=o.filter(k=>DEV_TAB_DEFS.some(t=>t.k===k)); DEV_TAB_DEFS.forEach(t=>{ if(!o.includes(t.k)) o.push(t.k); }); return o; }
 async function renderDevis(){
   await loadConfig();
   setTopbar('Devis', DEV_TAB==='devis'?`<button class="btn" id="add-dv">${icon('plus')} Nouveau devis</button>`:'');
   $('#add-dv')?.addEventListener('click',()=>devisModal());
-  view().innerHTML = `<div class="tabs-row">
-      <button class="${DEV_TAB==='devis'?'active':''}" id="dt-devis">${icon('doc')} Devis</button>
-      <button class="${DEV_TAB==='tarifs'?'active':''}" id="dt-tarifs">${icon('tag')} Tarifs</button>
-      <button class="${DEV_TAB==='calc'?'active':''}" id="dt-calc">${icon('settings')} Calculatrice</button>
-    </div><div id="dev-body"></div>`;
-  $('#dt-devis').addEventListener('click',()=>{ DEV_TAB='devis'; renderDevis(); });
-  $('#dt-tarifs').addEventListener('click',()=>{ DEV_TAB='tarifs'; renderDevis(); });
-  $('#dt-calc').addEventListener('click',()=>{ DEV_TAB='calc'; renderDevis(); });
+  const order=devTabOrder();
+  const tabsHtml=()=>`<div class="tabs-row" id="dev-tabs">`+order.map((k,i)=>{ const t=DEV_TAB_DEFS.find(x=>x.k===k); return `<button class="${DEV_TAB===k?'active':''}" draggable="true" data-i="${i}" data-t="${k}" title="Glisse pour réordonner">${t.l()}</button>`; }).join('')+`</div>`;
+  view().innerHTML = tabsHtml() + `<div id="dev-body"></div>`;
+  function wireTabs(){
+    $$('#dev-tabs button').forEach(b=>b.addEventListener('click',()=>{ DEV_TAB=b.dataset.t; renderDevis(); }));
+    wireDnd($('#dev-tabs'),'button',order,()=>{ localStorage.setItem('wca_dev_taborder',JSON.stringify(order)); const el=$('#dev-tabs'); el.outerHTML=tabsHtml(); wireTabs(); });
+  }
+  wireTabs();
   if(DEV_TAB==='devis'){ $('#dev-body').innerHTML=`${segArchHtml('devis')}<div class="card" style="margin-bottom:14px;background:var(--teal-l);border-color:#b6e3e8"><strong>ℹ️ Blocage automatique</strong><p class="help">Un devis actif (brouillon, envoyé ou accepté) <strong>réserve le matériel</strong> sur sa période. Passez-le en « Refusé » pour libérer le matériel.</p></div><div id="dv-list"></div>`; wireSegArch('devis',()=>renderDevis()); loadDevisList(); }
   else if(DEV_TAB==='tarifs'){ renderTarifs(); }
+  else if(DEV_TAB==='pdf'){ renderFichesPdf(); }
   else { renderCalculatrice(); }
 }
 async function loadDevisList(){
@@ -894,6 +902,148 @@ async function devisModal(dv, prefill){
     if(!body.client_nom){ toast('Le nom du client est obligatoire.'); return; }
     try{ await api(dv?'/api/devis/'+dv.id:'/api/devis',{method:dv?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast('Devis enregistré'); loadDevisList(); }catch(err){ toast(err.message); }
   });
+}
+
+/* ============================ FICHES PRODUIT PDF ============================ */
+let PDF_SUB='gen', PDF_GEN_STATE=null, PDF_PRESELECT=null;
+const PDF_FIELD_CATALOG=[
+  {k:'categorie',label:'Catégorie'},{k:'sous_titre_site',label:'Sous-titre'},
+  {k:'etat',label:'État'},{k:'emplacement',label:'Emplacement'},
+  {k:'numero_serie',label:'N° de série'},{k:'proprietaire',label:'Propriétaire'},
+  {k:'proprietaire_nom',label:'Nom du propriétaire'},{k:'valeur',label:'Valeur (€)'},
+  {k:'prix_vente',label:'Prix de vente'},{k:'fonctionnel',label:'Fonctionnel'},{k:'a_vendre',label:'À vendre'},
+];
+function pdfVal(m,k){ if(k==='fonctionnel') return m.fonctionnel!==false?'Oui':'Non'; if(k==='a_vendre') return m.a_vendre?'Oui':'Non'; if(k==='valeur') return m.valeur?(m.valeur+' €'):''; return (m[k]==null?'':String(m[k])); }
+function pdfLoadScript(src){ return new Promise((res,rej)=>{ if([...document.scripts].some(s=>s.src===src)) return res(); const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+function pdfPrint(html,title){ const w=window.open('','_blank'); if(!w){ toast('Autorise les fenêtres pop-up pour imprimer.'); return; } w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+(title||'Fiche produit')+'</title><style>@page{margin:12mm}body{margin:0}</style></head><body>'+html+'</body></html>'); w.document.close(); setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} },500); }
+async function pdfDownloadNode(node,filename){
+  toast('Préparation du PDF…');
+  try{
+    await pdfLoadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await pdfLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const canvas=await window.html2canvas(node,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
+    const imgData=canvas.toDataURL('image/jpeg',0.92);
+    const { jsPDF }=window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
+    const iw=pw, ih=canvas.height*pw/canvas.width;
+    if(ih<=ph){ pdf.addImage(imgData,'JPEG',0,0,iw,ih); }
+    else { let pos=0, rem=ih; while(rem>0){ pdf.addImage(imgData,'JPEG',0,pos,iw,ih); rem-=ph; if(rem>0){ pdf.addPage(); pos-=ph; } } }
+    pdf.save(filename); toast('PDF téléchargé');
+  }catch(e){ toast('Téléchargement indisponible (connexion ?). Utilise « Imprimer / Enregistrer en PDF ».'); }
+}
+function pdfBuildFiche(m,inc,e,linkVal,cf,ci){
+  let head='';
+  if(e.show){
+    head=`<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:26px;border-bottom:2px solid #eef1f6;padding-bottom:16px">
+      ${e.logo?`<img src="${esc(e.logo)}" style="height:66px;width:auto;object-fit:contain">`:''}
+      <div style="font-size:12px;line-height:1.5;color:#333">
+        ${e.nom?`<div style="font-weight:700;font-size:15px;color:#0e2a52">${esc(e.nom)}</div>`:''}
+        ${e.adresse?`<div>${esc(e.adresse).replace(/\n/g,'<br>')}</div>`:''}
+        ${e.telephone?`<div>Tél : ${esc(e.telephone)}</div>`:''}
+        ${e.email?`<div>${esc(e.email)}</div>`:''}
+        ${e.site?`<div>${esc(e.site)}</div>`:''}
+      </div></div>`;
+  }
+  const titre = inc.titre ? `<h1 style="font-size:26px;color:#0e2a52;margin:0 0 16px">${esc(m.titre_site||m.denomination||'')}</h1>` : '';
+  const img = inc.image && m.photo ? `<img src="${esc(m.photo)}" style="max-width:100%;max-height:330px;object-fit:contain;border-radius:6px;display:block;margin:0 0 18px">` : '';
+  const desc = inc.description && m.description_site ? `<div style="font-size:13.5px;line-height:1.65;color:#222;margin-bottom:18px">${m.description_site}</div>` : '';
+  let rows='';
+  PDF_FIELD_CATALOG.forEach(f=>{ if(inc[f.k]){ const v=pdfVal(m,f.k); if(v!=='') rows+=`<tr><td style="font-weight:600;padding:5px 14px 5px 0;color:#555;white-space:nowrap;vertical-align:top">${esc(f.label)}</td><td style="padding:5px 0;color:#222">${esc(v)}</td></tr>`; } });
+  (cf||[]).forEach(c=>{ if((c.label||'').trim()||(c.value||'').trim()) rows+=`<tr><td style="font-weight:600;padding:5px 14px 5px 0;color:#555;white-space:nowrap;vertical-align:top">${esc(c.label||'')}</td><td style="padding:5px 0;color:#222">${esc(c.value||'')}</td></tr>`; });
+  const table = rows?`<table style="border-collapse:collapse;font-size:13.5px;margin-bottom:16px">${rows}</table>`:'';
+  const link = inc.lien && (linkVal||'').trim() ? `<div style="font-size:13px;margin-bottom:14px">🔗 <a href="${esc(linkVal)}" style="color:#1c5fd6">${esc(linkVal)}</a></div>` : '';
+  const imgs = (ci||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">${ci.map(u=>`<img src="${esc(u)}" style="max-width:48%;max-height:240px;object-fit:contain;border-radius:6px">`).join('')}</div>` : '';
+  return `<div class="pdf-doc" style="background:#fff;color:#111;padding:34px 40px;width:794px;max-width:100%;box-sizing:border-box;font-family:Inter,Arial,sans-serif">${head}${titre}${img}${desc}${table}${link}${imgs}</div>`;
+}
+async function renderFichesPdf(){
+  const dvb=$('#dev-body');
+  dvb.innerHTML=`<div class="tabs-row" id="pdf-sub" style="margin-bottom:14px">
+      <button class="${PDF_SUB==='gen'?'active':''}" data-s="gen">📄 Générer une fiche</button>
+      <button class="${PDF_SUB==='hist'?'active':''}" data-s="hist">🕘 Historique</button>
+    </div><div id="pdf-body"><p class="help" style="padding:16px">Chargement…</p></div>`;
+  $$('#pdf-sub button').forEach(b=>b.addEventListener('click',()=>{ PDF_SUB=b.dataset.s; renderFichesPdf(); }));
+  if(PDF_SUB==='hist') return renderPdfHistory();
+  const body=$('#pdf-body');
+  let mats=[], entete={};
+  try{ mats=await api('/api/materiel'); }catch{ mats=[]; }
+  try{ entete=await api('/api/pdf-config'); }catch{ entete={}; }
+  entete=Object.assign({show:true,nom:'',adresse:'',telephone:'',email:'',site:'',logo:''},entete);
+  if(!mats.length){ body.innerHTML='<p class="help" style="padding:16px">Aucun matériel dans l\'inventaire. Ajoutes-en pour générer une fiche.</p>'; return; }
+  const st = PDF_GEN_STATE || (PDF_GEN_STATE={ sel:null, inc:{image:true,titre:true,description:true,lien:true,prix_vente:true}, link:'https://www.westcoastarcades.fr/nos-machines.html', cf:[], ci:[], entete:null });
+  if(!st.entete) st.entete=entete;
+  if(PDF_PRESELECT){ st.sel=PDF_PRESELECT; PDF_PRESELECT=null; }
+  if(!st.sel || !mats.some(m=>m.id===st.sel)) st.sel=mats[0].id;
+  const cur=()=>mats.find(m=>m.id===st.sel)||{};
+
+  function enteteHtml(){ const e=st.entete; return `
+    <label class="mini" style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><input type="checkbox" id="pe-show" ${e.show?'checked':''}> Afficher l'entête (logo + adresse) sur la fiche</label>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+      <div id="pe-logo-prev" style="width:74px;height:52px;border:1px solid var(--line);border-radius:6px;background:#fff center/contain no-repeat;${e.logo?`background-image:url('${e.logo}')`:''}"></div>
+      ${mediaBtn('pe-logo-pick','Logo')}<button type="button" class="btn small red" id="pe-logo-clear">${icon('trash')}</button>
+    </div>
+    <label class="field"><span>Nom de l'association</span><input id="pe-nom" value="${esc(e.nom||'')}"></label>
+    <label class="field"><span>Adresse</span><textarea id="pe-adr" rows="2">${esc(e.adresse||'')}</textarea></label>
+    <div class="row2"><label class="field"><span>Téléphone</span><input id="pe-tel" value="${esc(e.telephone||'')}"></label><label class="field"><span>Email</span><input id="pe-mail" value="${esc(e.email||'')}"></label></div>
+    <label class="field"><span>Site</span><input id="pe-site" value="${esc(e.site||'')}"></label>
+    <button type="button" class="btn small grey" id="pe-save">${icon('check')} Enregistrer l'entête par défaut</button>`; }
+  function controlsHtml(){
+    const m=cur();
+    const fieldChecks=PDF_FIELD_CATALOG.filter(f=>pdfVal(m,f.k)!=='').map(f=>`<label class="cat-opt"><input type="checkbox" class="pdf-inc" data-k="${f.k}" ${st.inc[f.k]?'checked':''}><span>${esc(f.label)}</span></label>`).join('');
+    return `<label class="field"><span>Produit (fiche matériel)</span><select id="pdf-mat">${mats.map(x=>`<option value="${x.id}" ${x.id===st.sel?'selected':''}>${esc(x.denomination||'(sans nom)')}</option>`).join('')}</select></label>
+      ${bubbleCSS()}${bubble('🏢','Entête (logo + adresse)','En haut à gauche, comme un courrier', enteteHtml())}
+      <div class="field"><span>Contenu à inclure</span><div class="cat-picker" style="margin-top:6px">
+        <label class="cat-opt"><input type="checkbox" class="pdf-inc" data-k="image" ${st.inc.image?'checked':''}><span>Image</span></label>
+        <label class="cat-opt"><input type="checkbox" class="pdf-inc" data-k="titre" ${st.inc.titre?'checked':''}><span>Titre</span></label>
+        <label class="cat-opt"><input type="checkbox" class="pdf-inc" data-k="description" ${st.inc.description?'checked':''}><span>Description</span></label>
+        <label class="cat-opt"><input type="checkbox" class="pdf-inc" data-k="lien" ${st.inc.lien?'checked':''}><span>Lien internet</span></label>
+        ${fieldChecks}
+      </div></div>
+      <label class="field" id="pdf-link-wrap" style="${st.inc.lien?'':'display:none'}"><span>Lien internet</span><input id="pdf-link" value="${esc(st.link)}"></label>
+      <div class="field"><span>Champs personnalisés</span><div id="pdf-cf"></div><button type="button" class="btn small grey" id="pdf-cf-add" style="margin-top:6px">${icon('plus')} Ajouter un champ</button></div>
+      <div class="field"><span>Images supplémentaires</span><div id="pdf-ci" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px"></div><button type="button" class="btn small grey" id="pdf-ci-add">${icon('plus')} Ajouter une image</button></div>
+      <div class="buttons" style="margin-top:12px;flex-wrap:wrap"><button class="btn" id="pdf-print">🖨 Imprimer / Enregistrer en PDF</button><button class="btn grey" id="pdf-dl">⬇️ Télécharger le PDF</button></div>`;
+  }
+  function updatePreview(){ const p=$('#pdf-preview'); if(p) p.innerHTML=pdfBuildFiche(cur(),st.inc,st.entete,st.link,st.cf,st.ci); }
+  function drawCf(){ const box=$('#pdf-cf'); if(!box) return; box.innerHTML=st.cf.map((c,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px"><input class="pdf-cf-l" data-i="${i}" value="${esc(c.label||'')}" placeholder="Libellé" style="flex:1"><input class="pdf-cf-v" data-i="${i}" value="${esc(c.value||'')}" placeholder="Valeur" style="flex:1"><button type="button" class="iconbtn ghost pdf-cf-del" data-i="${i}" style="color:#e23b3b">${icon('trash')}</button></div>`).join(''); box.querySelectorAll('.pdf-cf-l').forEach(inp=>inp.addEventListener('input',e=>{ st.cf[+e.target.dataset.i].label=e.target.value; updatePreview(); })); box.querySelectorAll('.pdf-cf-v').forEach(inp=>inp.addEventListener('input',e=>{ st.cf[+e.target.dataset.i].value=e.target.value; updatePreview(); })); box.querySelectorAll('.pdf-cf-del').forEach(b=>b.addEventListener('click',()=>{ st.cf.splice(+b.dataset.i,1); drawCf(); updatePreview(); })); }
+  function drawCi(){ const box=$('#pdf-ci'); if(!box) return; box.innerHTML=st.ci.map((u,i)=>`<div style="position:relative"><img src="${esc(u)}" style="width:64px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--line)"><button type="button" class="pdf-ci-del" data-i="${i}" style="position:absolute;top:-6px;right:-6px;background:#e23b3b;color:#fff;border:0;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1">×</button></div>`).join(''); box.querySelectorAll('.pdf-ci-del').forEach(b=>b.addEventListener('click',()=>{ st.ci.splice(+b.dataset.i,1); drawCi(); updatePreview(); })); }
+  async function saveHistory(){ try{ await api('/api/pdf-history',{method:'POST',body:JSON.stringify({ materiel_id:st.sel, titre:(cur().titre_site||cur().denomination||''), include:st.inc, extras:st.cf })}); }catch(e){} }
+
+  function drawAll(){
+    body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px;align-items:start">
+      <div id="pdf-controls"></div>
+      <div><div class="mini" style="margin-bottom:6px;color:var(--muted)">Aperçu</div><div style="background:#5b6472;padding:16px;border-radius:10px;overflow:auto;max-height:74vh"><div id="pdf-preview"></div></div></div>
+    </div>`;
+    $('#pdf-controls').innerHTML=controlsHtml();
+    // wire
+    $('#pdf-mat').addEventListener('change',e=>{ st.sel=+e.target.value; drawAll(); });
+    $$('.pdf-inc').forEach(c=>c.addEventListener('change',e=>{ st.inc[e.target.dataset.k]=e.target.checked; if(e.target.dataset.k==='lien'){ const w=$('#pdf-link-wrap'); if(w) w.style.display=e.target.checked?'':'none'; } updatePreview(); }));
+    $('#pdf-link')?.addEventListener('input',e=>{ st.link=e.target.value; updatePreview(); });
+    // entête
+    $('#pe-show')?.addEventListener('change',e=>{ st.entete.show=e.target.checked; updatePreview(); });
+    ['nom:pe-nom','adresse:pe-adr','telephone:pe-tel','email:pe-mail','site:pe-site'].forEach(p=>{ const [k,id]=p.split(':'); $('#'+id)?.addEventListener('input',e=>{ st.entete[k]=e.target.value; updatePreview(); }); });
+    wireMedia('pe-logo-pick',url=>{ st.entete.logo=url; const pv=$('#pe-logo-prev'); if(pv) pv.style.backgroundImage=`url('${url}')`; updatePreview(); });
+    $('#pe-logo-clear')?.addEventListener('click',()=>{ st.entete.logo=''; const pv=$('#pe-logo-prev'); if(pv) pv.style.backgroundImage=''; updatePreview(); });
+    $('#pe-save')?.addEventListener('click',async()=>{ try{ await api('/api/pdf-config',{method:'PUT',body:JSON.stringify(st.entete)}); toast('Entête enregistrée par défaut'); }catch(e){ toast(e.message); } });
+    // champs / images perso
+    $('#pdf-cf-add').addEventListener('click',()=>{ st.cf.push({label:'',value:''}); drawCf(); });
+    $('#pdf-ci-add').addEventListener('click',()=>mediaPicker(url=>{ st.ci.push(url); drawCi(); updatePreview(); }));
+    drawCf(); drawCi();
+    // génération
+    $('#pdf-print').addEventListener('click',()=>{ pdfPrint(pdfBuildFiche(cur(),st.inc,st.entete,st.link,st.cf,st.ci), 'Fiche '+(cur().denomination||'')); saveHistory(); });
+    $('#pdf-dl').addEventListener('click',()=>{ const node=$('#pdf-preview').firstElementChild; if(node){ pdfDownloadNode(node, 'Fiche-'+((cur().denomination||'produit').replace(/[^a-z0-9]+/gi,'-'))+'.pdf'); saveHistory(); } });
+    updatePreview();
+  }
+  drawAll();
+}
+async function renderPdfHistory(){
+  const body=$('#pdf-body'); let list=[];
+  try{ list=await api('/api/pdf-history'); }catch{ list=[]; }
+  body.innerHTML = list.length
+    ? `<p class="help" style="margin-bottom:10px">Historique léger : on conserve seulement la trace (aucun PDF stocké). « Régénérer » rouvre la fiche avec les données à jour.</p><div class="tablecard"><table class="grid"><thead><tr><th>Date</th><th>Fiche</th><th>Par</th><th></th></tr></thead><tbody>${list.map(h=>`<tr><td data-label="Date">${esc(dateTimeShort(h.date))}</td><td data-label="Fiche">${esc(h.titre||'—')}</td><td data-label="Par">${esc(h.user||'')}</td><td class="actions"><div class="row-actions"><button class="btn small grey js-pdf-regen" data-id="${h.materiel_id}">Régénérer</button><button class="iconbtn ghost js-pdf-del" data-id="${h.id}" title="Supprimer">${icon('trash')}</button></div></td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="help" style="padding:16px">Aucune fiche générée pour l\'instant.</p>';
+  $$('.js-pdf-regen').forEach(b=>b.addEventListener('click',()=>{ PDF_PRESELECT=+b.dataset.id; PDF_SUB='gen'; renderFichesPdf(); }));
+  $$('.js-pdf-del').forEach(b=>b.addEventListener('click',async()=>{ try{ await api('/api/pdf-history/'+b.dataset.id,{method:'DELETE'}); renderPdfHistory(); }catch(e){ toast(e.message); } }));
 }
 
 /* ---------------------------- Tarifs ---------------------------- */
