@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.0 — 14 juin 2026**
+## Finitions blog
+- **Bannière** de l'article réduite en **bandeau** (hauteur raisonnable, rognée proprement) au lieu de la pleine hauteur — moins imposant.
+- **Éditeur d'article** : fond **blanc** (lisible quel que soit le thème de l'app) ; **insertion d'images** plus propre — image centrée sur sa propre ligne, format conservé (plus de recadrage carré), non déplaçable (évite les disparitions).
+
+---
+
 **Version 1.9 — 14 juin 2026**
 ## Correctifs thème sombre + bannière du blog
 - **Thème sombre** : fini les fonds blancs et les cases à cocher transformées en gros rectangles vides — couleurs en dur remplacées par les variables de thème (corrigé à la racine, valable partout et pour l'avenir).

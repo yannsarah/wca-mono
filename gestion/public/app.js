@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '1.9'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
+const APP_VERSION = '2.0'; // Versionnage du dépôt unique : +0.1 à chaque mise à jour.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1912,7 +1912,7 @@ function articleModal(a){
         <label class="btn small grey" style="cursor:pointer" title="Insérer une image">${icon('plus')} Image<input type="file" id="art-img-file" accept="image/*" style="display:none"></label>
         <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')} Format</button>
       </div>
-      <div id="art-contenu" contenteditable="true" style="min-height:220px;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--card);color:var(--ink);overflow:auto;line-height:1.5">${a.contenu||''}</div>
+      <div id="art-contenu" contenteditable="true" style="min-height:220px;border:1px solid var(--line);border-radius:8px;padding:14px;background:#ffffff;color:#1a1a1a;overflow:auto;line-height:1.6">${a.contenu||''}</div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:12px;cursor:pointer"><input type="checkbox" id="art-vis" ${a.visible_site!==false?'checked':''}> 🌐 Publié sur le site (visible dans le blog)</label>
     <div class="field"><span>Partenaires participants (encart en bas de l'article)</span><div id="art-parts" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:4px"><span class="mini">Chargement…</span></div></div>
@@ -1922,7 +1922,7 @@ function articleModal(a){
   $$('.wysi-toolbar [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); }));
   $$('.wysi-toolbar [data-block]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand('formatBlock',false,b.dataset.block); }));
   $('#art-link').addEventListener('click',()=>{ const url=prompt('Adresse du lien (https://…)'); if(url){ ed.focus(); document.execCommand('createLink',false,url); } });
-  $('#art-img-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ ed.focus(); document.execCommand('insertImage',false,data); },120*1024); });
+  $('#art-img-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ ed.focus(); document.execCommand('insertHTML',false,'<p style="text-align:center"><img src="'+data+'" style="max-width:100%;height:auto;display:inline-block;margin:10px 0;border-radius:6px" draggable="false"></p><p><br></p>'); },1200,180*1024); });
   $('#art-cover-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressSquare(f,data=>{ cover=data; $('#art-cover-prev').style.backgroundImage=`url('${data}')`; },120*1024); });
   $('#art-cover-clear').addEventListener('click',()=>{ cover=''; $('#art-cover-prev').style.backgroundImage=''; });
   $('#art-ban-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; compressImage(f,data=>{ banner=data; $('#art-ban-prev').style.backgroundImage=`url('${data}')`; }); });

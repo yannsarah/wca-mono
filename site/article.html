@@ -45,7 +45,7 @@
     document.getElementById('aTitre').textContent=a.titre;
     document.getElementById('aDate').textContent=WCA.dateRange(a.date)+(a.auteur?(' · '+a.auteur):'');
     var banner=a.banniere||(home.blog&&home.blog.banner)||'';
-    if(banner) document.getElementById('aFeat').innerHTML='<img src="'+WCA.esc(banner)+'" alt="" style="width:100%;display:block">';
+    if(banner) document.getElementById('aFeat').innerHTML='<img src="'+WCA.esc(banner)+'" alt="" style="width:100%;height:clamp(150px,26vw,300px);object-fit:cover;display:block">';
     else if(a.image) document.getElementById('aFeat').innerHTML='<img src="'+a.image+'" alt="">';
     document.getElementById('aBody').innerHTML=a.contenu||('<p>'+WCA.esc(a.extrait||'')+'</p>');
     if(a.partenaires && a.partenaires.length){
