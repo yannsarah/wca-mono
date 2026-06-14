@@ -2,6 +2,12 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.3 — 14 juin 2026**
+## Correctif hamburger (blog & articles)
+- Menu hamburger **remis à gauche** sur les pages Blog et Article, **barres blanches bien visibles** (ombre portée pour ressortir sur n'importe quel fond), fond transparent.
+
+---
+
 **Version 2.2 — 14 juin 2026**
 ## Harmonisation blog + regroupement des réglages
 - **Page article harmonisée** : la bannière devient le **hero** en haut (comme la page Blog), **hamburger à droite**, **logo central redondant retiré**. Plus propre, plus cohérent.
