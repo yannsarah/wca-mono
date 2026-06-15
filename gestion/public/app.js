@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.18'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.19'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2472,7 +2472,7 @@ async function renderSalonsTab(){
           <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')}</button>
         </div>
         <div id="sp-desc" contenteditable="true" style="min-height:140px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${sp.description||''}</div></div>`, {open:true})
-   + bubble('🎪','Salons (frise / timeline)','Ajoute, réordonne, active/désactive chaque salon', `<div id="sp-items"></div><button type="button" class="btn small grey" id="sp-add" style="margin-top:6px">${icon('plus')} Ajouter un salon</button>`)
+   + bubble('🎪','Salons (frise / timeline)','Ajoute, réordonne, active/désactive chaque salon', `<div id="sp-items"></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn small grey" id="sp-add">${icon('plus')} Ajouter un salon</button><button type="button" class="btn small grey" id="sp-import">${icon('download')} Importer les salons de l'ancienne page</button></div>`)
    + `<div class="buttons" style="margin-top:8px"><button class="btn" id="sp-save">${icon('check')} Enregistrer la page Nos salons</button></div>`;
   { const ed=$('#sp-desc'); $$('#sp-desc-tools [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); })); }
   function drawItems(){
@@ -2492,6 +2492,7 @@ async function renderSalonsTab(){
   }
   drawItems();
   $('#sp-add').addEventListener('click',()=>salonItemModal(null,evs,saved=>{ items.push(saved); drawItems(); }));
+  $('#sp-import').addEventListener('click',()=>confirmChoice('Importer les salons de l’ancienne page (titre, description et les 11 salons avec leurs images) ?\n\nSans doublon : les salons déjà présents sont conservés, seuls les manquants sont ajoutés.','Importer','Annuler',async()=>{ try{ const r=await api('/api/salons/import',{method:'POST',body:'{}'}); toast(`${r.added} ajouté(s), ${r.updated} complété(s)`); renderSalonsTab(); }catch(e){ toast(e.message); } }));
   $('#sp-save').addEventListener('click',async()=>{
     items.forEach((it,i)=>it.ordre=i);
     const payload={ salons_page:{ title:$('#sp-title').value.trim(), description:$('#sp-desc').innerHTML.trim(), items } };

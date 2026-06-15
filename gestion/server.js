@@ -935,6 +935,58 @@ add('PUT', '/api/site', (req, res, p, body, query, user) => {
   logActivity(user, 'update', 'site', ''); save(); send(res, 200, s.site);
 });
 
+// --- Reprise de l'ancienne page statique « Nos salons » vers le module dynamique ---
+// Idempotent (upsert par clé année+titre) : ne crée pas de doublon, ne réinitialise pas l'ordre
+// déjà modifié par l'admin, ne complète que les champs manquants des salons déjà présents.
+const SALON_IMG_BASE = 'https://www.westcoastarcades.fr/img/';
+const SALON_SEED = {
+  title: "L'histoire West Coast Arcades",
+  description: "<p><b>West Coast Arcades</b> est une association qui a été créée en 2014 par Julien et Maxime sur une idée simple : rassembler les passionnés des jeux d'arcades. Rapidement l'association est rejointe par Cédric qui va apporter aux passionnés de bornes d'arcades les mordus de flippers. L'association s'agrandit pour compter 10 membres majeurs et organise son 1er salon le Freeplay qui se déroule à la Romagne dans une modeste salle de 190 m². Suivront 4 salons toujours à la Romagne jusqu'en 2018 pour accueillir 2000 visiteurs dans une salle de 400 m². L'année 2019 arrive et les évènements associatifs avec le public sont très compliqués à organiser, et l'asso passe en veille.</p><p>Sortie de cette période de confinement, la présidence de l'asso change, mais l'envie de partager, de faire et de transmettre cette passion est plus grande que jamais. L'association se concentre sur ses valeurs : jouer, partager et prendre du plaisir autour du jeu, bornes d'arcades, flippers et rétrogaming. La machine est relancée en 2023 en collaboration avec le parc des expositions de Cholet. Le Games in Cholet voit le jour pour sa première édition en 2023 sur 2500 m² et accueille plus de 4000 visiteurs. Fort de ce succès, le Games in Cholet revient à la Meilleraie les 3 et 4 mai 2025, cette fois sur plus de 5000 m², pour encore plus de jeux et de fun.</p>",
+  items: [
+    { annee: '2025', titre: 'Salon du Livre et du Jeu de Briançon', sous_titre: 'Édition les 22 et 23 Novembre 2025', image: 'salon-du-livre-et-du-jeux-2025-chateau-de-briancon-westcoastarcades.fr_.webp' },
+    { annee: '2025', titre: 'La BIF', sous_titre: 'Édition les 3, 4 et 5 Octobre 2025', image: 'la-bif-2025-westcoastarcades.fr_.jpg' },
+    { annee: '2025', titre: 'Boc and Geek', sous_titre: 'Édition les 20 et 21 Septembre 2025', image: 'boc_n_geek___2025.webp' },
+    { annee: '2025', titre: 'Mazé-Millon', sous_titre: "Première participation, 19 et 20 Juillet 2025. Jeux rétro et d'arcade pour petits et grands.", image: 'west-coast-arcades-Maze-Millon-2025-westcoastarcades.fr_.jpg' },
+    { annee: '2025', titre: 'Games in Cholet', sous_titre: "Seconde édition les 3 et 4 Mai 2025 — 5 500 m² d'animation !", image: 'West_Coast-games-in-cholet-2024-intro.jpeg' },
+    { annee: '2025', titre: 'La Fête du Jeu — Chemillé', sous_titre: 'Édition 2025', image: 'la-fete-du-jeu-chemille-2025-westcoastarcades.fr_.jpg' },
+    { annee: '2023', titre: 'Games in Cholet', sous_titre: 'Première édition les 23 et 24 Septembre 2023', image: 'West-coast-Arcades-GamesInCholet-2023.jpg' },
+    { annee: '2018', titre: 'Freeplay', sous_titre: 'La Romagne — salle de 400 m², 2000 visiteurs', image: 'salon-Freeplay-2018-westcoastarcades.fr_-scaled.jpeg' },
+    { annee: '2017', titre: 'Freeplay — 4e édition', sous_titre: '', image: 'salon-freeplay-2017-WESTCOASTARCADES.FR_.jpeg' },
+    { annee: '2016', titre: 'Freeplay — 3e édition', sous_titre: '', image: 'salon-freeplay-2016-westcoastarcades.fr_.jpg' },
+    { annee: '2014', titre: 'Freeplay — 1ère édition', sous_titre: 'Le tout premier salon, à la Romagne (190 m²)', image: 'salon-FREEPLAY-2014-westcoastarcades.fr_.png' },
+  ],
+};
+function salonKey(it) { return String((it.annee || '') + '-' + (it.titre || '')).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+add('POST', '/api/salons/import', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const s = db().settings; if (!s.site || typeof s.site !== 'object') s.site = {};
+  const sp = s.site.salons_page || (s.site.salons_page = {});
+  if (!Array.isArray(sp.items)) sp.items = [];
+  if (!sp.title) sp.title = SALON_SEED.title;
+  if (!sp.description) sp.description = SALON_SEED.description;
+  const firstImport = sp.items.length === 0;
+  let maxOrdre = sp.items.reduce((m, it) => Math.max(m, +it.ordre || 0), -1);
+  let added = 0, updated = 0;
+  SALON_SEED.items.forEach((seed, i) => {
+    const url = SALON_IMG_BASE + seed.image;
+    const key = salonKey(seed);
+    const existing = sp.items.find(it => salonKey(it) === key);
+    if (existing) {
+      let touched = false; // ne complète que les champs manquants, n'écrase pas
+      if (!existing.image && url) { existing.image = url; touched = true; }
+      if (!existing.sous_titre && seed.sous_titre) { existing.sous_titre = seed.sous_titre; touched = true; }
+      if (!existing.annee && seed.annee) { existing.annee = seed.annee; touched = true; }
+      if (!existing.titre && seed.titre) { existing.titre = seed.titre; touched = true; }
+      if (touched) updated++;
+    } else {
+      sp.items.push({ id: Date.now() + i, annee: seed.annee, titre: seed.titre, sous_titre: seed.sous_titre, image: url, popup_html: '', event_id: null, actif: true, ordre: firstImport ? i : (++maxOrdre) });
+      added++;
+    }
+  });
+  save();
+  send(res, 200, { added, updated, total: sp.items.length });
+});
+
 /* =============================== FICHES PRODUIT PDF =============================== */
 // Entête type courrier (logo + adresse + téléphone) — réglages persistants.
 add('GET', '/api/pdf-config', (req, res) => {

@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.19 — 15 juin 2026**
+## Nos salons : reprise automatique de l'ancienne page
+- Bouton **« Importer les salons de l'ancienne page »** : reprend en un clic le **titre**, la **description** et les **11 salons** (année, titre, sous-titre, image) de l'ancienne page statique — plus besoin de tout ressaisir.
+- **Sans doublon** : on peut relancer l'import sans risque (les salons déjà présents sont conservés, seuls les manquants sont ajoutés ; l'ordre que tu as réglé n'est pas réinitialisé).
+
+---
+
 **Version 2.8.18 — 15 juin 2026**
 ## Page « Nos salons » dynamique
 - Nouvel onglet **Nos salons** dans Site internet (à côté de Nos machines).
