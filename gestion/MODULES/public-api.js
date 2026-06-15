@@ -175,10 +175,15 @@ export function handlePublic(req, res, pathname, searchParams) {
     const items = (Array.isArray(sp.items) ? sp.items : [])
       .filter(it => it && it.actif !== false)
       .sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
-      .map(it => ({
-        id: it.id, annee: it.annee || '', titre: it.titre || '', sous_titre: it.sous_titre || '',
-        image: it.image || '', popup_html: it.popup_html || '', event_id: it.event_id || null,
-      }));
+      .map(it => {
+        const tk = it.ticketing || {};
+        return {
+          id: it.id, annee: it.annee || '', titre: it.titre || '', sous_titre: it.sous_titre || '',
+          image: it.image || '', popup_html: it.popup_html || '', event_id: it.event_id || null,
+          date_debut: it.date_debut || '', heure_debut: it.heure_debut || '', date_fin: it.date_fin || '', heure_fin: it.heure_fin || '',
+          ticketing: tk.enabled ? { enabled: true, label: tk.label || 'Réserver', url: tk.url || '', intro: tk.intro || '', status: tk.status || 'ouverte' } : null,
+        };
+      });
     return sendJSON(res, 200, { title: sp.title || '', description: sp.description || '', items }), true;
   }
 

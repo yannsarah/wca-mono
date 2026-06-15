@@ -2,6 +2,17 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.21 — 15 juin 2026**
+## Fiche salon enrichie (création / modification)
+- **Dates précises** : date + heure de début et de fin, avec un bouton **« Générer le sous-titre depuis les dates »** (ex. « Les 22 et 23 novembre 2025 », « Du 3 au 5 octobre 2025 »).
+- **Éditeur enrichi** du contenu : titres, sous-titres, gras/italique, listes, **liens** et **images** (médiathèque).
+- **Modèle de page** : un modèle « Salon classique » insérable en un clic (hero, infos pratiques, programme, galerie…), plus l'option **« Coller du HTML »**. Tu complètes ensuite librement avec tes propres zones de texte.
+- **Dupliquer** un salon (copie en brouillon, masquée).
+- **Prévisualiser** la fiche avant de valider.
+- **Billetterie préparée** : activable par salon (texte du bouton, lien, intro, statut) — affichée sur le site quand elle est activée. *(Le paiement en ligne viendra plus tard.)*
+
+---
+
 **Version 2.8.20 — 15 juin 2026**
 ## Nos machines : « Louer cette borne » ouvre le formulaire en popup
 - Sur la page **Nos Machines**, le bouton **« Louer cette borne »** ouvre une **popup** avec le **formulaire de contact** (les champs réglés dans Site internet › Contact), joliment mis en page, avec la **borne pré-remplie**.

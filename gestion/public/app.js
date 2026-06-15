@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.20'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.21'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2483,10 +2483,12 @@ async function renderSalonsTab(){
         <span style="flex:1;min-width:0"><strong style="color:var(--navy)">${esc(it.annee||'')} ${esc(it.titre||'(sans titre)')}</strong><span class="mini" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.sous_titre||'')}</span></span>
         <span class="toggle-oui-non ${it.actif!==false?'on':'off'} sp-act" data-i="${i}" style="cursor:pointer"><span class="t-oui">Affiché</span><span class="t-non">Masqué</span></span>
         <button type="button" class="iconbtn ghost sp-edit" data-i="${i}" title="Modifier">${icon('edit')}</button>
+        <button type="button" class="iconbtn ghost sp-dup" data-i="${i}" title="Dupliquer">${icon('copy')}</button>
         <button type="button" class="iconbtn ghost sp-del" data-i="${i}" title="Supprimer" style="color:#e23b3b">${icon('trash')}</button>
       </div>`).join('') : '<p class="mini">Aucun salon. Clique « Ajouter un salon ».</p>';
     box.querySelectorAll('.sp-act').forEach(t=>t.addEventListener('click',()=>{ items[+t.dataset.i].actif = !(items[+t.dataset.i].actif!==false); drawItems(); }));
     box.querySelectorAll('.sp-edit').forEach(b=>b.addEventListener('click',()=>salonItemModal(items[+b.dataset.i],evs,saved=>{ items[+b.dataset.i]=saved; drawItems(); })));
+    box.querySelectorAll('.sp-dup').forEach(b=>b.addEventListener('click',()=>{ const src=items[+b.dataset.i]; const copy=JSON.parse(JSON.stringify(src)); copy.id=Date.now(); copy.titre='Copie de '+(src.titre||''); copy.actif=false; if(copy.ticketing) copy.ticketing.enabled=false; items.splice(+b.dataset.i+1,0,copy); drawItems(); toast('Salon dupliqué (en brouillon, masqué)'); }));
     box.querySelectorAll('.sp-del').forEach(b=>b.addEventListener('click',()=>{ items.splice(+b.dataset.i,1); drawItems(); }));
     wireDnd(box,'.il-row',items,drawItems);
   }
@@ -2499,37 +2501,129 @@ async function renderSalonsTab(){
     try{ await api('/api/site',{method:'PUT',body:JSON.stringify(payload)}); SITE_CONTENT.salons_page=payload.salons_page; toast('Page Nos salons enregistrée'); renderSalonsTab(); }catch(e){ toast(e.message); }
   });
 }
+// Phrase de dates lisible à partir de date/heure début/fin.
+function salonPhrase(dd,hd,df,hf){
+  const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const p=s=>{ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||''); return m?{y:+m[1],mo:+m[2],d:+m[3]}:null; };
+  const h=x=>x?String(x).replace(':','h').replace(/h00$/,'h'):'';
+  const a=p(dd), b=p(df); if(!a) return '';
+  const jour=x=>x.d+' '+MOIS[x.mo-1]+' '+x.y;
+  if(!b||(a.y===b.y&&a.mo===b.mo&&a.d===b.d)){ let s='Le '+jour(a); if(hd&&hf) s+=' de '+h(hd)+' à '+h(hf); else if(hd) s+=' à '+h(hd); return s; }
+  if(a.y===b.y&&a.mo===b.mo) return (b.d===a.d+1?('Les '+a.d+' et '+b.d):('Du '+a.d+' au '+b.d))+' '+MOIS[a.mo-1]+' '+a.y;
+  if(a.y===b.y) return 'Du '+a.d+' '+MOIS[a.mo-1]+' au '+b.d+' '+MOIS[b.mo-1]+' '+a.y;
+  return 'Du '+jour(a)+' au '+jour(b);
+}
+// Modèles de fiche salon (HTML autonome, inline-stylé → s'affiche tel quel dans la popup / une future page).
+const SALON_TEMPLATES = {
+  classique: { label:'Salon classique', html:
+`<h2 style="color:#0e2a52;font-size:24px;margin:0 0 6px">Titre du salon</h2>
+<p style="color:#5d6b85;font-weight:600;margin:0 0 16px">Dates &amp; lieu</p>
+<p>Présentez le salon en quelques phrases : l'ambiance, les nouveautés, ce qui attend les visiteurs…</p>
+<h3 style="color:#0e2a52;margin:18px 0 6px">Infos pratiques</h3>
+<ul><li><b>Lieu :</b> …</li><li><b>Horaires :</b> …</li><li><b>Tarif :</b> …</li><li><b>Accès / parking :</b> …</li></ul>
+<h3 style="color:#0e2a52;margin:18px 0 6px">Au programme</h3>
+<p>Tournois, animations, exposants, zone enfants… décrivez le programme ici. Vous pouvez ajouter autant de paragraphes que vous voulez.</p>
+<h3 style="color:#0e2a52;margin:18px 0 6px">En images</h3>
+<p>Ajoutez des photos avec le bouton 🖼 de la barre d'outils.</p>` },
+};
 function salonItemModal(it, evs, onSave){
-  const isNew=!it; it = it ? {...it} : {id:Date.now(),annee:'',titre:'',sous_titre:'',image:'',popup_html:'',event_id:null,actif:true,ordre:9999};
+  const isNew=!it; it = it ? {...it} : {id:Date.now(),annee:'',titre:'',sous_titre:'',date_debut:'',heure_debut:'',date_fin:'',heure_fin:'',image:'',popup_html:'',event_id:null,actif:true,ordre:9999,template_key:'',ticketing:{}};
+  const tk = it.ticketing||{};
   let img=it.image||'';
   const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1250';
   ov.innerHTML=`<div class="modal modal-wide"><h3>${isNew?'Nouveau salon':'Modifier le salon'}</h3>
-    <div class="row2"><label class="field"><span>Année / date (gros texte)</span><input class="si-annee" value="${esc(it.annee||'')}" placeholder="ex. 2025"></label>
+    <div class="row2"><label class="field"><span>Année / date (gros texte de la frise)</span><input class="si-annee" value="${esc(it.annee||'')}" placeholder="ex. 2025"></label>
       <label class="field"><span>Lier à un événement (optionnel)</span><select class="si-event"><option value="">— Aucun —</option>${evs.map(e=>`<option value="${e.id}" ${String(it.event_id)===String(e.id)?'selected':''}>${esc(e.nom)}</option>`).join('')}</select></label></div>
     <label class="field"><span>Titre</span><input class="si-titre" value="${esc(it.titre||'')}" placeholder="ex. Games in Cholet"></label>
-    <label class="field"><span>Sous-titre / dates</span><input class="si-sous" value="${esc(it.sous_titre||'')}" placeholder="ex. Édition les 3 et 4 mai 2025"></label>
+    <div class="section-title" style="margin-top:6px">Dates &amp; horaires</div>
+    <div class="row2"><label class="field"><span>Date de début</span><input type="date" class="si-dd" value="${esc(it.date_debut||'')}"></label><label class="field"><span>Heure de début</span><input class="si-hd" value="${esc(it.heure_debut||'')}" placeholder="ex. 10:00"></label></div>
+    <div class="row2"><label class="field"><span>Date de fin</span><input type="date" class="si-df" value="${esc(it.date_fin||'')}"></label><label class="field"><span>Heure de fin</span><input class="si-hf" value="${esc(it.heure_fin||'')}" placeholder="ex. 19:00"></label></div>
+    <label class="field"><span>Sous-titre / dates (affiché sous le titre)</span><input class="si-sous" value="${esc(it.sous_titre||'')}" placeholder="ex. Édition les 3 et 4 mai 2025"></label>
+    <button type="button" class="btn small grey si-gen" style="margin:-4px 0 4px">↻ Générer le sous-titre depuis les dates</button>
     <div class="field"><span>Image / affiche</span>
       <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
         <div class="si-prev" style="width:120px;height:84px;border-radius:8px;background:#0b0b0d center/cover no-repeat;border:1px solid var(--line);${img?`background-image:url('${img}')`:''}"></div>
         ${mediaBtn('si-pick','Choisir')}<button type="button" class="btn small red si-clear">${icon('trash')} Retirer</button>
       </div></div>
-    <div class="field"><span>Contenu de la popup (texte enrichi, optionnel)</span>
-      <div class="wysi-toolbar si-pop-tools" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px"><button type="button" class="btn small grey" data-cmd="bold"><b>G</b></button><button type="button" class="btn small grey" data-cmd="italic"><i>I</i></button><button type="button" class="btn small grey" data-cmd="insertUnorderedList">• Liste</button></div>
-      <div class="si-pop" contenteditable="true" style="min-height:110px;border:1px solid var(--line);border-radius:8px;padding:10px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${it.popup_html||''}</div></div>
+    <div class="field"><span>Modèle de page</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+        <select class="si-tpl" style="width:auto">${Object.keys(SALON_TEMPLATES).map(k=>`<option value="${k}">${esc(SALON_TEMPLATES[k].label)}</option>`).join('')}</select>
+        <button type="button" class="btn small grey si-tpl-apply">${icon('plus')} Insérer le modèle</button>
+        <button type="button" class="btn small grey si-html-paste">${icon('doc')} Coller du HTML</button>
+      </div><span class="help">Le modèle remplit la zone de contenu ci-dessous, que tu complètes ensuite librement.</span></div>
+    <div class="field"><span>Contenu de la fiche / popup (texte enrichi)</span>
+      <div class="wysi-toolbar si-pop-tools" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px">
+        <button type="button" class="btn small grey" data-block="h2" title="Titre">Titre</button>
+        <button type="button" class="btn small grey" data-block="h3" title="Sous-titre">Sous-titre</button>
+        <button type="button" class="btn small grey" data-cmd="bold"><b>G</b></button>
+        <button type="button" class="btn small grey" data-cmd="italic"><i>I</i></button>
+        <button type="button" class="btn small grey" data-cmd="insertUnorderedList">• Liste</button>
+        <button type="button" class="btn small grey si-link" title="Lien">🔗</button>
+        <button type="button" class="btn small grey si-img" title="Image">🖼<input type="file" class="si-img-file" accept="image/*" style="display:none"></button>
+        <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')}</button>
+      </div>
+      <div class="si-pop" contenteditable="true" style="min-height:150px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${it.popup_html||''}</div></div>
+    <details class="bubble-sec" style="margin-top:6px"><summary style="cursor:pointer;padding:10px 4px;font-weight:700;color:var(--navy)">🎟️ Billetterie (préparé pour plus tard)</summary>
+      <div style="padding:4px 2px 6px">
+        <label class="mini" style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><input type="checkbox" class="si-tk-on" ${tk.enabled?'checked':''}> Activer la billetterie</label>
+        <div class="row2"><label class="field"><span>Texte du bouton</span><input class="si-tk-label" value="${esc(tk.label||'Réserver')}"></label>
+          <label class="field"><span>Statut</span><select class="si-tk-status">${['desactivee','bientot','ouverte','complete','terminee'].map(s=>`<option value="${s}" ${tk.status===s?'selected':''}>${({desactivee:'Désactivée',bientot:'Bientôt disponible',ouverte:'Ouverte',complete:'Complète',terminee:'Terminée'})[s]}</option>`).join('')}</select></label></div>
+        <label class="field"><span>Lien de billetterie</span><input class="si-tk-url" value="${esc(tk.url||'')}" placeholder="https://…"></label>
+        <label class="field"><span>Texte d'introduction (optionnel)</span><input class="si-tk-intro" value="${esc(tk.intro||'')}"></label>
+      </div></details>
     <label class="mini" style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" class="si-actif" ${it.actif!==false?'checked':''}> Affiché sur le site</label>
-    <div class="buttons" style="margin-top:12px"><button type="button" class="btn grey si-cancel">Annuler</button><button type="button" class="btn si-ok">Valider</button></div></div>`;
+    <div class="buttons" style="margin-top:12px;flex-wrap:wrap"><button type="button" class="btn grey si-cancel">Annuler</button><button type="button" class="btn grey si-preview">👁 Prévisualiser</button><button type="button" class="btn si-ok">Valider</button></div></div>`;
   document.body.appendChild(ov);
   const sel=s=>ov.querySelector(s); const close=()=>ov.remove();
   ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
   sel('.si-cancel').addEventListener('click',close);
   wireMedia('si-pick',url=>{ img=url; sel('.si-prev').style.backgroundImage=`url('${url}')`; });
   sel('.si-clear').addEventListener('click',()=>{ img=''; sel('.si-prev').style.backgroundImage=''; });
-  { const ed=sel('.si-pop'); ov.querySelectorAll('.si-pop-tools [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); })); }
-  sel('.si-event').addEventListener('change',e=>{ const ev=evs.find(x=>String(x.id)===e.target.value); if(ev){ if(!sel('.si-titre').value) sel('.si-titre').value=ev.nom||''; if(!img && (ev.affiche||ev.photo)){ img=ev.affiche||ev.photo; sel('.si-prev').style.backgroundImage=`url('${img}')`; } } });
-  sel('.si-ok').addEventListener('click',()=>{
-    onSave({ id:it.id, annee:sel('.si-annee').value.trim(), titre:sel('.si-titre').value.trim(), sous_titre:sel('.si-sous').value.trim(), image:img, popup_html:sel('.si-pop').innerHTML.trim(), event_id:sel('.si-event').value||null, actif:sel('.si-actif').checked, ordre:it.ordre });
-    close();
-  });
+  const ed=sel('.si-pop');
+  ov.querySelectorAll('.si-pop-tools [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); }));
+  ov.querySelectorAll('.si-pop-tools [data-block]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand('formatBlock',false,b.dataset.block); }));
+  sel('.si-link').addEventListener('click',()=>{ const url=window.prompt('Adresse du lien (https://…)'); if(url){ ed.focus(); document.execCommand('createLink',false,url); } });
+  sel('.si-img').addEventListener('click',()=>mediaPicker(url=>{ ed.focus(); document.execCommand('insertHTML',false,'<p style="text-align:center"><img src="'+url+'" style="max-width:100%;height:auto;border-radius:6px;margin:10px 0"></p><p><br></p>'); }));
+  sel('.si-gen').addEventListener('click',()=>{ const s=salonPhrase(sel('.si-dd').value,sel('.si-hd').value.trim(),sel('.si-df').value,sel('.si-hf').value.trim()); if(s){ sel('.si-sous').value=s; if(!sel('.si-annee').value){ const y=(sel('.si-dd').value||'').slice(0,4); if(y) sel('.si-annee').value=y; } toast('Sous-titre généré'); } else toast('Renseigne au moins la date de début.'); });
+  sel('.si-tpl-apply').addEventListener('click',()=>{ const tpl=SALON_TEMPLATES[sel('.si-tpl').value]; if(!tpl) return; const apply=()=>{ ed.innerHTML=tpl.html; }; if(ed.innerHTML.trim()) confirmChoice('Insérer le modèle « '+tpl.label+' » ? Cela remplacera le contenu actuel de la fiche.','Remplacer','Annuler',apply); else apply(); });
+  sel('.si-html-paste').addEventListener('click',()=>{ htmlPasteOverlay(html=>{ const apply=()=>{ ed.innerHTML=html; }; if(ed.innerHTML.trim()) confirmChoice('Remplacer le contenu actuel par le HTML collé ?','Remplacer','Annuler',apply); else apply(); }); });
+  sel('.si-event').addEventListener('change',e=>{ const ev=evs.find(x=>String(x.id)===e.target.value); if(ev){ if(!sel('.si-titre').value) sel('.si-titre').value=ev.nom||''; if(!sel('.si-dd').value && ev.date_debut) sel('.si-dd').value=ev.date_debut; if(!sel('.si-df').value && ev.date_fin) sel('.si-df').value=ev.date_fin; if(!img && (ev.affiche||ev.photo)){ img=ev.affiche||ev.photo; sel('.si-prev').style.backgroundImage=`url('${img}')`; } } });
+  function collect(){
+    return { id:it.id, annee:sel('.si-annee').value.trim(), titre:sel('.si-titre').value.trim(), sous_titre:sel('.si-sous').value.trim(),
+      date_debut:sel('.si-dd').value, heure_debut:sel('.si-hd').value.trim(), date_fin:sel('.si-df').value, heure_fin:sel('.si-hf').value.trim(),
+      image:img, popup_html:ed.innerHTML.trim(), event_id:sel('.si-event').value||null, template_key:sel('.si-tpl').value, actif:sel('.si-actif').checked, ordre:it.ordre,
+      ticketing:{ enabled:sel('.si-tk-on').checked, label:sel('.si-tk-label').value.trim(), url:sel('.si-tk-url').value.trim(), intro:sel('.si-tk-intro').value.trim(), status:sel('.si-tk-status').value } };
+  }
+  sel('.si-preview').addEventListener('click',()=>salonPreview(collect()));
+  sel('.si-ok').addEventListener('click',()=>{ onSave(collect()); close(); });
+}
+// Overlay « coller du HTML »
+function htmlPasteOverlay(onInsert){
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1350';
+  ov.innerHTML=`<div class="modal"><h3>Coller un modèle HTML</h3><p class="help" style="margin:-4px 0 8px">Colle ici le code HTML. Il servira de base au contenu de la fiche.</p><textarea class="hp-ta" rows="10" style="font-family:monospace;font-size:12px"></textarea><div class="buttons" style="margin-top:12px"><button type="button" class="btn grey hp-cancel">Annuler</button><button type="button" class="btn hp-ok">Insérer</button></div></div>`;
+  document.body.appendChild(ov); const sel=s=>ov.querySelector(s); const close=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  sel('.hp-cancel').addEventListener('click',close);
+  sel('.hp-ok').addEventListener('click',()=>{ const v=sel('.hp-ta').value.trim(); if(v) onInsert(v); close(); });
+}
+// Aperçu de la fiche/popup telle qu'elle s'affichera
+function salonPreview(it){
+  const tk=it.ticketing||{};
+  const tkHtml = (tk.enabled && tk.status!=='desactivee') ? `<div style="margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--card)">${tk.intro?`<p style="margin:0 0 8px">${esc(tk.intro)}</p>`:''}${tk.status==='complete'?'<strong>🎟️ Complet</strong>':tk.status==='terminee'?'<strong>Événement terminé</strong>':tk.status==='bientot'?'<strong>Billetterie bientôt disponible</strong>':`<a class="btn" href="${esc(tk.url||'#')}" target="_blank" style="text-decoration:none">${esc(tk.label||'Réserver')}</a>`}</div>` : '';
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1350';
+  ov.innerHTML=`<div class="modal modal-wide" style="padding:0;overflow:hidden">
+    ${it.image?`<img src="${esc(it.image)}" style="width:100%;max-height:280px;object-fit:cover;display:block">`:''}
+    <div style="padding:22px 24px">
+      <div style="color:var(--teal-d);font-weight:700">${esc(it.annee||'')}</div>
+      <h3 style="margin:4px 0 4px">${esc(it.titre||'')}</h3>
+      <div style="color:var(--muted);margin-bottom:12px">${esc(it.sous_titre||'')}</div>
+      <div style="line-height:1.6">${it.popup_html||''}</div>
+      ${tkHtml}
+      <div class="buttons" style="margin-top:16px"><button type="button" class="btn grey sp-prev-close">Fermer l'aperçu</button></div>
+    </div></div>`;
+  document.body.appendChild(ov); const close=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  ov.querySelector('.sp-prev-close').addEventListener('click',close);
 }
 
 /* ============ Onglet CONTACT : formulaire de la page contact.html (dynamique) ============ */
