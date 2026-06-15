@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.22'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.23'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2526,6 +2526,24 @@ const SALON_TEMPLATES = {
 <p>Tournois, animations, exposants, zone enfants… décrivez le programme ici.</p>
 <h3 style="color:var(--acc);margin:18px 0 6px">En images</h3>
 <p>Ajoutez des photos avec le bouton 🖼 de la barre d'outils.</p>` },
+  page: { label:'Page événement (sombre)', dark:true, html:
+`<p style="color:var(--acc);font-weight:800;letter-spacing:1px;font-size:13px;margin:0 0 4px">INTRODUCTION</p>
+<h2 style="color:#fff;font-size:26px;margin:0 0 10px">Un week-end sous le signe du jeu et du partage.</h2>
+<p>West Coast Arcades était présent pour faire découvrir l'univers des bornes d'arcade, des flippers et du jeu rétro. Décrivez ici l'ambiance, les machines présentées et les moments forts.</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:18px 0">
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center"><div style="color:var(--acc);font-weight:800;font-size:12px;letter-spacing:.5px">DATE</div><div style="margin-top:4px;color:rgba(255,255,255,.85)">…</div></div>
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center"><div style="color:var(--acc);font-weight:800;font-size:12px;letter-spacing:.5px">LIEU</div><div style="margin-top:4px;color:rgba(255,255,255,.85)">…</div></div>
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center"><div style="color:var(--acc);font-weight:800;font-size:12px;letter-spacing:.5px">TYPE</div><div style="margin-top:4px;color:rgba(255,255,255,.85)">…</div></div>
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center"><div style="color:var(--acc);font-weight:800;font-size:12px;letter-spacing:.5px">MACHINES</div><div style="margin-top:4px;color:rgba(255,255,255,.85)">…</div></div>
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center"><div style="color:var(--acc);font-weight:800;font-size:12px;letter-spacing:.5px">PUBLIC</div><div style="margin-top:4px;color:rgba(255,255,255,.85)">…</div></div>
+</div>
+<p style="color:var(--acc);font-weight:800;letter-spacing:1px;font-size:13px;margin:22px 0 4px">CE QUE NOUS AVONS PRÉSENTÉ</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:8px 0 16px">
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px"><strong style="color:#fff">Bornes d'arcade</strong><p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.7)">Des machines jouables pour revivre les sensations des salles d'arcade.</p></div>
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px"><strong style="color:#fff">Flippers</strong><p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.7)">Des flippers accessibles au public.</p></div>
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px"><strong style="color:#fff">Jeux rétro</strong><p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.7)">Une sélection pour petits et grands nostalgiques.</p></div>
+</div>
+<div style="background:linear-gradient(135deg,var(--acc),rgba(0,0,0,.25));border-radius:16px;padding:24px;margin:20px 0;color:#fff"><div style="font-size:30px;opacity:.6;line-height:.6">“</div><p style="font-size:17px;margin:6px 0 8px">Chaque salon est une nouvelle occasion de faire revivre ces machines et de transmettre notre passion.</p><div style="font-weight:700">— L'équipe West Coast Arcades</div></div>` },
   affiche: { label:'Affiche événement', html:
 `<div style="text-align:center;padding:6px 0 16px;border-bottom:3px solid var(--acc);margin-bottom:18px">
   <h2 style="color:var(--acc);font-size:30px;letter-spacing:.5px;margin:0 0 4px;text-transform:uppercase">Titre de l'événement</h2>
@@ -2550,6 +2568,9 @@ function salonBlockHTML(kind, imgUrl){
   if(kind==='bouton') return '<p style="text-align:center;margin:14px 0"><a href="#" style="display:inline-block;background:var(--acc);color:#fff;text-decoration:none;font-weight:700;padding:11px 22px;border-radius:100px">Bouton</a></p><p><br></p>';
   if(kind==='imgtexte') return '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:14px 0"><div style="flex:1;min-width:160px"><h3 style="color:var(--acc);margin-top:0">Titre</h3><p>Votre texte à côté de l\'image…</p></div><div style="flex:1;min-width:160px"><img src="'+(imgUrl||'')+'" style="width:100%;border-radius:8px"></div></div><p><br></p>';
   if(kind==='galerie') return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0">'+(imgUrl?('<img src="'+imgUrl+'" style="width:100%;border-radius:6px"><img src="'+imgUrl+'" style="width:100%;border-radius:6px"><img src="'+imgUrl+'" style="width:100%;border-radius:6px">'):'')+'</div><p><br></p>';
+  if(kind==='infocards') return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:14px 0">'+['DATE','LIEU','TYPE','MACHINES','PUBLIC'].map(l=>'<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center"><div style="color:var(--acc);font-weight:800;font-size:12px;letter-spacing:.5px">'+l+'</div><div style="margin-top:4px;color:rgba(255,255,255,.85)">…</div></div>').join('')+'</div><p><br></p>';
+  if(kind==='featurecards') return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0">'+[1,2,3].map(()=>'<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px"><strong style="color:#fff">Titre</strong><p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.7)">Description…</p></div>').join('')+'</div><p><br></p>';
+  if(kind==='citation') return '<div style="background:linear-gradient(135deg,var(--acc),rgba(0,0,0,.25));border-radius:16px;padding:24px;margin:16px 0;color:#fff"><div style="font-size:30px;opacity:.6;line-height:.6">“</div><p style="font-size:17px;margin:6px 0 8px">Votre citation…</p><div style="font-weight:700">— L\'équipe</div></div><p><br></p>';
   return '';
 }
 function salonItemModal(it, evs, onSave){
@@ -2593,6 +2614,9 @@ function salonItemModal(it, evs, onSave){
         <button type="button" class="btn small grey" data-blk="section">＋ Section</button>
         <button type="button" class="btn small grey" data-blk="imgtexte">＋ Image + texte</button>
         <button type="button" class="btn small grey" data-blk="galerie">＋ Galerie</button>
+        <button type="button" class="btn small grey" data-blk="infocards">＋ Cartes infos</button>
+        <button type="button" class="btn small grey" data-blk="featurecards">＋ Cartes programme</button>
+        <button type="button" class="btn small grey" data-blk="citation">＋ Citation</button>
         <button type="button" class="btn small grey" data-blk="bande">＋ Bande colorée</button>
         <button type="button" class="btn small grey" data-blk="bouton">＋ Bouton</button>
       </div>
@@ -2605,7 +2629,10 @@ function salonItemModal(it, evs, onSave){
         <label class="field"><span>Lien de billetterie</span><input class="si-tk-url" value="${esc(tk.url||'')}" placeholder="https://…"></label>
         <label class="field"><span>Texte d'introduction (optionnel)</span><input class="si-tk-intro" value="${esc(tk.intro||'')}"></label>
       </div></details>
-    <label class="mini" style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" class="si-actif" ${it.actif!==false?'checked':''}> Affiché sur le site</label>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
+      <label class="mini" style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="si-actif" ${it.actif!==false?'checked':''}> Affiché sur le site</label>
+      <label class="mini" style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="si-aspage" ${it.as_page!==false?'checked':''}> Ouvrir une page détail (sinon popup)</label>
+    </div>
     <div class="buttons" style="margin-top:12px;flex-wrap:wrap"><button type="button" class="btn grey si-cancel">Annuler</button><button type="button" class="btn grey si-preview">👁 Prévisualiser</button><button type="button" class="btn si-ok">Valider</button></div></div>`;
   document.body.appendChild(ov);
   const sel=s=>ov.querySelector(s); const close=()=>ov.remove();
@@ -2620,6 +2647,9 @@ function salonItemModal(it, evs, onSave){
   sel('.si-img').addEventListener('click',()=>mediaPicker(url=>{ ed.focus(); document.execCommand('insertHTML',false,'<p style="text-align:center"><img src="'+url+'" style="max-width:100%;height:auto;border-radius:6px;margin:10px 0"></p><p><br></p>'); }));
   // Couleur d'accent (live sur l'éditeur)
   sel('.si-color').addEventListener('input',e=>{ ed.style.setProperty('--acc', e.target.value); });
+  // Thème de l'éditeur selon le modèle (sombre pour « Page événement »)
+  function setEditorTheme(){ const dark=!!(SALON_TEMPLATES[sel('.si-tpl').value]||{}).dark; ed.style.background=dark?'#11141d':'#ffffff'; ed.style.color=dark?'#e8ecf4':'#1a1a1a'; }
+  setEditorTheme(); sel('.si-tpl').addEventListener('change',setEditorTheme);
   // Blocs insérables n'importe où
   ov.querySelectorAll('.si-blocks [data-blk]').forEach(b=>b.addEventListener('click',()=>{
     const kind=b.dataset.blk;
@@ -2627,13 +2657,13 @@ function salonItemModal(it, evs, onSave){
     else { ed.focus(); document.execCommand('insertHTML',false,salonBlockHTML(kind)); }
   }));
   sel('.si-gen').addEventListener('click',()=>{ const s=salonPhrase(sel('.si-dd').value,sel('.si-hd').value.trim(),sel('.si-df').value,sel('.si-hf').value.trim()); if(s){ sel('.si-sous').value=s; if(!sel('.si-annee').value){ const y=(sel('.si-dd').value||'').slice(0,4); if(y) sel('.si-annee').value=y; } toast('Sous-titre généré'); } else toast('Renseigne au moins la date de début.'); });
-  sel('.si-tpl-apply').addEventListener('click',()=>{ const tpl=SALON_TEMPLATES[sel('.si-tpl').value]; if(!tpl) return; const apply=()=>{ ed.innerHTML=tpl.html; }; if(ed.innerHTML.trim()) confirmChoice('Insérer le modèle « '+tpl.label+' » ? Cela remplacera le contenu actuel de la fiche.','Remplacer','Annuler',apply); else apply(); });
+  sel('.si-tpl-apply').addEventListener('click',()=>{ const tpl=SALON_TEMPLATES[sel('.si-tpl').value]; if(!tpl) return; const apply=()=>{ ed.innerHTML=tpl.html; setEditorTheme(); }; if(ed.innerHTML.trim()) confirmChoice('Insérer le modèle « '+tpl.label+' » ? Cela remplacera le contenu actuel de la fiche.','Remplacer','Annuler',apply); else apply(); });
   sel('.si-html-paste').addEventListener('click',()=>{ htmlPasteOverlay(html=>{ const apply=()=>{ ed.innerHTML=html; }; if(ed.innerHTML.trim()) confirmChoice('Remplacer le contenu actuel par le HTML collé ?','Remplacer','Annuler',apply); else apply(); }); });
   sel('.si-event').addEventListener('change',e=>{ const ev=evs.find(x=>String(x.id)===e.target.value); if(ev){ if(!sel('.si-titre').value) sel('.si-titre').value=ev.nom||''; if(!sel('.si-dd').value && ev.date_debut) sel('.si-dd').value=ev.date_debut; if(!sel('.si-df').value && ev.date_fin) sel('.si-df').value=ev.date_fin; if(!img && (ev.affiche||ev.photo)){ img=ev.affiche||ev.photo; sel('.si-prev').style.backgroundImage=`url('${img}')`; } } });
   function collect(){
     return { id:it.id, annee:sel('.si-annee').value.trim(), titre:sel('.si-titre').value.trim(), sous_titre:sel('.si-sous').value.trim(),
       date_debut:sel('.si-dd').value, heure_debut:sel('.si-hd').value.trim(), date_fin:sel('.si-df').value, heure_fin:sel('.si-hf').value.trim(),
-      image:img, popup_html:ed.innerHTML.trim(), event_id:sel('.si-event').value||null, template_key:sel('.si-tpl').value, template_color:sel('.si-color').value, actif:sel('.si-actif').checked, ordre:it.ordre,
+      image:img, popup_html:ed.innerHTML.trim(), event_id:sel('.si-event').value||null, template_key:sel('.si-tpl').value, template_color:sel('.si-color').value, as_page:sel('.si-aspage').checked, actif:sel('.si-actif').checked, ordre:it.ordre,
       ticketing:{ enabled:sel('.si-tk-on').checked, label:sel('.si-tk-label').value.trim(), url:sel('.si-tk-url').value.trim(), intro:sel('.si-tk-intro').value.trim(), status:sel('.si-tk-status').value } };
   }
   sel('.si-preview').addEventListener('click',()=>salonPreview(collect()));
@@ -2650,16 +2680,17 @@ function htmlPasteOverlay(onInsert){
 }
 // Aperçu de la fiche/popup telle qu'elle s'affichera
 function salonPreview(it){
-  const tk=it.ticketing||{};
-  const tkHtml = (tk.enabled && tk.status!=='desactivee') ? `<div style="margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--card)">${tk.intro?`<p style="margin:0 0 8px">${esc(tk.intro)}</p>`:''}${tk.status==='complete'?'<strong>🎟️ Complet</strong>':tk.status==='terminee'?'<strong>Événement terminé</strong>':tk.status==='bientot'?'<strong>Billetterie bientôt disponible</strong>':`<a class="btn" href="${esc(tk.url||'#')}" target="_blank" style="text-decoration:none">${esc(tk.label||'Réserver')}</a>`}</div>` : '';
+  const tk=it.ticketing||{}; const dark=!!(SALON_TEMPLATES[it.template_key]||{}).dark;
+  const acc=/^#([0-9a-f]{6})$/i.test(it.template_color||'')?it.template_color:'#467ff7';
+  const tkHtml = (tk.enabled && tk.status!=='desactivee') ? `<div style="margin-top:16px;padding:14px;border:1px solid ${dark?'rgba(255,255,255,.15)':'var(--line)'};border-radius:10px">${tk.intro?`<p style="margin:0 0 8px">${esc(tk.intro)}</p>`:''}${tk.status==='complete'?'<strong>🎟️ Complet</strong>':tk.status==='terminee'?'<strong>Événement terminé</strong>':tk.status==='bientot'?'<strong>Billetterie bientôt disponible</strong>':`<a href="${esc(tk.url||'#')}" target="_blank" style="display:inline-block;background:${acc};color:#fff;text-decoration:none;font-weight:700;padding:11px 22px;border-radius:100px">${esc(tk.label||'Réserver')}</a>`}</div>` : '';
   const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1350';
-  ov.innerHTML=`<div class="modal modal-wide" style="padding:0;overflow:hidden">
+  ov.innerHTML=`<div class="modal modal-wide" style="padding:0;overflow:hidden;${dark?'background:#0d1018;color:#e8ecf4':''}">
     ${it.image?`<img src="${esc(it.image)}" style="width:100%;max-height:280px;object-fit:cover;display:block">`:''}
     <div style="padding:22px 24px">
-      <div style="color:var(--teal-d);font-weight:700">${esc(it.annee||'')}</div>
-      <h3 style="margin:4px 0 4px">${esc(it.titre||'')}</h3>
-      <div style="color:var(--muted);margin-bottom:12px">${esc(it.sous_titre||'')}</div>
-      <div style="line-height:1.6;--acc:${/^#([0-9a-f]{6})$/i.test(it.template_color||'')?it.template_color:'#467ff7'}">${it.popup_html||''}</div>
+      <div style="color:${acc};font-weight:700">${esc(it.annee||'')}</div>
+      <h3 style="margin:4px 0 4px;${dark?'color:#fff':''}">${esc(it.titre||'')}</h3>
+      <div style="color:${dark?'rgba(255,255,255,.6)':'var(--muted)'};margin-bottom:12px">${esc(it.sous_titre||'')}</div>
+      <div style="line-height:1.6;--acc:${acc}">${it.popup_html||''}</div>
       ${tkHtml}
       <div class="buttons" style="margin-top:16px"><button type="button" class="btn grey sp-prev-close">Fermer l'aperçu</button></div>
     </div></div>`;

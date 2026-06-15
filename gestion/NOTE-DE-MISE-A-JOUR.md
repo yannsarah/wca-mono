@@ -2,6 +2,15 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.23 — 15 juin 2026**
+## Salons : vraie page détail (façon affiche événement)
+- Nouvelle **page détail** d'un salon sur le site (sombre, style arcade) : grand visuel en hero, titre, dates, contenu riche, billetterie, et boutons « Retour à nos salons / Voir les autres événements / Nous contacter ».
+- Nouveau modèle **« Page événement (sombre) »** prérempli (introduction, cartes infos Date/Lieu/Type/Machines/Public, retour sur l'événement, cartes « ce que nous avons présenté », galerie, citation).
+- Nouveaux blocs insérables : **Cartes infos**, **Cartes programme**, **Citation** (en plus de Section, Image+texte, Galerie, Bande, Bouton).
+- L'éditeur passe en **thème sombre** pour ce modèle (aperçu fidèle). Choix par salon : **ouvrir une page détail** ou rester en popup.
+
+---
+
 **Version 2.8.22 — 15 juin 2026**
 ## Fiche salon : 2ᵉ modèle + couleur réglable + blocs
 - Nouveau modèle **« Affiche événement »** (grand titre coloré, bande de couleur, programme, galerie…).

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salon — West Coast Arcades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--acc:#7C5CFF;--heebo:'Heebo',sans-serif;--poppins:'Poppins',sans-serif;}
+*{box-sizing:border-box;}
+body{margin:0;background:#0c0f17;color:#e8ecf4;font-family:var(--heebo);}
+a{color:inherit;}
+.container{max-width:960px;margin:0 auto;padding:0 18px;}
+/* Header */
+.sp-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;max-width:1100px;margin:0 auto;}
+.sp-logo{display:flex;align-items:center;gap:10px;font-family:var(--poppins);font-weight:700;letter-spacing:1px;}
+.sp-logo img{height:34px;width:auto;}
+.sp-back{display:inline-block;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:9px 16px;text-decoration:none;font-weight:600;font-size:14px;}
+.sp-back:hover{background:rgba(255,255,255,.08);}
+/* Hero */
+.sp-hero{position:relative;min-height:420px;display:flex;align-items:flex-end;background:#11141d center/cover no-repeat;}
+.sp-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,10,16,.92) 0%,rgba(8,10,16,.55) 55%,rgba(8,10,16,.25) 100%);}
+.sp-hero .inner{position:relative;z-index:2;max-width:1100px;margin:0 auto;width:100%;padding:46px 18px 40px;}
+.sp-eyebrow{color:var(--acc);font-weight:700;letter-spacing:1px;font-size:14px;text-transform:uppercase;}
+.sp-hero h1{font-family:var(--poppins);font-weight:700;font-size:46px;line-height:1.05;margin:8px 0 0;text-transform:uppercase;}
+.sp-underline{width:64px;height:4px;background:var(--acc);border-radius:3px;margin:16px 0;}
+.sp-hero .sub{font-size:17px;color:rgba(255,255,255,.82);max-width:560px;}
+/* Content */
+.sp-content{padding:36px 0 10px;line-height:1.7;}
+.sp-content h2{font-family:var(--poppins);font-weight:700;font-size:26px;color:#fff;margin:18px 0 10px;}
+.sp-content h3{font-family:var(--poppins);font-weight:700;color:var(--acc);margin:18px 0 6px;}
+.sp-content p{color:rgba(255,255,255,.82);}
+.sp-content ul{color:rgba(255,255,255,.82);margin:0 0 14px 20px;}
+.sp-content a{color:var(--acc);}
+.sp-content img{max-width:100%;height:auto;border-radius:10px;}
+/* Ticketing */
+.sp-ticket{margin:20px 0;padding:18px 20px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(255,255,255,.04);}
+.sp-ticket .btn{display:inline-block;background:var(--acc);color:#fff;text-decoration:none;font-weight:700;padding:12px 26px;border-radius:100px;margin-top:6px;}
+/* Footer nav */
+.sp-foot{max-width:1100px;margin:30px auto 50px;padding:0 18px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.sp-foot a{border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:13px 22px;text-decoration:none;font-weight:600;}
+.sp-foot a.primary{background:var(--acc);border-color:var(--acc);}
+.sp-foot a:hover{background:rgba(255,255,255,.08);}
+@media(max-width:768px){ .sp-hero h1{font-size:32px;} .sp-hero{min-height:340px;} }
+</style>
+</head>
+<body>
+<div class="sp-head">
+  <a class="sp-logo" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="West Coast Arcades"><span>WEST&nbsp;COAST&nbsp;ARCADES</span></a>
+  <a class="sp-back" href="nos-salons.html">← Retour à nos salons</a>
+</div>
+
+<section class="sp-hero" id="spHero">
+  <div class="inner">
+    <div class="sp-eyebrow" id="spEyebrow"></div>
+    <h1 id="spTitle">Salon</h1>
+    <div class="sp-underline"></div>
+    <p class="sub" id="spSub"></p>
+  </div>
+</section>
+
+<main class="container">
+  <div class="sp-content" id="spBody"></div>
+  <div id="spTicket"></div>
+</main>
+
+<div class="sp-foot">
+  <a href="nos-salons.html">← Retour à nos salons</a>
+  <a href="nos-salons.html" class="primary">Voir les autres événements</a>
+  <a href="contact.html">✉ Nous contacter</a>
+</div>
+
+<script src="assets/js/wca-api.js"></script>
+<script>
+(async function(){
+  if(!window.WCA) return;
+  var id=new URLSearchParams(location.search).get('id');
+  var data; try{ data=await WCA.getJSON('salons'); }catch(e){ location.href='nos-salons.html'; return; }
+  var it=(data.items||[]).filter(function(x){ return String(x.id)===String(id); })[0];
+  if(!it){ location.href='nos-salons.html'; return; }
+  var acc=it.template_color||'#7C5CFF';
+  document.documentElement.style.setProperty('--acc', acc);
+  if(it.image){ document.getElementById('spHero').style.backgroundImage="url('"+WCA.esc(it.image)+"')"; }
+  document.getElementById('spEyebrow').textContent=it.sous_titre||it.annee||'';
+  document.getElementById('spTitle').textContent=it.titre||'';
+  document.getElementById('spSub').textContent='';
+  document.title=(it.titre||'Salon')+' — West Coast Arcades';
+  document.getElementById('spBody').innerHTML=it.popup_html||'';
+  // billetterie
+  var tk=it.ticketing;
+  if(tk && tk.enabled && tk.status!=='desactivee'){
+    var inner;
+    if(tk.status==='complete') inner='<strong>🎟️ Complet</strong>';
+    else if(tk.status==='terminee') inner='<strong>Événement terminé</strong>';
+    else if(tk.status==='bientot') inner='<strong>Billetterie bientôt disponible</strong>';
+    else inner='<a class="btn" href="'+WCA.esc(tk.url||'#')+'" target="_blank" rel="noopener">'+WCA.esc(tk.label||'Réserver')+'</a>';
+    document.getElementById('spTicket').innerHTML='<div class="sp-ticket">'+(tk.intro?'<p style="margin:0 0 6px">'+WCA.esc(tk.intro)+'</p>':'')+inner+'</div>';
+  }
+})();
+</script>
+</body>
+</html>

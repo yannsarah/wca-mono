@@ -137,7 +137,10 @@
         tl.innerHTML=items.map(function(it,i){
           var img=it.image?'<br><br><img src="'+WCA.esc(it.image)+'" alt="'+WCA.esc(it.titre)+'">':'';
           var sub=it.sous_titre?'<p>'+WCA.esc(it.sous_titre)+'</p>':'';
-          return '<div class="ev"><span class="dot"></span><div class="yr">'+WCA.esc(it.annee)+'</div><h3>'+WCA.esc(it.titre)+'</h3>'+sub+'<a class="btn btn-rent js-salon-btn" data-i="'+i+'" href="#">Voir la page Évènement</a>'+img+'</div>';
+          var btn = (it.as_page!==false)
+            ? '<a class="btn btn-rent" href="salon.html?id='+encodeURIComponent(it.id)+'">Voir la page Évènement</a>'
+            : '<a class="btn btn-rent js-salon-btn" data-i="'+i+'" href="#">Voir la page Évènement</a>';
+          return '<div class="ev"><span class="dot"></span><div class="yr">'+WCA.esc(it.annee)+'</div><h3>'+WCA.esc(it.titre)+'</h3>'+sub+btn+img+'</div>';
         }).join('');
         tl.addEventListener('click',function(e){ var b=e.target.closest('.js-salon-btn'); if(!b) return; e.preventDefault(); var it=items[+b.dataset.i]; if(it) openPop(it); });
       }

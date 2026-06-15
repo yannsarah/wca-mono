@@ -180,7 +180,7 @@ export function handlePublic(req, res, pathname, searchParams) {
         return {
           id: it.id, annee: it.annee || '', titre: it.titre || '', sous_titre: it.sous_titre || '',
           image: it.image || '', popup_html: it.popup_html || '', event_id: it.event_id || null,
-          template_color: it.template_color || '',
+          template_color: it.template_color || '', as_page: it.as_page !== false,
           date_debut: it.date_debut || '', heure_debut: it.heure_debut || '', date_fin: it.date_fin || '', heure_fin: it.heure_fin || '',
           ticketing: tk.enabled ? { enabled: true, label: tk.label || 'Réserver', url: tk.url || '', intro: tk.intro || '', status: tk.status || 'ouverte' } : null,
         };

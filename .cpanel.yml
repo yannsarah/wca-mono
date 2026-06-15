@@ -9,6 +9,7 @@ deployment:
     - /bin/cp -f site/index.html $SITEPATH/
     - /bin/cp -f site/nos-machines.html $SITEPATH/
     - /bin/cp -f site/nos-salons.html $SITEPATH/
+    - /bin/cp -f site/salon.html $SITEPATH/
     - /bin/cp -f site/les-projets.html $SITEPATH/
     - /bin/cp -f site/projet-virtua-racing.html $SITEPATH/
     - /bin/cp -f site/projet-virtua-fighter-2.html $SITEPATH/
