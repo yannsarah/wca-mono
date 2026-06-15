@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.28 — 15 juin 2026**
+## Filtre inventaire + droits par groupe
+- **Inventaire** : le bouton d'état est maintenant un **3 positions** : Tous → ⛔ Non fonctionnels → ✅ Fonctionnels (clic pour faire défiler).
+- **Droits** : le groupe **Technicien** n'a plus accès à **Devis** ni à **Site internet** (menus masqués + accès bloqué côté serveur).
+- Nouveau groupe **Webmaster** : mêmes droits que Technicien **+ Site internet** (mais toujours pas les Devis). L'**Administrateur** garde tout.
+
+---
+
 **Version 2.8.27 — 15 juin 2026**
 ## Correctif majeur : modifications parfois « non prises en compte »
 - Sur le serveur, plusieurs processus tournaient en parallèle, chacun avec sa copie des données en mémoire : après une modification (WIP, mais aussi inventaire, devis…), une partie des affichages montrait encore l'ancienne version (« 3 fois sur 4 », la modif « disparaissait » à la réouverture).

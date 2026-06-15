@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.27'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.28'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -229,9 +229,19 @@ async function loadMateriel(){ MAT_CACHE = await api('/api/materiel'); return MA
 function matOptions(selectedId){ return MAT_CACHE.map(m=>`<option value="${m.id}" ${+selectedId===m.id?'selected':''}>${esc(m.denomination)}${m.categorie?' — '+esc(m.categorie):''}</option>`).join(''); }
 
 /* ------------------------------- Coquille / nav ------------------------------- */
+// Accès par rôle : le technicien n'a ni Devis ni Site internet ; le webmaster a tout du technicien + Site internet ;
+// l'admin a tout ; l'invité (lecture seule) voit tout en démo.
+function navAllowed(navId){
+  if(isAdminUser()||isReadonly()) return true;
+  const role = CURRENT_USER && CURRENT_USER.role;
+  if(navId==='devis') return false;
+  if(navId==='site') return role==='webmaster';
+  return true;
+}
 function buildNav(){
   const items = NAV.filter(n => {
     if(n.admin && !(isAdminUser()||isReadonly())) return false;
+    if(!navAllowed(n.id)) return false;
     if(n.mod && !moduleOn(n.mod)) return false;
     const ck = NAV_HIDEABLE[n.id];
     if(ck){ const ov=NAV_VIS[n.id]; if(ov==='show') return true; if(ov==='hide') return false; return (NAV_COUNTS[ck]||0)>0; }
@@ -262,6 +272,7 @@ const view = () => $('#view');
 function render(){
   const nv=NAV.find(n=>n.id===state.view);
   if(nv && nv.mod && !moduleOn(nv.mod)){ state.view='accueil'; }
+  if(!navAllowed(state.view)){ state.view='accueil'; }
   const map={ accueil:renderAccueil, inventaire:renderInventaire, devis:renderDevis, evenements:renderEvenements,
     projets:renderProjets, reparations:renderReparations, ventes:renderVentes, prets:renderPrets, site:renderSiteInternet, users:renderUsers, reglages:renderReglages, asso:renderAsso, mediatheque:renderMediatheque };
   (map[state.view]||renderAccueil)();
@@ -284,10 +295,10 @@ async function renderAccueil(){
   if(S.metrics){ try{
     const d = await api('/api/dashboard');
     const M=[
-      ['Matériel total', d.materiel_total, '', ()=>{ INV.nonfonc=false; INV.cat=''; setView('inventaire'); }],
-      ['Disponibles', d.materiel_dispo, 'accent', ()=>{ INV.nonfonc=false; INV.cat=''; setView('inventaire'); }],
-      ['Bloqués', d.materiel_bloque, '', ()=>{ INV.nonfonc=false; INV.cat=''; setView('inventaire'); }],
-      ['Hors service', d.materiel_hs, '', ()=>{ INV.nonfonc=true; INV.cat=''; setView('inventaire'); }],
+      ['Matériel total', d.materiel_total, '', ()=>{ INV.nonfonc=''; INV.cat=''; setView('inventaire'); }],
+      ['Disponibles', d.materiel_dispo, 'accent', ()=>{ INV.nonfonc=''; INV.cat=''; setView('inventaire'); }],
+      ['Bloqués', d.materiel_bloque, '', ()=>{ INV.nonfonc=''; INV.cat=''; setView('inventaire'); }],
+      ['Hors service', d.materiel_hs, '', ()=>{ INV.nonfonc='non'; INV.cat=''; setView('inventaire'); }],
       ['Devis actifs', d.devis_actifs, '', ()=>{ DEV_TAB='devis'; setView('devis'); }],
       ['Réparations', d.reparations_en_cours, '', ()=>{ REP_TAB='interv'; setView('reparations'); }],
       ['Prêts en cours', d.prets_en_cours, '', ()=>setView('prets')],
@@ -304,7 +315,7 @@ async function renderAccueil(){
       { id:'reparations', t:'Réparations', d:'Suivi des pannes & interventions', c:'ic-amber', tc:'#e0830f', i:'wrench', mod:'reparations' },
       { id:'ventes', t:'Ventes', d:'Matériel vendu', c:'ic-green', tc:'var(--green)', i:'tag', mod:'ventes' },
       { id:'prets', t:'Prêts', d:'Matériel prêté & retours', c:'ic-blue', tc:'var(--blue)', i:'share', mod:'prets' },
-    ].filter(c=>!c.mod||moduleOn(c.mod));
+    ].filter(c=>(!c.mod||moduleOn(c.mod)) && navAllowed(c.id));
     $('#quick').innerHTML = cards.map(c=>`<div class="home-card" data-go="${c.id}">
         <span class="h-ico ${c.c}">${icon(c.i)}</span>
         <div class="h-txt"><h4 style="color:${c.tc}">${c.t}</h4><p>${c.d}</p></div>${icon('chevron','ic h-chev')}</div>`).join('');
@@ -352,7 +363,7 @@ async function loadWidget(w, el){
   const defs={
     inventaire: async()=>{ let l=(await api('/api/materiel?all=1')).filter(m=>!m.archive); if(w.cat) l=l.filter(m=>(m.categorie||'Autre')===w.cat); if(w.nonfonc) l=l.filter(m=>m.fonctionnel===false);
       return { title:'Inventaire'+(w.cat?' — '+w.cat:'')+(w.nonfonc?' (HS)':''), list:l, n:w.n, empty:'Aucun article.',
-        row:m=>`<span>${esc(m.denomination)}${m.en_wip?' <span class="statut wip">EN WIP</span>':''}</span>${statutBadge(m)}`, go:()=>{ INV.cat=w.cat||''; INV.nonfonc=!!w.nonfonc; setView('inventaire'); }, open:m=>materielModal(m) }; },
+        row:m=>`<span>${esc(m.denomination)}${m.en_wip?' <span class="statut wip">EN WIP</span>':''}</span>${statutBadge(m)}`, go:()=>{ INV.cat=w.cat||''; INV.nonfonc=w.nonfonc?'non':''; setView('inventaire'); }, open:m=>materielModal(m) }; },
     reparations: async()=>{ const l=(await api('/api/reparations')).filter(r=>r.statut!=='termine'&&!r.archive);
       return { title:'Réparations en cours', list:l, n:w.n, empty:'Aucune réparation.',
         row:r=>`<span>${esc(r.denomination)}</span><span class="pill-st ${r.statut}">${REP_STATUTS[r.statut]||r.statut}</span>`, go:()=>{ REP_TAB='interv'; setView('reparations'); }, open:r=>reparationModal(r) }; },
@@ -583,7 +594,9 @@ function statutBadge(m){
   return `<span class="statut dispo">Disponible</span>`;
 }
 let INV_ALL = [];
-const INV = { q:'', cat:'', nonfonc:false };
+const INV = { q:'', cat:'', nonfonc:'' }; // '' = tous · 'non' = non fonctionnels · 'oui' = fonctionnels
+function nfBtnLabel(){ return INV.nonfonc==='oui' ? '✅ Fonctionnels' : '⛔ Non fonctionnels'; }
+function nfBtnClass(){ return INV.nonfonc==='oui' ? 'green' : (INV.nonfonc==='non' ? 'red' : 'outline'); }
 const INV_COLS = [
   { key:'photo', label:'Photo' }, { key:'categorie', label:'Catégorie' }, { key:'emplacement', label:'Emplacement' },
   { key:'proprietaire', label:'Propriétaire' }, { key:'etat', label:'État' }, { key:'fonctionnel', label:'Fonctionnel' }, { key:'statut', label:'Statut' },
@@ -615,10 +628,10 @@ async function renderInventaire(){
   $('#cols-btn').addEventListener('click',colonnesModal);
   $('#gerer-btn').addEventListener('click',gererModal);
   view().innerHTML = `${segArchHtml('inventaire')}<div class="toolbar"><div class="search${INV.q?' has-val':''}">${icon('search')}<input id="mat-q" value="${esc(INV.q)}" placeholder="Rechercher (nom, catégorie, emplacement)…"><button type="button" class="search-clear" tabindex="-1" aria-label="Effacer">×</button></div>
-      <button class="btn ${INV.nonfonc?'red':'outline'} small" id="nf-btn" title="Voir le travail à faire pour les WIP">⛔ Non fonctionnels</button></div>
+      <button class="btn ${nfBtnClass()} small" id="nf-btn" title="Filtrer par état : Tous → Non fonctionnels → Fonctionnels">${nfBtnLabel()}</button></div>
     <div id="cat-pills" class="cat-pills"></div><div id="mat-list"></div>`;
   wireSegArch('inventaire',()=>renderInventaire());
-  $('#nf-btn').addEventListener('click',()=>{ INV.nonfonc=!INV.nonfonc; $('#nf-btn').classList.toggle('red',INV.nonfonc); $('#nf-btn').classList.toggle('outline',!INV.nonfonc); renderMatList(); });
+  $('#nf-btn').addEventListener('click',()=>{ INV.nonfonc = INV.nonfonc==='non' ? 'oui' : (INV.nonfonc==='oui' ? '' : 'non'); const b=$('#nf-btn'); b.textContent=nfBtnLabel(); b.className='btn '+nfBtnClass()+' small'; renderMatList(); });
   $('#mat-q').addEventListener('input', ()=>{ INV.q=$('#mat-q').value; renderMatList(); });
   loadMatList();
 }
@@ -644,7 +657,8 @@ function renderMatList(){
   const q=(INV.q||'').trim().toLowerCase();
   const base=archFilter(INV_ALL,'inventaire');
   const list=base.filter(m=>{
-    if(INV.nonfonc && m.fonctionnel!==false) return false;
+    if(INV.nonfonc==='non' && m.fonctionnel!==false) return false;
+    if(INV.nonfonc==='oui' && m.fonctionnel===false) return false;
     if(INV.cat && (m.categorie||'Autre')!==INV.cat) return false;
     if(q && ![m.denomination,m.categorie,m.emplacement,m.numero_serie].some(v=>(v||'').toLowerCase().includes(q))) return false;
     return true;

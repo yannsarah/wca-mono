@@ -1649,6 +1649,9 @@ add('GET', '/api/dashboard', (req, res) => {
 
 /* =============================== COMPTES & SESSION =============================== */
 function requireAdmin(user, res) { if (!user || roleNiveau(user.role) !== 'admin') { send(res, 403, { error: 'Réservé aux administrateurs.' }); return false; } return true; }
+// Accès par section : technicien (standard) n'a ni Devis ni Site internet ; webmaster a le Site internet ; admin/lecture ont tout.
+function canDevis(user) { const n = roleNiveau(user && user.role); return n === 'admin' || n === 'lecture'; }
+function canSite(user) { const n = roleNiveau(user && user.role); return n === 'admin' || n === 'lecture' || (user && user.role === 'webmaster'); }
 // Lecture des pages admin : autorisée aux administrateurs ET aux invités (lecture seule, pour la démo).
 function requireView(user, res) { const n = roleNiveau(user && user.role); if (n === 'admin' || n === 'lecture') return true; send(res, 403, { error: 'Réservé aux administrateurs.' }); return false; }
 
@@ -1859,6 +1862,11 @@ http.createServer((req, res) => {
         // Niveau « lecture » : lecture seule (uniquement GET + déconnexion).
         if (user && roleNiveau(user.role) === 'lecture' && req.method !== 'GET' && !(req.method === 'POST' && pathname === '/api/logout'))
           return send(res, 403, { error: 'Mode lecture seule : modification non autorisée.' });
+        // Accès par section (défense côté serveur, en plus du masquage des menus).
+        if (pathname.startsWith('/api/devis') && !canDevis(user))
+          return send(res, 403, { error: 'Accès aux devis non autorisé pour votre groupe.' });
+        if ((pathname === '/api/site' || pathname.startsWith('/api/salons') || pathname.startsWith('/api/articles')) && !canSite(user))
+          return send(res, 403, { error: 'Accès au site internet non autorisé pour votre groupe.' });
         for (const r of routes) {
           if (r.method !== req.method) continue;
           const params = matchRoute(r.pattern, pathname);
@@ -1883,6 +1891,11 @@ http.createServer((req, res) => {
       if (!Array.isArray(d.settings.roles) || !d.settings.roles.length) d.settings.roles = DEFAULT_ROLES.map(r => ({ ...r }));
       if (!d.settings.roles.some(r => r.key === 'membre')) d.settings.roles.push({ key: 'membre', label: 'Membre asso actif', niveau: 'lecture' });
       d.settings._membre_role_v1 = true;
+    }
+    if (d.settings && !d.settings._webmaster_role_v1) {
+      if (!Array.isArray(d.settings.roles) || !d.settings.roles.length) d.settings.roles = DEFAULT_ROLES.map(r => ({ ...r }));
+      if (!d.settings.roles.some(r => r.key === 'webmaster')) d.settings.roles.push({ key: 'webmaster', label: 'Webmaster (site internet)', niveau: 'standard' });
+      d.settings._webmaster_role_v1 = true;
     }
     save();
   } catch (e) { logFatal('ensureCollections', e); }
