@@ -2,6 +2,12 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.26 — 15 juin 2026**
+## Accueil : espacement sous l'encart « Prochain WIP »
+- Ajout d'un espace sous l'encart du prochain WIP, pour ne plus qu'il soit collé aux compteurs.
+
+---
+
 **Version 2.8.25 — 15 juin 2026**
 ## Correctif : médiathèque toujours au premier plan
 - La médiathèque s'ouvrait **derrière** la fenêtre « Modifier le salon » (et d'autres fenêtres), ce qui bloquait l'écran. Elle s'affiche désormais **au-dessus de toutes les fenêtres**.

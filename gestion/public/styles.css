@@ -117,6 +117,7 @@ svg.ic{width:20px;height:20px;flex-shrink:0}
 .section-title{font-size:13px;font-weight:700;color:var(--teal-d);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
 
 /* ============================== CARTES MÉTRIQUES ============================== */
+#alertes:not(:empty){margin-bottom:18px}
 .metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px}
 .metric.clic{cursor:pointer;transition:.12s}
 .metric.clic:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--teal)}
