@@ -22,14 +22,18 @@ import { db } from '../store.js';
 const ALLOW_ORIGINS = [
   'https://www.westcoastarcades.fr',
   'https://westcoastarcades.fr',
+  'https://v2.westcoastarcades.fr',
   'http://localhost:3000',
   'http://localhost:8080',
   'http://127.0.0.1:5500', // Live Server (dev)
 ];
+// Autorise aussi TOUT sous-domaine de westcoastarcades.fr (v2, preprod, etc.) en HTTPS.
+const ALLOW_RE = /^https:\/\/([a-z0-9-]+\.)*westcoastarcades\.fr$/i;
 
 function cors(req, res) {
   const origin = req.headers.origin || '';
-  const allow = ALLOW_ORIGINS.includes(origin) ? origin : ALLOW_ORIGINS[0];
+  const ok = ALLOW_ORIGINS.includes(origin) || ALLOW_RE.test(origin);
+  const allow = ok ? origin : ALLOW_ORIGINS[0];
   res.setHeader('Access-Control-Allow-Origin', allow);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');

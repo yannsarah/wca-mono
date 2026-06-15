@@ -2,6 +2,12 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.31 — 16 juin 2026**
+## API publique : autoriser le sous-domaine V2 (CORS)
+- L'API publique (lue par le site) autorise désormais **`v2.westcoastarcades.fr`** et **tout sous-domaine** de westcoastarcades.fr (preprod, etc.) à charger les données. Sans ça, le nouveau site V2 affichait des sections vides (« Aucune machine ») alors que les données étaient bien publiées.
+
+---
+
 **Version 2.8.30 — 15 juin 2026**
 ## Hero vidéo, événements, salons & page Utilisateurs
 - **Site – Hero vidéo YouTube** : plus de « flash » des boutons YouTube au chargement. Un rideau (identique à l'image de fond) masque la vidéo pendant son lancement puis se fond en douceur. Paramètres durcis (`controls=0`, `modestbranding=1`, `rel=0`, `fs=0`, `iv_load_policy=3`, autoplay/mute/loop/playsinline).
