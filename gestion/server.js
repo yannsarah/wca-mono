@@ -1037,6 +1037,15 @@ add('PUT', '/api/asso', (req, res, p, body, query, user) => {
   save(); send(res, 200, s.asso);
 });
 
+// Soustrait n mois à une date ISO (yyyy-mm-dd). Sert au calcul de la relance (AG − 2 mois).
+function dateMinusMonths(iso, n) {
+  if (!iso) return '';
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!y || !m) return '';
+  const dt = new Date(y, m - 1, d || 1);
+  dt.setMonth(dt.getMonth() - n);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
 // --- Campagnes de cotisation (réglages annuels, base des lettres) ---
 const CAMP_FIELDS = ['annee', 'montant', 'ag_date', 'periode_debut', 'periode_fin', 'echeance', 'echeance2', 'rappel', 'mode_paiement', 'statut_article'];
 add('GET', '/api/asso/campagnes', (req, res, p, body, query, user) => {
@@ -1050,6 +1059,9 @@ add('POST', '/api/asso/campagnes', (req, res, p, body, query, user) => {
   let c = s.cotisation_campagnes.find(x => String(x.annee) === annee);
   if (!c) { c = { annee }; s.cotisation_campagnes.push(c); }
   CAMP_FIELDS.forEach(k => { if (body[k] !== undefined) c[k] = body[k]; });
+  // Relance = 2 mois avant l'AG. Filet de sécurité : si la date d'AG est connue
+  // mais que la relance n'a pas été fixée à la main, on la (re)calcule.
+  if (c.ag_date && !c.rappel) c.rappel = dateMinusMonths(c.ag_date, 2);
   s.cotisation_campagnes.sort((a, b) => String(b.annee).localeCompare(String(a.annee)));
   save(); send(res, 200, c);
 });
@@ -1148,6 +1160,114 @@ add('DELETE', '/api/membres/:id/cotisation/:annee', (req, res, p, body, query, u
   const u = db().users.find(x => x.id === +p.id); if (!u) return send(res, 404, { error: 'Membre introuvable.' });
   u.cotisations = (u.cotisations || []).filter(x => String(x.annee) !== String(p.annee));
   save(); send(res, 200, memberView(u));
+});
+
+/* =============================== CARNET D'ADRESSES =============================== */
+// Annuaire central de toutes les personnes connues de l'association (membres, anciens
+// membres, contacts salons, partenaires, prestataires, mairie, presse…). Un contact
+// peut être relié à un compte utilisateur (user_id) et/ou à un membre extérieur.
+const CARNET_FIELDS = ['prenom', 'nom', 'email', 'telephone', 'adresse', 'code_postal', 'ville', 'type', 'groupe', 'organisation', 'notes'];
+function carnetCanEdit(user) { const n = roleNiveau(user && user.role); return n === 'admin' || n === 'standard'; }
+function carnetView(c) {
+  const o = { id: c.id };
+  CARNET_FIELDS.forEach(k => { o[k] = cleanStr(c[k]); });
+  o.user_id = c.user_id || null; o.membre_ext_id = c.membre_ext_id || null;
+  o.source = c.source || 'manuel'; o.cree_le = c.cree_le || '';
+  o.modif_le = c.modif_le || ''; o.modif_par = c.modif_par || '';
+  return o;
+}
+function normEmail(s) { return cleanStr(s).trim().toLowerCase(); }
+function nameKey(prenom, nom) { return (cleanStr(prenom) + '|' + cleanStr(nom)).trim().toLowerCase(); }
+// Recherche un doublon : priorité au lien (compte/membre ext), puis email, puis prénom+nom.
+function carnetFindDup(list, { email, prenom, nom, user_id, membre_ext_id }) {
+  if (user_id != null) { const f = list.find(x => x.user_id === user_id); if (f) return f; }
+  if (membre_ext_id != null) { const f = list.find(x => x.membre_ext_id === membre_ext_id); if (f) return f; }
+  const em = normEmail(email); if (em) { const f = list.find(x => normEmail(x.email) === em); if (f) return f; }
+  const key = nameKey(prenom, nom); if (key !== '|' && key !== '') { const f = list.find(x => nameKey(x.prenom, x.nom) === key); if (f) return f; }
+  return null;
+}
+// Verse (sans doublon) les comptes utilisateurs et les membres extérieurs dans le carnet.
+function importCarnet() {
+  const d = db(); if (!Array.isArray(d.carnet)) d.carnet = [];
+  let added = 0, linked = 0;
+  (d.users || []).forEach(u => {
+    const dup = carnetFindDup(d.carnet, { email: u.email, prenom: u.prenom, nom: u.nom, user_id: u.id });
+    if (dup) { if (dup.user_id == null) { dup.user_id = u.id; linked++; } }
+    else {
+      d.carnet.push({ id: nextId('carnet'), prenom: cleanStr(u.prenom), nom: cleanStr(u.nom), email: u.email || '', telephone: u.telephone || '', adresse: u.adresse || '', code_postal: u.code_postal || '', ville: u.ville || '', type: 'membre_actuel', groupe: '', organisation: '', notes: '', user_id: u.id, membre_ext_id: null, source: 'compte', cree_le: new Date().toISOString() });
+      added++;
+    }
+  });
+  const ext = Array.isArray(d.settings.membres_ext) ? d.settings.membres_ext : [];
+  ext.forEach(e => {
+    const dup = carnetFindDup(d.carnet, { email: e.email, prenom: e.prenom, nom: e.nom, membre_ext_id: e.id });
+    if (dup) { if (dup.membre_ext_id == null) { dup.membre_ext_id = e.id; linked++; } }
+    else {
+      d.carnet.push({ id: nextId('carnet'), prenom: cleanStr(e.prenom), nom: cleanStr(e.nom), email: e.email || '', telephone: e.telephone || '', adresse: e.adresse || '', code_postal: e.code_postal || '', ville: e.ville || '', type: 'membre_actuel', groupe: '', organisation: '', notes: '', user_id: null, membre_ext_id: e.id, source: 'membre_ext', cree_le: new Date().toISOString() });
+      added++;
+    }
+  });
+  save(); return { added, linked, total: d.carnet.length };
+}
+add('GET', '/api/carnet', (req, res, p, body, query, user) => {
+  const d = db(); if (!Array.isArray(d.carnet)) d.carnet = [];
+  send(res, 200, d.carnet.map(carnetView));
+});
+add('POST', '/api/carnet', (req, res, p, body, query, user) => {
+  if (!carnetCanEdit(user)) return send(res, 403, { error: 'Droits insuffisants.' });
+  const d = db(); if (!Array.isArray(d.carnet)) d.carnet = [];
+  // Rattachement éventuel à un compte (depuis la fiche utilisateur) : upsert pour éviter les doublons.
+  const linkUid = (body.user_id != null && body.user_id !== '') ? +body.user_id : null;
+  if (linkUid != null) {
+    const acc = d.users.find(x => x.id === linkUid); if (!acc) return send(res, 404, { error: 'Compte introuvable.' });
+    if (!cleanStr(body.prenom).trim() && !cleanStr(body.nom).trim()) { body.prenom = acc.prenom || ''; body.nom = acc.nom || ''; }
+    let c = d.carnet.find(x => x.user_id === linkUid);
+    if (!c) { c = { id: nextId('carnet'), user_id: linkUid, membre_ext_id: null, source: 'compte', cree_le: new Date().toISOString() }; d.carnet.push(c); }
+    CARNET_FIELDS.forEach(k => { if (body[k] !== undefined) c[k] = String(body[k]); });
+    ['email', 'telephone', 'adresse', 'code_postal', 'ville'].forEach(k => { if (body[k] !== undefined) acc[k] = String(body[k]); });
+    c.modif_le = new Date().toISOString(); c.modif_par = user ? (user.prenom || user.login) : ''; c.modif_par_id = user && user.id;
+    save(); return send(res, 200, carnetView(c));
+  }
+  if (!cleanStr(body.prenom).trim() && !cleanStr(body.nom).trim()) return send(res, 400, { error: 'Indiquez au moins un prénom ou un nom.' });
+  const c = { id: nextId('carnet'), user_id: null, membre_ext_id: null, source: 'manuel', cree_le: new Date().toISOString() };
+  CARNET_FIELDS.forEach(k => { if (body[k] !== undefined) c[k] = String(body[k]); });
+  c.modif_le = new Date().toISOString(); c.modif_par = user ? (user.prenom || user.login) : ''; c.modif_par_id = user && user.id;
+  d.carnet.push(c); save(); send(res, 200, carnetView(c));
+});
+add('PUT', '/api/carnet/:id', (req, res, p, body, query, user) => {
+  if (!carnetCanEdit(user)) return send(res, 403, { error: 'Droits insuffisants.' });
+  const c = (db().carnet || []).find(x => x.id === +p.id); if (!c) return send(res, 404, { error: 'Contact introuvable.' });
+  CARNET_FIELDS.forEach(k => { if (body[k] !== undefined) c[k] = String(body[k]); });
+  c.modif_le = new Date().toISOString(); c.modif_par = user ? (user.prenom || user.login) : ''; c.modif_par_id = user && user.id;
+  // Si le contact est relié à un compte, on synchronise nom/prénom/coordonnées côté compte.
+  if (c.user_id) {
+    const u = db().users.find(x => x.id === c.user_id);
+    if (u) { if (body.prenom !== undefined) u.prenom = cleanStr(body.prenom).trim(); if (body.nom !== undefined) u.nom = cleanStr(body.nom).trim(); ['email', 'telephone', 'adresse', 'code_postal', 'ville'].forEach(k => { if (body[k] !== undefined) u[k] = String(body[k]); }); }
+  }
+  save(); send(res, 200, carnetView(c));
+});
+add('DELETE', '/api/carnet/:id', (req, res, p, body, query, user) => {
+  if (!carnetCanEdit(user)) return send(res, 403, { error: 'Droits insuffisants.' });
+  const d = db(); d.carnet = (d.carnet || []).filter(x => x.id !== +p.id); save(); send(res, 200, { ok: true });
+});
+add('POST', '/api/carnet/import', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  send(res, 200, importCarnet());
+});
+// Crée un compte utilisateur à partir d'un contact du carnet (reprend ses informations).
+add('POST', '/api/carnet/:id/create-account', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const c = (db().carnet || []).find(x => x.id === +p.id); if (!c) return send(res, 404, { error: 'Contact introuvable.' });
+  if (c.user_id) return send(res, 400, { error: 'Ce contact a déjà un compte utilisateur.' });
+  const login = String(body.login || '').trim().toLowerCase();
+  if (!login) return send(res, 400, { error: 'Identifiant obligatoire.' });
+  if (!body.password || String(body.password).length < 3) return send(res, 400, { error: 'Mot de passe (3 caractères minimum) obligatoire.' });
+  if (db().users.some(x => x.login.toLowerCase() === login)) return send(res, 400, { error: 'Cet identifiant existe déjà.' });
+  const role = String(body.role || 'technicien');
+  const { salt, hash } = makePw(String(body.password));
+  const u = { id: nextId('users'), login, nom: cleanStr(c.nom), prenom: cleanStr(c.prenom), role, salt, hash, must_change: true, photo: '', email: c.email || '', telephone: c.telephone || '', adresse: c.adresse || '', code_postal: c.code_postal || '', ville: c.ville || '', created_at: new Date().toISOString() };
+  db().users.push(u); c.user_id = u.id; if (!c.type) c.type = 'membre_actuel'; save();
+  send(res, 200, { user: publicUser(u), contact: carnetView(c) });
 });
 
 // --- Assemblées générales (historique + PV) ---
@@ -1880,7 +2000,7 @@ http.createServer((req, res) => {
   // Filet de sécurité : garantit que toutes les collections existent (même si store.js est plus ancien).
   try {
     const d = db();
-    ['materiel', 'devis', 'evenements', 'reparations', 'ventes', 'prets', 'users', 'achats', 'partenaires', 'wip', 'projets', 'absences', 'idees', 'articles', 'medias'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
+    ['materiel', 'devis', 'evenements', 'reparations', 'ventes', 'prets', 'users', 'achats', 'partenaires', 'wip', 'projets', 'absences', 'idees', 'articles', 'medias', 'carnet'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
     if (!Array.isArray(d.logins)) d.logins = [];
     if (!d.presence || typeof d.presence !== 'object') d.presence = {};
     if (!Array.isArray(d.activity)) d.activity = [];
@@ -1903,5 +2023,11 @@ http.createServer((req, res) => {
   try { migratePartners(); } catch (e) { logFatal('migratePartners', e); }
   try { ensureAdmin(); } catch (e) { logFatal('ensureAdmin', e); }
   try { ensureGuest(); } catch (e) { logFatal('ensureGuest', e); }
+  // Première initialisation du Carnet d'adresses (après création des comptes par défaut) :
+  // verse comptes + membres extérieurs, sans doublon. Ensuite l'admin gère via le bouton « Importer ».
+  try {
+    const d = db();
+    if (d.settings && !d.settings._carnet_import_v1) { importCarnet(); d.settings._carnet_import_v1 = true; save(); }
+  } catch (e) { logFatal('carnetImport', e); }
   console.log(`\n  West Coast Arcades — Gestion démarré → http://localhost:${PORT}\n`);
 });

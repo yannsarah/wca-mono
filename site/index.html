@@ -69,6 +69,10 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
 .hero-video{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
 .hero-video iframe{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100vw;height:56.25vw;min-height:100%;min-width:177.78vh;border:0;}
 .hero-overlay{position:absolute;inset:0;z-index:1;background:rgba(0,0,0,.5);}
+/* Rideau anti-flash : masque les contrôles YouTube qui apparaissent ~1s au chargement.
+   Identique au poster du hero, il se fond une fois la vidéo lancée proprement. */
+.hero-curtain{position:absolute;inset:0;z-index:0;background:#000 url('img/flippers-expo-westcoastarcades.fr_.jpg') center/cover no-repeat;opacity:1;transition:opacity .9s ease;pointer-events:none;}
+.hero-curtain.gone{opacity:0;}
 .hero-grid{position:relative;z-index:2;max-width:var(--container);margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:30px;
   align-items:center;padding:60px 10px 90px;}
 .hero h1{font-size:65px;font-weight:700;color:#fff;line-height:1.05;}
@@ -179,7 +183,8 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
 <!-- ===== Hero ===== -->
 <section class="hero">
   <div class="hero-inner">
-    <div class="hero-video" id="heroVideo"><iframe src="https://www.youtube.com/embed/W3NuWfFUITM?autoplay=1&mute=1&loop=1&playlist=W3NuWfFUITM&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&disablekb=1" allow="autoplay; encrypted-media" allowfullscreen title="West Coast Arcades"></iframe></div>
+    <div class="hero-video" id="heroVideo"><iframe src="https://www.youtube.com/embed/W3NuWfFUITM?autoplay=1&mute=1&loop=1&playlist=W3NuWfFUITM&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&disablekb=1&fs=0&iv_load_policy=3" allow="autoplay; encrypted-media" allowfullscreen title="West Coast Arcades"></iframe></div>
+    <div class="hero-curtain" id="heroCurtain"></div>
     <div class="hero-overlay"></div>
     <div class="hero-grid">
       <div>
@@ -191,6 +196,19 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
       </div>
     </div>
   </div>
+  <script>
+  /* Fait disparaître le rideau anti-flash une fois la vidéo lancée (≈1,7 s). */
+  (function(){
+    window.armHeroCurtain=function(){
+      var c=document.getElementById('heroCurtain'); if(!c) return;
+      c.classList.remove('gone');
+      clearTimeout(window.__heroCurtainT);
+      window.__heroCurtainT=setTimeout(function(){ c.classList.add('gone'); },1700);
+    };
+    if(document.readyState!=='loading') window.armHeroCurtain();
+    else document.addEventListener('DOMContentLoaded',window.armHeroCurtain);
+  })();
+  </script>
   <div class="hero-pill">
     <a class="btn btn-hero" id="heroCta" href="projet-virtua-fighter-2.html">Projet en cours - VIRTUA FIGHTER 2</a>
   </div>
@@ -338,7 +356,7 @@ h1,h2,h3,h4{font-family:var(--heebo);font-weight:700;line-height:1.2;}
       if(he.image && (el=document.getElementById('heroImg'))) el.src=he.image;
       if(el=document.getElementById('heroCta')){ if(he.cta_label) el.textContent=he.cta_label; if(he.cta_url) el.href=he.cta_url; }
       var id=ytId(he.video_url), hv=document.getElementById('heroVideo');
-      if(id && hv) hv.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&mute=1&loop=1&playlist='+id+'&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&disablekb=1" allow="autoplay; encrypted-media" allowfullscreen title="West Coast Arcades"></iframe>';
+      if(id && hv){ hv.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&mute=1&loop=1&playlist='+id+'&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&disablekb=1&fs=0&iv_load_policy=3" allow="autoplay; encrypted-media" allowfullscreen title="West Coast Arcades"></iframe>'; if(window.armHeroCurtain) window.armHeroCurtain(); }
     }
     if(h && h.photos && h.photos.length){ var g=document.getElementById('homeGallery'); if(g) g.innerHTML=h.photos.map(function(p){ return '<img src="'+WCA.esc(p.image||p)+'" alt="">'; }).join(''); }
     if(h && h.equipe && h.equipe.length){ var tm=document.getElementById('homeTeam'); if(tm) tm.innerHTML=h.equipe.map(function(m){ return '<div class="member"><img src="'+WCA.esc(m.photo||'')+'" alt="'+WCA.esc(m.nom||'')+'"><h3>'+WCA.esc(m.nom||'')+'</h3><p>'+WCA.esc(m.description||'')+'</p></div>'; }).join(''); }

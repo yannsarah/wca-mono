@@ -2,6 +2,34 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.30 — 15 juin 2026**
+## Hero vidéo, événements, salons & page Utilisateurs
+- **Site – Hero vidéo YouTube** : plus de « flash » des boutons YouTube au chargement. Un rideau (identique à l'image de fond) masque la vidéo pendant son lancement puis se fond en douceur. Paramètres durcis (`controls=0`, `modestbranding=1`, `rel=0`, `fs=0`, `iv_load_policy=3`, autoplay/mute/loop/playsinline).
+- **Événements – bornes hors service** : on peut désormais ajouter une borne **hors service** à un événement (elle apparaît dans le sélecteur avec un badge **⛔ Hors service**). La logique d'inventaire et de disponibilité reste inchangée.
+- **Site – Nos salons** :
+  - Bulle **« Titre & description »** repliée par défaut.
+  - Bouton **« Ajouter un salon »** désormais **rouge, bien visible, en haut** du module.
+  - À l'ajout, le salon se **classe automatiquement à la bonne place selon sa date** (plus de salon ajouté « en bas »).
+  - **Enregistrement automatique** de la page après l'ajout d'un salon, avec confirmation visuelle.
+- **Utilisateurs** : la page passe en **bulles repliables** (même accordéon que l'Administration). **Comptes, Carnet d'adresses, Partenaires, Disponibilités, Groupes & permissions** sont **fermés par défaut** et s'ouvrent au clic. Code factorisé.
+
+---
+
+**Version 2.8.29 — 15 juin 2026**
+## Carnet d'adresses + simplification des cotisations
+- **Nouveau : Carnet d'adresses** (onglet dans **Utilisateurs**). Centralise toutes les personnes que connaît l'association : membres, anciens membres, contacts de salons, partenaires, bénévoles, responsables d'associations, prestataires, mairie, presse… Pour chaque contact : type, organisation, groupe libre, coordonnées et notes.
+  - **Recherche** rapide + **filtres** par type et par groupe.
+  - Bouton **« Importer comptes & membres »** : verse automatiquement les comptes utilisateurs **et** les membres extérieurs dans le carnet, **sans doublon** (correspondance par e-mail, sinon par nom). Le carnet est déjà pré-rempli au premier démarrage.
+  - Bouton **« Créer un compte dans l'association »** depuis une fiche contact : reprend ses informations, propose un identifiant, un mot de passe initial et un groupe, **évite les doublons**, et affiche une confirmation claire.
+  - Dans la **fiche d'un utilisateur**, nouvel onglet **« Carnet d'adresses »** pour voir / modifier ses coordonnées (synchronisées avec son compte).
+- **Cotisations (module Asso)** : formulaire simplifié.
+  - Suppression des champs **« Échéance de paiement »**, **« Date limite »** et **« Exclusion AG »**.
+  - La **date de relance** est désormais calculée automatiquement à **2 mois avant l'assemblée générale**, et **se recalcule** si la date d'AG change (vous pouvez toujours la corriger à la main).
+  - Vérification de toute la chaîne d'enregistrement (formulaire → serveur → fichier).
+- **Module Asso** : la fiche **« Identité de l'association »** est maintenant **repliée** par défaut (moins de défilement à l'ouverture).
+
+---
+
 **Version 2.8.28 — 15 juin 2026**
 ## Filtre inventaire + droits par groupe
 - **Inventaire** : le bouton d'état est maintenant un **3 positions** : Tous → ⛔ Non fonctionnels → ✅ Fonctionnels (clic pour faire défiler).

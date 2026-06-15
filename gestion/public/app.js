@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.28'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.30'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -108,6 +108,7 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 function dateShort(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-').map(Number); return `${d} ${MOIS[m-1]} ${y}`; }
 function dateTimeShort(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return dateShort((iso+'').slice(0,10)); return `${dateShort((iso+'').slice(0,10))} à ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function dateMinusMonths(iso,n){ if(!iso) return ''; const [y,m,d]=iso.split('-').map(Number); if(!y||!m) return ''; const dt=new Date(y,m-1,d||1); dt.setMonth(dt.getMonth()-n); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
 function esc(s){ return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function euros(n){ return (Number(n)||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR'}); }
 async function api(url, opts){ const r=await fetch(url,{headers:{'Content-Type':'application/json'},credentials:'same-origin',...opts}); if(r.status===401){ if(typeof showLogin==='function'){ CURRENT_USER=null; showLogin(); } throw new Error('Session expirée, reconnectez-vous.'); } if(!r.ok){const e=await r.json().catch(()=>({}));const err=new Error(e.error||'Erreur serveur');err.status=r.status;err.data=e;throw err;} return r.status===204?null:r.json(); }
@@ -1385,12 +1386,14 @@ function evenementModal(ev){
     box.innerHTML='<p class="mini">Chargement…</p>';
     try{
       const data=await api(`/api/disponibilite?from=${from}&to=${to}${ev?('&exclude_event='+ev.id):''}`);
-      const choix=data.filter(m=>m.dispo||evMat.has(m.id));
-      box.innerHTML = choix.length ? choix.map(m=>`<label class="ev-pick ${evMat.has(m.id)?'on':''}">
+      // On propose le matériel libre, le déjà-sélectionné, ET les bornes hors service
+      // (on peut vouloir les exposer dans un événement même si elles ne fonctionnent pas).
+      const choix=data.filter(m=>m.dispo||evMat.has(m.id)||m.fonctionnel===false);
+      box.innerHTML = choix.length ? choix.map(m=>{ const hs=m.fonctionnel===false; return `<label class="ev-pick ${evMat.has(m.id)?'on':''}" ${hs?'title="Borne hors service — affichable mais non fonctionnelle"':''}>
           <input type="checkbox" data-id="${m.id}" ${evMat.has(m.id)?'checked':''}>
           ${icon(CAT_ICONS[m.categorie]||'box','ic')}
-          <span class="ep-name">${esc(m.denomination)}</span>${m.categorie?`<small>${esc(m.categorie)}</small>`:''}
-        </label>`).join('') : '<p class="mini">Aucun matériel libre sur cette période.</p>';
+          <span class="ep-name">${esc(m.denomination)}</span>${hs?'<small style="color:#c0392b;font-weight:700">⛔ Hors service</small>':(m.categorie?`<small>${esc(m.categorie)}</small>`:'')}
+        </label>`; }).join('') : '<p class="mini">Aucun matériel disponible sur cette période.</p>';
       $$('#e-mat input').forEach(c=>c.addEventListener('change',()=>{ const id=+c.dataset.id; c.checked?evMat.add(id):evMat.delete(id); c.closest('.ev-pick').classList.toggle('on',c.checked); }));
     }catch(err){ box.innerHTML=`<p class="mini">${esc(err.message)}</p>`; }
   }
@@ -2486,8 +2489,8 @@ async function renderSalonsTab(){
           <button type="button" class="btn small grey" data-cmd="insertUnorderedList" title="Liste">• Liste</button>
           <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')}</button>
         </div>
-        <div id="sp-desc" contenteditable="true" style="min-height:140px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${sp.description||''}</div></div>`, {open:true})
-   + bubble('🎪','Salons (frise / timeline)','Ajoute, réordonne, active/désactive chaque salon', `<div id="sp-items"></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn small grey" id="sp-add">${icon('plus')} Ajouter un salon</button><button type="button" class="btn small grey" id="sp-import">${icon('download')} Importer les salons de l'ancienne page</button></div>`)
+        <div id="sp-desc" contenteditable="true" style="min-height:140px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${sp.description||''}</div></div>`)
+   + bubble('🎪','Salons (frise / timeline)','Ajoute, réordonne, active/désactive chaque salon', `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn red" id="sp-add" style="font-weight:700">${icon('plus')} Ajouter un salon</button><button type="button" class="btn small grey" id="sp-import">${icon('download')} Importer les salons de l'ancienne page</button></div><div id="sp-items"></div>`, {open:true})
    + `<div class="buttons" style="margin-top:8px"><button class="btn" id="sp-save">${icon('check')} Enregistrer la page Nos salons</button></div>`;
   { const ed=$('#sp-desc'); $$('#sp-desc-tools [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); })); }
   function drawItems(){
@@ -2508,13 +2511,37 @@ async function renderSalonsTab(){
     wireDnd(box,'.il-row',items,drawItems);
   }
   drawItems();
-  $('#sp-add').addEventListener('click',()=>salonItemModal(null,evs,saved=>{ items.push(saved); drawItems(); }));
-  $('#sp-import').addEventListener('click',()=>confirmChoice('Importer les salons de l’ancienne page (titre, description et les 11 salons avec leurs images) ?\n\nSans doublon : les salons déjà présents sont conservés, seuls les manquants sont ajoutés.','Importer','Annuler',async()=>{ try{ const r=await api('/api/salons/import',{method:'POST',body:'{}'}); toast(`${r.added} ajouté(s), ${r.updated} complété(s)`); renderSalonsTab(); }catch(e){ toast(e.message); } }));
-  $('#sp-save').addEventListener('click',async()=>{
+  async function saveSalons(silent){
     items.forEach((it,i)=>it.ordre=i);
     const payload={ salons_page:{ title:$('#sp-title').value.trim(), description:$('#sp-desc').innerHTML.trim(), items } };
-    try{ await api('/api/site',{method:'PUT',body:JSON.stringify(payload)}); SITE_CONTENT.salons_page=payload.salons_page; toast('Page Nos salons enregistrée'); renderSalonsTab(); }catch(e){ toast(e.message); }
-  });
+    await api('/api/site',{method:'PUT',body:JSON.stringify(payload)});
+    SITE_CONTENT.salons_page=payload.salons_page;
+    if(!silent) toast('Page Nos salons enregistrée');
+  }
+  // Ajout d'un salon : on le place à sa position chronologique puis on enregistre tout de suite.
+  $('#sp-add').addEventListener('click',()=>salonItemModal(null,evs,async saved=>{
+    insertSalonByDate(items,saved); drawItems();
+    try{ await saveSalons(true); toast('Salon ajouté et enregistré ✅'); }
+    catch(e){ toast('Salon ajouté, mais l\'enregistrement a échoué : '+e.message); }
+  }));
+  $('#sp-import').addEventListener('click',()=>confirmChoice('Importer les salons de l’ancienne page (titre, description et les 11 salons avec leurs images) ?\n\nSans doublon : les salons déjà présents sont conservés, seuls les manquants sont ajoutés.','Importer','Annuler',async()=>{ try{ const r=await api('/api/salons/import',{method:'POST',body:'{}'}); toast(`${r.added} ajouté(s), ${r.updated} complété(s)`); renderSalonsTab(); }catch(e){ toast(e.message); } }));
+  $('#sp-save').addEventListener('click',async()=>{ try{ await saveSalons(false); renderSalonsTab(); }catch(e){ toast(e.message); } });
+}
+// Clé de date comparable pour un salon (date_debut sinon année).
+function salonDateKey(it){
+  if(it && it.date_debut && /^\d{4}-\d{2}-\d{2}/.test(it.date_debut)) return it.date_debut.slice(0,10);
+  const y=String((it&&it.annee)||'').match(/\d{4}/); return y?y[0]+'-01-01':'';
+}
+// Insère un salon à sa place chronologique (respecte le sens dominant de la liste ; récent→ancien par défaut).
+function insertSalonByDate(items,saved){
+  const key=salonDateKey(saved);
+  if(!key){ items.push(saved); return; }
+  const keyed=items.map(salonDateKey).filter(Boolean);
+  let asc=0,desc=0; for(let i=1;i<keyed.length;i++){ if(keyed[i]>keyed[i-1]) asc++; else if(keyed[i]<keyed[i-1]) desc++; }
+  const ascending = asc>desc;
+  let idx=items.length;
+  for(let i=0;i<items.length;i++){ const k=salonDateKey(items[i]); if(!k) continue; if(ascending ? key<k : key>k){ idx=i; break; } }
+  items.splice(idx,0,saved);
 }
 // Phrase de dates lisible à partir de date/heure début/fin.
 function salonPhrase(dd,hd,df,hf){
@@ -3143,38 +3170,36 @@ async function blogDisplayModal(){
   });
 }
 
+// Page Utilisateurs : sections en bulles repliables (même comportement accordéon que
+// l'Administration). Toutes fermées par défaut, contenu chargé à la 1re ouverture.
 async function renderUsers(){
   await loadConfig();
   const canComptes = isAdminUser() || isReadonly();
   const dispoOn = moduleOn('disponibilites');
   const partOn = moduleOn('partenaires') && canComptes;
   const groupesOn = isAdminUser();
-  if(USR_TAB===null) USR_TAB = isAdminUser()||!dispoOn ? 'comptes' : 'dispo';
-  if(USR_TAB==='comptes' && !canComptes) USR_TAB = dispoOn?'dispo':'comptes';
-  if(USR_TAB==='dispo' && !dispoOn) USR_TAB='comptes';
-  if(USR_TAB==='partenaires' && !partOn) USR_TAB = canComptes?'comptes':'dispo';
-  if(USR_TAB==='groupes' && !groupesOn) USR_TAB = canComptes?'comptes':'dispo';
   if(!canComptes && !dispoOn){ setView('accueil'); return; }
-  const action = USR_TAB==='comptes'
-    ? (isAdminUser()?`<button class="btn" id="add-u">${icon('userplus')} Nouvel utilisateur</button>`:'')
-    : USR_TAB==='dispo' ? `<button class="btn" id="add-abs">${icon('plus')} Ajouter une absence</button>` : '';
-  setTopbar('Utilisateurs', action);
+  setTopbar('Utilisateurs','');
+  const secs=[];
+  if(canComptes) secs.push({ k:'comptes', emo:'👤', title:'Comptes', desc:'Utilisateurs et accès',
+    body:`${isAdminUser()?`<div style="margin-bottom:10px"><button class="btn" id="add-u">${icon('userplus')} Nouvel utilisateur</button></div>`:''}<div id="u-pills" class="cat-pills"></div><div id="u-list"></div>`,
+    load:()=>loadUsers() });
+  secs.push({ k:'carnet', emo:'📒', title:"Carnet d'adresses", desc:"Tous les contacts connus de l'association",
+    body:`<div id="carnet-body"></div>`, load:()=>renderCarnet() });
+  if(partOn) secs.push({ k:'partenaires', emo:'🤝', title:'Partenaires', desc:'Partenaires affichés sur le site',
+    body:`<div id="pt-body"></div>`, load:()=>{ PT_INTAB=true; loadPartners().then(()=>renderPartenaires()); } });
+  if(dispoOn) secs.push({ k:'dispo', emo:'📅', title:'Disponibilités', desc:'Frise des absences et présences',
+    body:`<div style="margin-bottom:10px"><button class="btn" id="add-abs">${icon('plus')} Ajouter une absence</button></div><div id="usr-body"></div>`,
+    load:()=>renderDispo() });
+  if(groupesOn) secs.push({ k:'groupes', emo:'🔒', title:'Groupes & permissions', desc:"Rôles et niveaux d'accès",
+    body:`<div id="roles-body"></div>`, load:()=>renderRoles() });
+  view().innerHTML = bubbleCSS() + `<div id="um-secs">` + secs.map(s=>bubble(s.emo,s.title,s.desc,s.body)).join('') + `</div>`;
+  $$('#um-secs > .bubble-sec').forEach((d,i)=>{
+    d.dataset.k = secs[i].k;
+    d.addEventListener('toggle',()=>{ if(d.open && !d.dataset.loaded){ d.dataset.loaded='1'; secs[i].load(); } });
+  });
   $('#add-u')?.addEventListener('click',()=>userModal());
   $('#add-abs')?.addEventListener('click',()=>absenceModal());
-  view().innerHTML = `<div class="tabs-row">
-      ${canComptes?`<button class="${USR_TAB==='comptes'?'active':''}" id="ut-comptes">${icon('users')} Comptes</button>`:''}
-      ${partOn?`<button class="${USR_TAB==='partenaires'?'active':''}" id="ut-part">${icon('share')} Partenaires</button>`:''}
-      ${dispoOn?`<button class="${USR_TAB==='dispo'?'active':''}" id="ut-dispo">${icon('calendar')} Disponibilités</button>`:''}
-      ${groupesOn?`<button class="${USR_TAB==='groupes'?'active':''}" id="ut-groupes">${icon('lock')} Groupes & permissions</button>`:''}
-    </div><div id="usr-body"></div>`;
-  $('#ut-dispo')?.addEventListener('click',()=>{ USR_TAB='dispo'; renderUsers(); });
-  $('#ut-comptes')?.addEventListener('click',()=>{ USR_TAB='comptes'; renderUsers(); });
-  $('#ut-part')?.addEventListener('click',()=>{ USR_TAB='partenaires'; renderUsers(); });
-  $('#ut-groupes')?.addEventListener('click',()=>{ USR_TAB='groupes'; renderUsers(); });
-  if(USR_TAB==='comptes'){ $('#usr-body').innerHTML=`<div id="u-pills" class="cat-pills"></div><div id="u-list"></div>`; loadUsers(); }
-  else if(USR_TAB==='partenaires'){ PT_INTAB=true; $('#usr-body').innerHTML='<div id="pt-body"></div>'; loadPartners().then(()=>renderPartenaires()); }
-  else if(USR_TAB==='groupes'){ $('#usr-body').innerHTML='<div id="roles-body"></div>'; renderRoles(); }
-  else { renderDispo(); }
 }
 
 /* ---------------------------- Disponibilités (frise) ---------------------------- */
@@ -3310,6 +3335,8 @@ function userModal(u){
   const e=u||{};
   let uPhoto=e.photo||'';
   openModal(`<h3>${u?'Modifier l\'utilisateur':'Nouvel utilisateur'}</h3>
+    ${u?`<div class="tabs-row" id="um-tabs"><button type="button" class="active" data-t="compte">${icon('users')} Compte</button><button type="button" data-t="carnet">${icon('book')} Carnet d'adresses</button></div>`:''}
+    <div id="um-compte">
     <label class="field"><span>Photo</span><div class="photo-edit"><div class="photo-prev" id="u-photo-prev">${uPhoto?`<img src="${uPhoto}" alt="">`:`<span class="ph">${icon('users','ic')}</span>`}</div>
       <div class="photo-btns">${mediaBtn('u-photo-pick','Choisir')}
         <button type="button" class="btn small red" id="u-photo-clear">${icon('trash')} Retirer</button></div></div></label>
@@ -3318,7 +3345,19 @@ function userModal(u){
     <label class="field"><span>Identifiant *</span><input id="u-login" value="${esc(e.login)}" ${u?'disabled style="opacity:.6"':''}></label>
     ${u?'':`<label class="field"><span>Mot de passe *</span><input id="u-pw" type="text" placeholder="mot de passe initial"></label>`}
     <label class="field"><span>Rôle</span><select id="u-role">${ROLES.map(r=>`<option value="${esc(r.key)}" ${(e.role||'technicien')===r.key?'selected':''}>${esc(r.label)} — ${NIVEAUX[r.niveau]||r.niveau}</option>`).join('')}</select></label>
-    <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="u-save">Enregistrer</button></div>`);
+    <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="u-save">Enregistrer</button></div>
+    </div>
+    ${u?`<div id="um-carnet" class="hidden"></div>`:''}`);
+  if(u){
+    const tabs=$('#um-tabs');
+    tabs.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+      tabs.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));
+      const carnet=b.dataset.t==='carnet';
+      $('#um-compte').classList.toggle('hidden',carnet);
+      $('#um-carnet').classList.toggle('hidden',!carnet);
+      if(carnet && !$('#um-carnet').dataset.loaded){ $('#um-carnet').dataset.loaded='1'; loadUserCarnetPanel(u); }
+    }));
+  }
   wireMedia('u-photo-pick',url=>{ uPhoto=url; $('#u-photo-prev').innerHTML=`<img src="${url}" alt="">`; });
   $('#u-photo-clear').addEventListener('click',()=>{ uPhoto=''; $('#u-photo-prev').innerHTML=`<span class="ph">${icon('users','ic')}</span>`; });
   $('#u-save').addEventListener('click',async()=>{
@@ -3326,6 +3365,31 @@ function userModal(u){
     else { const body={ login:$('#u-login').value.trim(), password:$('#u-pw').value, nom:$('#u-nom').value, prenom:$('#u-prenom').value, role:$('#u-role').value, photo:uPhoto, must_change:true };
       if(!body.login||!body.password){ toast('Identifiant et mot de passe obligatoires.'); return; }
       try{ await api('/api/users',{method:'POST',body:JSON.stringify(body)}); closeModal(); toast('Compte créé'); loadUsers(); }catch(e){ toast(e.message); } }
+  });
+}
+// Onglet « Carnet d'adresses » dans la fiche utilisateur : coordonnées étendues (reliées au carnet).
+async function loadUserCarnetPanel(u){
+  const box=$('#um-carnet'); if(!box) return;
+  box.innerHTML='<p class="mini">Chargement…</p>';
+  let c={}; try{ const all=await api('/api/carnet'); c=all.find(x=>x.user_id===u.id)||{}; }catch(e){ box.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`; return; }
+  const edit=carnetEditable();
+  const ro=edit?'':'disabled';
+  const typeSel=Object.entries(CARNET_TYPES).map(([k,v])=>`<option value="${k}" ${(c.type||'membre_actuel')===k?'selected':''}>${esc(v)}</option>`).join('');
+  box.innerHTML=`
+    <p class="help" style="margin:0 0 10px">Coordonnées de la personne dans le carnet d'adresses. ${c.id?'':'Aucune fiche carnet pour ce compte — enregistrez pour la créer.'}</p>
+    <div class="row2"><label class="field"><span>Type de contact</span><select id="uc-type" ${ro}>${typeSel}</select></label>
+      <label class="field"><span>Groupe (libre)</span><input id="uc-groupe" value="${esc(c.groupe)}" placeholder="ex. Bureau, Bénévoles…" ${ro}></label></div>
+    <label class="field"><span>Organisation / structure</span><input id="uc-org" value="${esc(c.organisation)}" ${ro}></label>
+    <div class="row2"><label class="field"><span>Email</span><input id="uc-email" type="email" value="${esc(c.email)}" ${ro}></label>
+      <label class="field"><span>Téléphone</span><input id="uc-tel" value="${esc(c.telephone)}" ${ro}></label></div>
+    <label class="field"><span>Adresse</span><input id="uc-adr" value="${esc(c.adresse)}" ${ro}></label>
+    <div class="row2"><label class="field"><span>Code postal</span><input id="uc-cp" value="${esc(c.code_postal)}" ${ro}></label>
+      <label class="field"><span>Ville</span><input id="uc-ville" value="${esc(c.ville)}" ${ro}></label></div>
+    <label class="field"><span>Notes</span><textarea id="uc-notes" rows="3" ${ro}>${esc(c.notes)}</textarea></label>
+    ${edit?`<div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Fermer</button><button class="btn" id="uc-save">${icon('check')} Enregistrer le carnet</button></div>`:''}`;
+  $('#uc-save')?.addEventListener('click',async()=>{
+    const obj={ user_id:u.id, prenom:u.prenom||'', nom:u.nom||'', type:$('#uc-type').value, groupe:$('#uc-groupe').value.trim(), organisation:$('#uc-org').value.trim(), email:$('#uc-email').value.trim(), telephone:$('#uc-tel').value.trim(), adresse:$('#uc-adr').value.trim(), code_postal:$('#uc-cp').value.trim(), ville:$('#uc-ville').value.trim(), notes:$('#uc-notes').value.trim() };
+    try{ await api('/api/carnet',{method:'POST',body:JSON.stringify(obj)}); toast('Carnet mis à jour'); }catch(err){ toast(err.message); }
   });
 }
 function userPwModal(id){
@@ -3339,6 +3403,132 @@ function userPwModal(id){
     <button class="btn light small" id="pw-code-gen">${icon('lock')} Générer un code</button>`);
   $('#pw-save').addEventListener('click',async()=>{ try{ await api(`/api/users/${id}/password`,{method:'POST',body:JSON.stringify({password:$('#pw-new').value})}); closeModal(); toast('Mot de passe réinitialisé'); }catch(e){ toast(e.message); } });
   $('#pw-code-gen').addEventListener('click',async()=>{ try{ const r=await api(`/api/users/${id}/reset-code`,{method:'POST',body:JSON.stringify({})}); $('#pw-code-box').innerHTML=`<div class="recap" style="font-size:18px;letter-spacing:2px;text-align:center;font-weight:800">${esc(r.code)}</div><p class="help">Identifiant : <strong>${esc(r.login)}</strong> · valable 24h, usage unique.</p>`; toast('Code généré'); }catch(e){ toast(e.message); } });
+}
+
+/* ============================== CARNET D'ADRESSES ============================== */
+const CARNET_TYPES = {
+  membre_actuel:'Membre actuel', ancien_membre:'Ancien membre', contact_salon:'Contact salon',
+  partenaire:'Partenaire', benevole:'Bénévole potentiel', responsable_asso:"Responsable d'association",
+  prestataire:'Prestataire', mairie:'Contact mairie', presse:'Contact presse', autre:'Autre'
+};
+const CARNET_TYPE_COLOR = {
+  membre_actuel:'#dcf5e6|#1d7a46', ancien_membre:'#eef0f3|#6b7280', contact_salon:'#e7f0ff|#2659c8',
+  partenaire:'#fdeede|#c2700f', benevole:'#e9f7ee|#2f8f57', responsable_asso:'#f3e8ff|#7b3fe4',
+  prestataire:'#e7f6f7|#0f7a86', mairie:'#fff3d6|#9a6b00', presse:'#ffe7ef|#b3245e', autre:'#eef0f3|#6b7280'
+};
+let CARNET_ALL=[]; const CARNET={ q:'', type:'', groupe:'' };
+function carnetEditable(){ return !isReadonly(); }
+function carnetName(c){ return ((c.prenom||'')+' '+(c.nom||'')).trim() || '(sans nom)'; }
+function carnetTypeBadge(t){ const [bg,fg]=(CARNET_TYPE_COLOR[t]||CARNET_TYPE_COLOR.autre).split('|'); return `<span class="tag" style="background:${bg};color:${fg}">${esc(CARNET_TYPES[t]||'Autre')}</span>`; }
+async function renderCarnet(){
+  const body=$('#carnet-body'); if(!body) return;
+  body.innerHTML='<p class="mini">Chargement…</p>';
+  try{ CARNET_ALL=await api('/api/carnet'); }catch(e){ body.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`; return; }
+  if(CARNET.type && !CARNET_ALL.some(c=>c.type===CARNET.type)) CARNET.type='';
+  const edit=carnetEditable(), admin=isAdminUser();
+  const typeOpts=`<option value="">Tous les types</option>`+Object.entries(CARNET_TYPES).map(([k,v])=>`<option value="${k}" ${CARNET.type===k?'selected':''}>${esc(v)}</option>`).join('');
+  const groupes=[...new Set(CARNET_ALL.map(c=>(c.groupe||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const groupeOpts=`<option value="">Tous les groupes</option>`+groupes.map(g=>`<option value="${esc(g)}" ${CARNET.groupe===g?'selected':''}>${esc(g)}</option>`).join('');
+  body.innerHTML=`
+    <p class="help" style="margin:-2px 0 10px">📒 Toutes les personnes que connaît l'association — membres, anciens membres, contacts de salons, partenaires, prestataires, mairie, presse… Reliez un contact à un compte ou créez-en un en un clic.</p>
+    <div class="toolbar" style="gap:10px;flex-wrap:wrap;align-items:center">
+      <div class="search${CARNET.q?' has-val':''}" style="flex:1;min-width:200px">${icon('search','ic')}<input id="ca-q" value="${esc(CARNET.q)}" placeholder="Rechercher un nom, email, organisation…"><button type="button" class="search-clear" tabindex="-1" aria-label="Effacer">×</button></div>
+      <select id="ca-type" style="width:auto">${typeOpts}</select>
+      ${groupes.length?`<select id="ca-groupe" style="width:auto">${groupeOpts}</select>`:''}
+      ${edit?`<button class="btn small" id="ca-add">${icon('userplus')} Nouveau contact</button>`:''}
+      ${admin?`<button class="btn small grey" id="ca-import" title="Verser les comptes et membres extérieurs dans le carnet (sans doublon)">${icon('download')} Importer comptes & membres</button>`:''}
+    </div>
+    <div id="ca-list"></div>`;
+  const qi=$('#ca-q');
+  qi.addEventListener('input',()=>{ CARNET.q=qi.value; body.querySelector('.search').classList.toggle('has-val',!!CARNET.q); drawCarnetList(); });
+  body.querySelector('.search-clear')?.addEventListener('click',()=>{ CARNET.q=''; qi.value=''; body.querySelector('.search').classList.remove('has-val'); drawCarnetList(); qi.focus(); });
+  $('#ca-type').addEventListener('change',e=>{ CARNET.type=e.target.value; drawCarnetList(); });
+  $('#ca-groupe')?.addEventListener('change',e=>{ CARNET.groupe=e.target.value; drawCarnetList(); });
+  $('#ca-add')?.addEventListener('click',()=>carnetModal());
+  $('#ca-import')?.addEventListener('click',()=>{
+    confirmChoice("Verser les comptes utilisateurs et les membres extérieurs de l'asso dans le carnet ?\n\nLes contacts déjà présents ne seront pas dupliqués.",'Importer','Annuler',async()=>{
+      try{ const r=await api('/api/carnet/import',{method:'POST',body:JSON.stringify({})}); toast(`${r.added} ajouté(s), ${r.linked} relié(s)`); renderCarnet(); }catch(e){ toast(e.message); }
+    });
+  });
+  drawCarnetList();
+}
+function drawCarnetList(){
+  const el=$('#ca-list'); if(!el) return;
+  const q=(CARNET.q||'').toLowerCase().trim();
+  let list=CARNET_ALL.filter(c=>{
+    if(CARNET.type && c.type!==CARNET.type) return false;
+    if(CARNET.groupe && (c.groupe||'').trim()!==CARNET.groupe) return false;
+    if(q){ const hay=[c.prenom,c.nom,c.email,c.telephone,c.organisation,c.groupe,c.ville,CARNET_TYPES[c.type]].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  }).sort((a,b)=>carnetName(a).localeCompare(carnetName(b),'fr',{sensitivity:'base'}));
+  const edit=carnetEditable();
+  if(!CARNET_ALL.length){ el.innerHTML=`<div class="empty-state" style="margin-top:8px">Aucun contact pour l'instant.${edit?' Ajoutez-en un ou importez vos comptes & membres.':''}</div>`; return; }
+  el.innerHTML=`<p class="mini" style="margin:8px 2px;color:var(--muted)">${list.length} contact${list.length>1?'s':''}${list.length!==CARNET_ALL.length?` sur ${CARNET_ALL.length}`:''}</p>
+    <div class="tablecard"><table class="grid">
+      <thead><tr><th>Nom</th><th>Type</th><th>Organisation / Groupe</th><th>Contact</th><th></th></tr></thead>
+      <tbody>${list.length?list.map(c=>`<tr class="js-ca-row" data-id="${c.id}" style="cursor:pointer" title="Cliquer pour ouvrir la fiche">
+        <td data-label="Nom"><strong>${esc(carnetName(c))}</strong>${c.user_id?` <span class="tag blue" style="font-size:10px" title="Relié à un compte utilisateur">${icon('users','ic')} Compte</span>`:''}</td>
+        <td data-label="Type">${carnetTypeBadge(c.type)}</td>
+        <td data-label="Organisation">${c.organisation?esc(c.organisation):''}${c.groupe?`<div class="sub">${esc(c.groupe)}</div>`:''}</td>
+        <td data-label="Contact">${c.telephone?esc(c.telephone):''}${c.email?`<div class="sub">${esc(c.email)}</div>`:''}</td>
+        <td data-label="" class="cell-actions"><div class="row-actions">${edit?`<button class="iconbtn ghost js-ca-edit" data-id="${c.id}" title="Modifier">${icon('edit')}</button><button class="iconbtn ghost js-ca-del" data-id="${c.id}" title="Supprimer">${icon('trash')}</button>`:''}</div></td>
+      </tr>`).join(''):`<tr><td colspan="5"><div class="empty-state" style="margin:8px">Aucun contact ne correspond à la recherche.</div></td></tr>`}</tbody>
+    </table></div>`;
+  $$('.js-ca-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('.row-actions')) return; carnetModal(CARNET_ALL.find(x=>x.id===+r.dataset.id)); }));
+  $$('.js-ca-edit').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); carnetModal(CARNET_ALL.find(x=>x.id===+b.dataset.id)); }));
+  $$('.js-ca-del').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const c=CARNET_ALL.find(x=>x.id===+b.dataset.id); confirmModal(`Supprimer ${carnetName(c)} du carnet ?${c.user_id?' (le compte utilisateur, lui, est conservé)':''}`,async()=>{ try{ await api('/api/carnet/'+c.id,{method:'DELETE'}); toast('Contact supprimé'); CARNET_ALL=CARNET_ALL.filter(x=>x.id!==c.id); drawCarnetList(); }catch(e){ toast(e.message); } }); }));
+}
+function carnetModal(c){
+  const e=c||{}; const isEdit=!!c; const edit=carnetEditable(); const admin=isAdminUser();
+  const ro=edit?'':'disabled';
+  const typeSel=Object.entries(CARNET_TYPES).map(([k,v])=>`<option value="${k}" ${(e.type||'autre')===k?'selected':''}>${esc(v)}</option>`).join('');
+  openModal(`<h3>${isEdit?esc(carnetName(e)):'Nouveau contact'}</h3>
+    ${e.user_id?`<div class="card" style="background:var(--teal-l,#e7f6f7);border-color:#b6e3e8;margin-bottom:10px;padding:8px 12px"><span class="mini">${icon('users','ic')} Ce contact est relié à un <strong>compte utilisateur</strong>. Modifier le nom ou les coordonnées met aussi à jour le compte.</span></div>`:''}
+    <div class="row2"><label class="field"><span>Prénom</span><input id="ca-prenom" value="${esc(e.prenom)}" ${ro}></label>
+      <label class="field"><span>Nom</span><input id="ca-nom" value="${esc(e.nom)}" ${ro}></label></div>
+    <div class="row2"><label class="field"><span>Type de contact</span><select id="ca-type-f" ${ro}>${typeSel}</select></label>
+      <label class="field"><span>Groupe (libre)</span><input id="ca-groupe-f" value="${esc(e.groupe)}" placeholder="ex. Bureau, Bénévoles 2026…" ${ro}></label></div>
+    <label class="field"><span>Organisation / structure</span><input id="ca-org" value="${esc(e.organisation)}" placeholder="ex. Mairie de Cholet, Presse Ouest…" ${ro}></label>
+    <div class="row2"><label class="field"><span>Email</span><input id="ca-email" type="email" value="${esc(e.email)}" ${ro}></label>
+      <label class="field"><span>Téléphone</span><input id="ca-tel" value="${esc(e.telephone)}" ${ro}></label></div>
+    <label class="field"><span>Adresse</span><input id="ca-adr" value="${esc(e.adresse)}" ${ro}></label>
+    <div class="row2"><label class="field"><span>Code postal</span><input id="ca-cp" value="${esc(e.code_postal)}" ${ro}></label>
+      <label class="field"><span>Ville</span><input id="ca-ville" value="${esc(e.ville)}" ${ro}></label></div>
+    <label class="field"><span>Notes</span><textarea id="ca-notes" rows="3" ${ro}>${esc(e.notes)}</textarea></label>
+    ${(admin && isEdit && !e.user_id)?`<button class="btn light" id="ca-mkacct" style="margin-top:4px">${icon('userplus')} Créer un compte dans l'association</button>`:''}
+    <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">${edit?'Annuler':'Fermer'}</button>${edit?`<button class="btn" id="ca-save">${icon('check')} Enregistrer</button>`:''}</div>`);
+  $('#ca-mkacct')?.addEventListener('click',()=>carnetCreateAccountDialog(e));
+  $('#ca-save')?.addEventListener('click',async()=>{
+    const obj={ prenom:$('#ca-prenom').value.trim(), nom:$('#ca-nom').value.trim(), type:$('#ca-type-f').value, groupe:$('#ca-groupe-f').value.trim(), organisation:$('#ca-org').value.trim(), email:$('#ca-email').value.trim(), telephone:$('#ca-tel').value.trim(), adresse:$('#ca-adr').value.trim(), code_postal:$('#ca-cp').value.trim(), ville:$('#ca-ville').value.trim(), notes:$('#ca-notes').value.trim() };
+    if(!obj.prenom && !obj.nom){ toast('Indiquez au moins un prénom ou un nom.'); return; }
+    try{ await api(isEdit?'/api/carnet/'+e.id:'/api/carnet',{method:isEdit?'PUT':'POST',body:JSON.stringify(obj)}); closeModal(); toast(isEdit?'Contact enregistré':'Contact ajouté'); renderCarnet(); }catch(err){ toast(err.message); }
+  });
+}
+// Crée un compte utilisateur à partir d'un contact (reprend ses infos, anti-doublon, confirmation claire).
+function carnetCreateAccountDialog(c){
+  const base=((c.prenom||'').trim()+'.'+(c.nom||'').trim()).toLowerCase().replace(/[^a-z0-9.]+/g,'').replace(/^\.|\.$/g,'')||'membre';
+  openModal(`<h3>Créer un compte dans l'association</h3>
+    <div class="card" style="background:var(--teal-l,#e7f6f7);border-color:#b6e3e8;margin-bottom:10px;padding:8px 12px"><span class="mini">Le compte reprendra les informations de <strong>${esc(carnetName(c))}</strong> (nom, email, téléphone, adresse). L'identifiant et le mot de passe ci-dessous serviront à la première connexion.</span></div>
+    <div class="row2"><label class="field"><span>Identifiant *</span><input id="cma-login" value="${esc(base)}"></label>
+      <label class="field"><span>Mot de passe initial *</span><input id="cma-pw" type="text" value=""></label></div>
+    <label class="field"><span>Groupe / rôle</span><select id="cma-role">${ROLES.map(r=>`<option value="${esc(r.key)}" ${r.key==='technicien'?'selected':''}>${esc(r.label)} — ${NIVEAUX[r.niveau]||r.niveau}</option>`).join('')}</select></label>
+    <p class="help">L'utilisateur devra changer son mot de passe à la première connexion.</p>
+    <div class="buttons" style="margin-top:8px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="cma-go">${icon('userplus')} Créer le compte</button></div>`);
+  $('#cma-pw').value=Math.random().toString(36).slice(2,8);
+  $('#cma-go').addEventListener('click',async()=>{
+    const body={ login:$('#cma-login').value.trim(), password:$('#cma-pw').value, role:$('#cma-role').value };
+    if(!body.login||!body.password){ toast('Identifiant et mot de passe obligatoires.'); return; }
+    try{
+      const r=await api('/api/carnet/'+c.id+'/create-account',{method:'POST',body:JSON.stringify(body)});
+      closeModal();
+      openModal(`<h3>✅ Compte créé</h3>
+        <p>Le compte de <strong>${esc(carnetName(c))}</strong> est prêt.</p>
+        <div class="recap" style="margin:8px 0"><div>Identifiant : <strong>${esc(r.user.login)}</strong></div><div>Mot de passe initial : <strong>${esc(body.password)}</strong></div><div>Groupe : <strong>${esc(roleLabel(r.user.role))}</strong></div></div>
+        <p class="help">Communiquez ces identifiants à la personne. Elle changera son mot de passe à la première connexion.</p>
+        <div class="buttons" style="margin-top:8px"><button class="btn" onclick="closeModal()">Fermer</button></div>`);
+      try{ CARNET_ALL=await api('/api/carnet'); drawCarnetList(); }catch{}
+    }catch(err){ toast(err.message); }
+  });
 }
 
 /* ============================== MÉDIATHÈQUE (module complet, dossiers imbriqués) ============================== */
@@ -3472,7 +3662,7 @@ async function renderAssoIdentite(){
        <div class="row2">${F('as-pres','Président·e',a.president_nom)}${F('as-tres','Trésorier·ère',a.tresorier_nom)}</div>
        <div class="row2">${F('as-sec','Secrétaire',a.secretaire_nom)}${F('as-lieu','Lieu (pour signature)',a.lieu,'Saint Christophe Du Bois')}</div>
        ${F('as-art','Article des statuts (cotisation)',a.statut_article,'07')}
-       <button class="btn" id="asso-save" style="margin-top:8px">${icon('check')} Enregistrer l'identité</button>`, {open:true})
+       <button class="btn" id="asso-save" style="margin-top:8px">${icon('check')} Enregistrer l'identité</button>`)
    + bubble('💳','Cotisations annuelles','Montant fixé par l\'AG, période et échéances — base des lettres', `<div id="camp-list"></div><div class="add-row" style="margin-top:8px"><input id="camp-new" placeholder="Nouvelle année (ex. 2026)" style="max-width:170px"><button class="btn small" id="camp-add">${icon('plus')} Ajouter</button></div>`);
   wireMedia('asso-logo-pick',url=>{ logo=url; $('#asso-logo-prev').style.backgroundImage=`url('${url}')`; });
   $('#asso-logo-clear').addEventListener('click',()=>{ logo=''; $('#asso-logo-prev').style.backgroundImage=''; });
@@ -3486,13 +3676,21 @@ async function renderAssoIdentite(){
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>Année ${esc(c.annee)}</strong><button class="iconbtn ghost camp-del" data-an="${esc(c.annee)}" style="color:#e23b3b" title="Supprimer">${icon('trash')}</button></div>
         <div class="row2"><label class="field"><span>Montant (€)</span><input class="cf-montant" value="${esc(c.montant||'')}"></label><label class="field"><span>Date de l'AG</span><input class="cf-ag" type="date" value="${esc(c.ag_date||'')}"></label></div>
         <div class="row2"><label class="field"><span>Période du</span><input class="cf-pd" type="date" value="${esc(c.periode_debut||'')}"></label><label class="field"><span>au</span><input class="cf-pf" type="date" value="${esc(c.periode_fin||'')}"></label></div>
-        <div class="row2"><label class="field"><span>Échéance de paiement</span><input class="cf-ech" type="date" value="${esc(c.echeance||'')}"></label><label class="field"><span>Date limite (exclusion AG)</span><input class="cf-ech2" type="date" value="${esc(c.echeance2||'')}"></label></div>
-        <label class="field"><span>Relance / renouvellement (quand prévenir les membres)</span><input class="cf-rappel" type="date" value="${esc(c.rappel||'')}"></label>
+        <label class="field"><span>Relance / renouvellement <span class="mini" style="color:var(--muted)">— quand prévenir les membres</span></span><input class="cf-rappel" type="date" value="${esc(c.rappel||'')}" data-touched="${c.rappel?'1':''}"><span class="help" style="margin-top:4px">📅 Calculée automatiquement à <strong>2 mois avant l'AG</strong>. Modifiez-la si besoin ; elle se recalcule tant que vous n'y avez pas touché.</span></label>
         <button class="btn small camp-save" data-an="${esc(c.annee)}">${icon('check')} Enregistrer ${esc(c.annee)}</button>
       </div>`).join('') : '<p class="mini">Aucune campagne. Ajoute une année ci-dessous.</p>';
+    // Relance auto = AG − 2 mois (recalcul tant que l'admin n'a pas saisi la relance à la main).
+    box.querySelectorAll('[data-an]').forEach(card=>{
+      const ag=card.querySelector('.cf-ag'), rap=card.querySelector('.cf-rappel');
+      if(!ag||!rap) return;
+      const recalc=()=>{ if(rap.dataset.touched) return; rap.value = ag.value ? dateMinusMonths(ag.value,2) : ''; };
+      if(!rap.value && ag.value) recalc();
+      ag.addEventListener('change',recalc); ag.addEventListener('input',recalc);
+      rap.addEventListener('input',()=>{ rap.dataset.touched = rap.value ? '1' : ''; });
+    });
     box.querySelectorAll('.camp-save').forEach(b=>b.addEventListener('click',async()=>{
       const card=b.closest('[data-an]');
-      const obj={ annee:b.dataset.an, montant:card.querySelector('.cf-montant').value.trim(), ag_date:card.querySelector('.cf-ag').value, periode_debut:card.querySelector('.cf-pd').value, periode_fin:card.querySelector('.cf-pf').value, echeance:card.querySelector('.cf-ech').value, echeance2:card.querySelector('.cf-ech2').value, rappel:card.querySelector('.cf-rappel').value };
+      const obj={ annee:b.dataset.an, montant:card.querySelector('.cf-montant').value.trim(), ag_date:card.querySelector('.cf-ag').value, periode_debut:card.querySelector('.cf-pd').value, periode_fin:card.querySelector('.cf-pf').value, rappel:card.querySelector('.cf-rappel').value };
       try{ await api('/api/asso/campagnes',{method:'POST',body:JSON.stringify(obj)}); camps=await api('/api/asso/campagnes'); drawCamps(); toast('Campagne enregistrée'); }catch(e){ toast(e.message); }
     }));
     box.querySelectorAll('.camp-del').forEach(b=>b.addEventListener('click',()=>confirmModal('Supprimer la campagne '+b.dataset.an+' ?',async()=>{ try{ await api('/api/asso/campagnes/'+b.dataset.an,{method:'DELETE'}); camps=await api('/api/asso/campagnes'); drawCamps(); }catch(e){ toast(e.message); } })));
@@ -3517,7 +3715,7 @@ async function renderAssoMembres(){
   const paidCount=membres.filter(m=>{ const c=cotisOf(m,ASSO_YEAR); return c&&c.paye; }).length;
   const camp=camps.find(x=>String(x.annee)===String(ASSO_YEAR));
   const summary = camp
-    ? `<div class="card" style="margin-bottom:10px;padding:10px 14px;background:var(--teal-l,#e7f6f7);border-color:#b6e3e8"><strong>Cotisation ${esc(ASSO_YEAR)}</strong> : ${camp.montant?'<strong>'+esc(camp.montant)+' €</strong>':'<em>montant non défini</em>'}${camp.periode_debut?` · période du <strong>${frDate(camp.periode_debut)}</strong> au <strong>${frDate(camp.periode_fin)}</strong>`:''}${camp.echeance?` · échéance le <strong>${frDate(camp.echeance)}</strong>`:''}${camp.rappel?` · relance le <strong>${frDate(camp.rappel)}</strong>`:''} <span class="mini" style="color:var(--muted)">— réglages dans l'onglet Association</span></div>`
+    ? `<div class="card" style="margin-bottom:10px;padding:10px 14px;background:var(--teal-l,#e7f6f7);border-color:#b6e3e8"><strong>Cotisation ${esc(ASSO_YEAR)}</strong> : ${camp.montant?'<strong>'+esc(camp.montant)+' €</strong>':'<em>montant non défini</em>'}${camp.periode_debut?` · période du <strong>${frDate(camp.periode_debut)}</strong> au <strong>${frDate(camp.periode_fin)}</strong>`:''}${camp.ag_date?` · AG le <strong>${frDate(camp.ag_date)}</strong>`:''}${camp.rappel?` · relance le <strong>${frDate(camp.rappel)}</strong>`:''} <span class="mini" style="color:var(--muted)">— réglages dans l'onglet Association</span></div>`
     : `<div class="card" style="margin-bottom:10px;padding:10px 14px;background:var(--amber-l,#fdf3da);border-color:#f0dca6"><span class="mini">Aucune campagne définie pour ${esc(ASSO_YEAR)} — règle le montant et les dates dans l'onglet <strong>Association</strong>.</span></div>`;
   const statutBadge=m=>(m.statut_membre==='passif'
     ? '<span class="tag" style="background:var(--line);color:var(--muted)">Passif</span>'
@@ -3685,9 +3883,9 @@ function assoLetterHTML(m,c,a){
     <p>Madame, Monsieur,</p>
     <p>Je vous rappelle que la participation aux activités de l'association est subordonnée au paiement d'une cotisation annuelle.</p>
     <p>L'assemblée générale (le conseil d'administration) du <strong>${frDate(c.ag_date)||'…'}</strong> a fixé le montant de la cotisation pour l'année <strong>${esc(annee)}</strong> (pour la période du <strong>${frDate(c.periode_debut)||'…'}</strong> au <strong>${frDate(c.periode_fin)||'…'}</strong>) à <strong>${esc(c.montant||'…')} euros</strong>.</p>
-    <p>Aux termes de l'article <strong>${esc(art)}</strong> de nos statuts, la cotisation devra être payée avant le <strong>${frDate(c.echeance)||'…'}</strong> auprès du trésorier de notre association.</p>
+    <p>Aux termes de l'article <strong>${esc(art)}</strong> de nos statuts, la cotisation devra être payée avant le <strong>${frDate(c.periode_fin)||frDate(c.ag_date)||'…'}</strong> auprès du trésorier de notre association.</p>
     <p>Ce paiement peut être effectué par ${esc(mode)}.${a.iban?` (IBAN : ${esc(a.iban)})`:''}</p>
-    <p>Conformément à l'article (<strong>${esc(art)}°</strong>) de nos statuts/du règlement intérieur, en l'absence de versement au plus tard le <strong>${frDate(c.echeance2)||frDate(c.echeance)||'…'}</strong>, vous ne pourriez pas participer à la prochaine assemblée générale.</p>
+    <p>Conformément à l'article (<strong>${esc(art)}°</strong>) de nos statuts/du règlement intérieur, en l'absence de versement avant l'assemblée générale du <strong>${frDate(c.ag_date)||'…'}</strong>, vous ne pourriez pas y participer.</p>
     <p>Dans cette attente, je vous prie d'agréer, Madame, Monsieur, l'expression de ma considération distinguée.</p>
     <p style="margin-top:24px">À <strong>${esc(a.lieu||a.ville||'')}</strong> le <strong>${todayFR()}</strong></p>
     <p style="margin-top:8px">Le trésorier${a.tresorier_nom?` — ${esc(a.tresorier_nom)}`:''}</p>
