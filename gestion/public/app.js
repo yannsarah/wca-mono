@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.24'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.25'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2065,8 +2065,9 @@ function wireMedia(btnId,onPick){ const b=document.getElementById(btnId); if(b) 
 function fmtSize(b){ if(!b) return ''; return b>=1048576?(b/1048576).toFixed(1)+' Mo':Math.round(b/1024)+' Ko'; }
 function mediaPicker(onPick){
   let q='', folder='', tab='all';
-  // Overlay indépendant : la médiathèque se superpose sans détruire la fenêtre en dessous (ex. « Modifier le matériel »).
-  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1200';
+  // Overlay indépendant : la médiathèque se superpose AU-DESSUS de toute fenêtre qui l'ouvre
+  // (fiche matériel, salon, etc. — z-index très élevé pour ne jamais passer dessous).
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='2000';
   ov.innerHTML=`<div class="modal modal-wide"><h3>Médiathèque</h3>
     <p class="help" style="margin:0 0 10px">${onPick?'Clique sur une image pour la choisir, ou ajoutes-en une nouvelle.':'Gère tes images réutilisables.'}</p>
     <div class="tabs-row med-tabs" style="margin-bottom:10px">

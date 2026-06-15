@@ -2,6 +2,12 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.25 — 15 juin 2026**
+## Correctif : médiathèque toujours au premier plan
+- La médiathèque s'ouvrait **derrière** la fenêtre « Modifier le salon » (et d'autres fenêtres), ce qui bloquait l'écran. Elle s'affiche désormais **au-dessus de toutes les fenêtres**.
+
+---
+
 **Version 2.8.24 — 15 juin 2026**
 ## Médiathèque : vrai module avec dossiers
 - Nouveau module **Médiathèque** dans Administration (entre Module Asso et Menus & modules).
