@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.21'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.22'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2513,19 +2513,45 @@ function salonPhrase(dd,hd,df,hf){
   if(a.y===b.y) return 'Du '+a.d+' '+MOIS[a.mo-1]+' au '+b.d+' '+MOIS[b.mo-1]+' '+a.y;
   return 'Du '+jour(a)+' au '+jour(b);
 }
-// Modèles de fiche salon (HTML autonome, inline-stylé → s'affiche tel quel dans la popup / une future page).
+// Modèles de fiche salon (HTML autonome, inline-stylé). La couleur d'accent utilise var(--acc),
+// définie sur le conteneur → modifiable à volonté via le sélecteur de couleur.
 const SALON_TEMPLATES = {
   classique: { label:'Salon classique', html:
-`<h2 style="color:#0e2a52;font-size:24px;margin:0 0 6px">Titre du salon</h2>
+`<h2 style="color:var(--acc);font-size:24px;margin:0 0 6px">Titre du salon</h2>
 <p style="color:#5d6b85;font-weight:600;margin:0 0 16px">Dates &amp; lieu</p>
 <p>Présentez le salon en quelques phrases : l'ambiance, les nouveautés, ce qui attend les visiteurs…</p>
-<h3 style="color:#0e2a52;margin:18px 0 6px">Infos pratiques</h3>
+<h3 style="color:var(--acc);margin:18px 0 6px">Infos pratiques</h3>
 <ul><li><b>Lieu :</b> …</li><li><b>Horaires :</b> …</li><li><b>Tarif :</b> …</li><li><b>Accès / parking :</b> …</li></ul>
-<h3 style="color:#0e2a52;margin:18px 0 6px">Au programme</h3>
-<p>Tournois, animations, exposants, zone enfants… décrivez le programme ici. Vous pouvez ajouter autant de paragraphes que vous voulez.</p>
-<h3 style="color:#0e2a52;margin:18px 0 6px">En images</h3>
+<h3 style="color:var(--acc);margin:18px 0 6px">Au programme</h3>
+<p>Tournois, animations, exposants, zone enfants… décrivez le programme ici.</p>
+<h3 style="color:var(--acc);margin:18px 0 6px">En images</h3>
 <p>Ajoutez des photos avec le bouton 🖼 de la barre d'outils.</p>` },
+  affiche: { label:'Affiche événement', html:
+`<div style="text-align:center;padding:6px 0 16px;border-bottom:3px solid var(--acc);margin-bottom:18px">
+  <h2 style="color:var(--acc);font-size:30px;letter-spacing:.5px;margin:0 0 4px;text-transform:uppercase">Titre de l'événement</h2>
+  <p style="font-weight:700;color:#555;margin:0">Dates · Lieu</p>
+</div>
+<p style="font-size:16px">Phrase d'accroche : présentez l'événement en une ou deux phrases percutantes.</p>
+<div style="background:var(--acc);color:#fff;padding:18px 20px;border-radius:12px;margin:18px 0;text-align:center">
+  <strong style="font-size:18px">Le rendez-vous incontournable</strong>
+  <p style="margin:6px 0 0">Ajoutez ici votre message clé.</p>
+</div>
+<h3 style="color:var(--acc);margin:18px 0 6px">Au programme</h3>
+<ul><li>Animation 1</li><li>Animation 2</li><li>Animation 3</li></ul>
+<h3 style="color:var(--acc);margin:18px 0 6px">Infos pratiques</h3>
+<p><b>Lieu :</b> … &nbsp;·&nbsp; <b>Horaires :</b> … &nbsp;·&nbsp; <b>Tarif :</b> …</p>
+<h3 style="color:var(--acc);margin:18px 0 6px">En images</h3>
+<p>Ajoutez des photos avec le bouton 🖼.</p>` },
 };
+// Blocs réutilisables insérables n'importe où dans le contenu (texte / image / bande / galerie / bouton).
+function salonBlockHTML(kind, imgUrl){
+  if(kind==='section') return '<h3 style="color:var(--acc);margin:16px 0 6px">Titre de section</h3><p>Votre texte ici…</p><p><br></p>';
+  if(kind==='bande') return '<div style="background:var(--acc);color:#fff;padding:16px 20px;border-radius:10px;margin:14px 0"><strong>Titre</strong><p style="margin:6px 0 0">Votre message…</p></div><p><br></p>';
+  if(kind==='bouton') return '<p style="text-align:center;margin:14px 0"><a href="#" style="display:inline-block;background:var(--acc);color:#fff;text-decoration:none;font-weight:700;padding:11px 22px;border-radius:100px">Bouton</a></p><p><br></p>';
+  if(kind==='imgtexte') return '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:14px 0"><div style="flex:1;min-width:160px"><h3 style="color:var(--acc);margin-top:0">Titre</h3><p>Votre texte à côté de l\'image…</p></div><div style="flex:1;min-width:160px"><img src="'+(imgUrl||'')+'" style="width:100%;border-radius:8px"></div></div><p><br></p>';
+  if(kind==='galerie') return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0">'+(imgUrl?('<img src="'+imgUrl+'" style="width:100%;border-radius:6px"><img src="'+imgUrl+'" style="width:100%;border-radius:6px"><img src="'+imgUrl+'" style="width:100%;border-radius:6px">'):'')+'</div><p><br></p>';
+  return '';
+}
 function salonItemModal(it, evs, onSave){
   const isNew=!it; it = it ? {...it} : {id:Date.now(),annee:'',titre:'',sous_titre:'',date_debut:'',heure_debut:'',date_fin:'',heure_fin:'',image:'',popup_html:'',event_id:null,actif:true,ordre:9999,template_key:'',ticketing:{}};
   const tk = it.ticketing||{};
@@ -2545,12 +2571,13 @@ function salonItemModal(it, evs, onSave){
         <div class="si-prev" style="width:120px;height:84px;border-radius:8px;background:#0b0b0d center/cover no-repeat;border:1px solid var(--line);${img?`background-image:url('${img}')`:''}"></div>
         ${mediaBtn('si-pick','Choisir')}<button type="button" class="btn small red si-clear">${icon('trash')} Retirer</button>
       </div></div>
-    <div class="field"><span>Modèle de page</span>
+    <div class="field"><span>Modèle de page &amp; couleur</span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
-        <select class="si-tpl" style="width:auto">${Object.keys(SALON_TEMPLATES).map(k=>`<option value="${k}">${esc(SALON_TEMPLATES[k].label)}</option>`).join('')}</select>
+        <select class="si-tpl" style="width:auto">${Object.keys(SALON_TEMPLATES).map(k=>`<option value="${k}" ${it.template_key===k?'selected':''}>${esc(SALON_TEMPLATES[k].label)}</option>`).join('')}</select>
         <button type="button" class="btn small grey si-tpl-apply">${icon('plus')} Insérer le modèle</button>
         <button type="button" class="btn small grey si-html-paste">${icon('doc')} Coller du HTML</button>
-      </div><span class="help">Le modèle remplit la zone de contenu ci-dessous, que tu complètes ensuite librement.</span></div>
+        <label class="mini" style="display:flex;align-items:center;gap:6px">Couleur <input type="color" class="si-color" value="${/^#([0-9a-f]{6})$/i.test(it.template_color||'')?it.template_color:'#467ff7'}" style="width:42px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px"></label>
+      </div><span class="help">La couleur s'applique à tout le modèle (titres, bandes, boutons) — modifiable à volonté.</span></div>
     <div class="field"><span>Contenu de la fiche / popup (texte enrichi)</span>
       <div class="wysi-toolbar si-pop-tools" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px">
         <button type="button" class="btn small grey" data-block="h2" title="Titre">Titre</button>
@@ -2559,10 +2586,17 @@ function salonItemModal(it, evs, onSave){
         <button type="button" class="btn small grey" data-cmd="italic"><i>I</i></button>
         <button type="button" class="btn small grey" data-cmd="insertUnorderedList">• Liste</button>
         <button type="button" class="btn small grey si-link" title="Lien">🔗</button>
-        <button type="button" class="btn small grey si-img" title="Image">🖼<input type="file" class="si-img-file" accept="image/*" style="display:none"></button>
+        <button type="button" class="btn small grey si-img" title="Image">🖼</button>
         <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')}</button>
       </div>
-      <div class="si-pop" contenteditable="true" style="min-height:150px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${it.popup_html||''}</div></div>
+      <div class="wysi-toolbar si-blocks" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px;align-items:center"><span class="mini" style="color:var(--muted)">Insérer un bloc :</span>
+        <button type="button" class="btn small grey" data-blk="section">＋ Section</button>
+        <button type="button" class="btn small grey" data-blk="imgtexte">＋ Image + texte</button>
+        <button type="button" class="btn small grey" data-blk="galerie">＋ Galerie</button>
+        <button type="button" class="btn small grey" data-blk="bande">＋ Bande colorée</button>
+        <button type="button" class="btn small grey" data-blk="bouton">＋ Bouton</button>
+      </div>
+      <div class="si-pop" contenteditable="true" style="--acc:${/^#([0-9a-f]{6})$/i.test(it.template_color||'')?it.template_color:'#467ff7'};min-height:150px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${it.popup_html||''}</div></div>
     <details class="bubble-sec" style="margin-top:6px"><summary style="cursor:pointer;padding:10px 4px;font-weight:700;color:var(--navy)">🎟️ Billetterie (préparé pour plus tard)</summary>
       <div style="padding:4px 2px 6px">
         <label class="mini" style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><input type="checkbox" class="si-tk-on" ${tk.enabled?'checked':''}> Activer la billetterie</label>
@@ -2584,6 +2618,14 @@ function salonItemModal(it, evs, onSave){
   ov.querySelectorAll('.si-pop-tools [data-block]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand('formatBlock',false,b.dataset.block); }));
   sel('.si-link').addEventListener('click',()=>{ const url=window.prompt('Adresse du lien (https://…)'); if(url){ ed.focus(); document.execCommand('createLink',false,url); } });
   sel('.si-img').addEventListener('click',()=>mediaPicker(url=>{ ed.focus(); document.execCommand('insertHTML',false,'<p style="text-align:center"><img src="'+url+'" style="max-width:100%;height:auto;border-radius:6px;margin:10px 0"></p><p><br></p>'); }));
+  // Couleur d'accent (live sur l'éditeur)
+  sel('.si-color').addEventListener('input',e=>{ ed.style.setProperty('--acc', e.target.value); });
+  // Blocs insérables n'importe où
+  ov.querySelectorAll('.si-blocks [data-blk]').forEach(b=>b.addEventListener('click',()=>{
+    const kind=b.dataset.blk;
+    if(kind==='imgtexte'||kind==='galerie'){ mediaPicker(url=>{ ed.focus(); document.execCommand('insertHTML',false,salonBlockHTML(kind,url)); }); }
+    else { ed.focus(); document.execCommand('insertHTML',false,salonBlockHTML(kind)); }
+  }));
   sel('.si-gen').addEventListener('click',()=>{ const s=salonPhrase(sel('.si-dd').value,sel('.si-hd').value.trim(),sel('.si-df').value,sel('.si-hf').value.trim()); if(s){ sel('.si-sous').value=s; if(!sel('.si-annee').value){ const y=(sel('.si-dd').value||'').slice(0,4); if(y) sel('.si-annee').value=y; } toast('Sous-titre généré'); } else toast('Renseigne au moins la date de début.'); });
   sel('.si-tpl-apply').addEventListener('click',()=>{ const tpl=SALON_TEMPLATES[sel('.si-tpl').value]; if(!tpl) return; const apply=()=>{ ed.innerHTML=tpl.html; }; if(ed.innerHTML.trim()) confirmChoice('Insérer le modèle « '+tpl.label+' » ? Cela remplacera le contenu actuel de la fiche.','Remplacer','Annuler',apply); else apply(); });
   sel('.si-html-paste').addEventListener('click',()=>{ htmlPasteOverlay(html=>{ const apply=()=>{ ed.innerHTML=html; }; if(ed.innerHTML.trim()) confirmChoice('Remplacer le contenu actuel par le HTML collé ?','Remplacer','Annuler',apply); else apply(); }); });
@@ -2591,7 +2633,7 @@ function salonItemModal(it, evs, onSave){
   function collect(){
     return { id:it.id, annee:sel('.si-annee').value.trim(), titre:sel('.si-titre').value.trim(), sous_titre:sel('.si-sous').value.trim(),
       date_debut:sel('.si-dd').value, heure_debut:sel('.si-hd').value.trim(), date_fin:sel('.si-df').value, heure_fin:sel('.si-hf').value.trim(),
-      image:img, popup_html:ed.innerHTML.trim(), event_id:sel('.si-event').value||null, template_key:sel('.si-tpl').value, actif:sel('.si-actif').checked, ordre:it.ordre,
+      image:img, popup_html:ed.innerHTML.trim(), event_id:sel('.si-event').value||null, template_key:sel('.si-tpl').value, template_color:sel('.si-color').value, actif:sel('.si-actif').checked, ordre:it.ordre,
       ticketing:{ enabled:sel('.si-tk-on').checked, label:sel('.si-tk-label').value.trim(), url:sel('.si-tk-url').value.trim(), intro:sel('.si-tk-intro').value.trim(), status:sel('.si-tk-status').value } };
   }
   sel('.si-preview').addEventListener('click',()=>salonPreview(collect()));
@@ -2617,7 +2659,7 @@ function salonPreview(it){
       <div style="color:var(--teal-d);font-weight:700">${esc(it.annee||'')}</div>
       <h3 style="margin:4px 0 4px">${esc(it.titre||'')}</h3>
       <div style="color:var(--muted);margin-bottom:12px">${esc(it.sous_titre||'')}</div>
-      <div style="line-height:1.6">${it.popup_html||''}</div>
+      <div style="line-height:1.6;--acc:${/^#([0-9a-f]{6})$/i.test(it.template_color||'')?it.template_color:'#467ff7'}">${it.popup_html||''}</div>
       ${tkHtml}
       <div class="buttons" style="margin-top:16px"><button type="button" class="btn grey sp-prev-close">Fermer l'aperçu</button></div>
     </div></div>`;

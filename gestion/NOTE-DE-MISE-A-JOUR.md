@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.22 — 15 juin 2026**
+## Fiche salon : 2ᵉ modèle + couleur réglable + blocs
+- Nouveau modèle **« Affiche événement »** (grand titre coloré, bande de couleur, programme, galerie…).
+- **Couleur réglable à volonté** : un sélecteur de couleur applique l'accent à tout le modèle (titres, bandes, boutons), en direct, sur la fiche et sur le site.
+- Boutons **« Insérer un bloc »** pour ajouter, où tu veux dans le contenu : **Section** (titre + texte), **Image + texte**, **Galerie**, **Bande colorée**, **Bouton**.
+
+---
+
 **Version 2.8.21 — 15 juin 2026**
 ## Fiche salon enrichie (création / modification)
 - **Dates précises** : date + heure de début et de fin, avec un bouton **« Générer le sous-titre depuis les dates »** (ex. « Les 22 et 23 novembre 2025 », « Du 3 au 5 octobre 2025 »).

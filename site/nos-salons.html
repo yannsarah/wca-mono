@@ -119,7 +119,9 @@
     document.getElementById('salPopYr').textContent=it.annee||'';
     document.getElementById('salPopTitle').textContent=it.titre||'';
     document.getElementById('salPopSub').textContent=it.sous_titre||'';
-    document.getElementById('salPopBody').innerHTML=(it.popup_html||'')+ticketHtml(it.ticketing);
+    var bodyEl=document.getElementById('salPopBody');
+    bodyEl.style.setProperty('--acc', it.template_color || '#467FF7');
+    bodyEl.innerHTML=(it.popup_html||'')+ticketHtml(it.ticketing);
     pop.classList.add('open');
   }
   if(!window.WCA) return;
