@@ -29,6 +29,24 @@
 .btn-rent svg{width:16px;height:16px;vertical-align:-2px;margin-right:5px;display:inline-block;}
 .btn-rent .material-symbols-outlined{font-size:18px;vertical-align:-3px;margin-right:4px;}
 @media(max-width:768px){.mrow{grid-template-columns:1fr;}.mrow.rev .mtext{order:0;}.mrow .mtext h2{font-size:30px;}}
+/* Popup « Louer cette borne » (formulaire de contact) */
+.rentpop-ov{position:fixed;inset:0;z-index:9000;background:rgba(10,15,25,.74);display:none;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;}
+.rentpop-ov.open{display:flex;}
+.rentpop{position:relative;background:#fff;max-width:560px;width:100%;border-radius:16px;padding:26px 28px 22px;box-shadow:0 24px 70px rgba(0,0,0,.45);margin:auto;}
+.rentpop h3{font-family:var(--poppins);font-weight:700;font-size:23px;color:var(--navy);margin-bottom:4px;}
+.rentpop .lead{color:#5d6b85;font-size:14px;margin-bottom:18px;}
+.rentpop .cf-field{margin-bottom:14px;}
+.rentpop .cf-field label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;color:var(--text);}
+.rentpop .cf-field input,.rentpop .cf-field select,.rentpop .cf-field textarea{width:100%;padding:12px 14px;border:1px solid #d8dde6;border-radius:8px;font:inherit;font-size:15px;background:#f7f9fc;box-sizing:border-box;}
+.rentpop .cf-field input:focus,.rentpop .cf-field select:focus,.rentpop .cf-field textarea:focus{outline:none;border-color:var(--blue);background:#fff;}
+.rentpop .cf-field input[readonly]{background:#eef1f6;color:#445;font-weight:600;}
+.rentpop .cf-field textarea{min-height:120px;resize:vertical;}
+.rentpop-actions{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;}
+.rentpop-actions .btn{cursor:pointer;border:0;}
+.rentpop-send{background:var(--blue);border-radius:100px;padding:13px 32px;}
+.rentpop-close{background:#d32f2f;border-radius:100px;padding:13px 32px;}
+.rentpop-close:hover{background:#b71c1c;}
+.rentpop-msg{display:none;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:14px;}
 </style>
 </head>
 <body class="machines">
@@ -149,51 +167,122 @@
  document.getElementById('burger').onclick=function(){pn.classList.add('open');ov.classList.add('open');};
  document.getElementById('sfmClose').onclick=ov.onclick=function(){pn.classList.remove('open');ov.classList.remove('open');};})();
 </script>
+<!-- Popup « Louer cette borne » : formulaire de contact (fermable uniquement par le bouton Fermer) -->
+<div class="rentpop-ov" id="rentPop" role="dialog" aria-modal="true" aria-label="Louer cette borne">
+  <form class="rentpop" id="rentForm" action="contact.php" method="post">
+    <h3 id="rentPopTitle">Louer cette borne</h3>
+    <p class="lead">Remplissez ce formulaire, nous revenons vers vous rapidement.</p>
+    <div class="rentpop-msg" id="rentMsg"></div>
+    <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+    <input type="hidden" name="__fields" id="rentFields">
+    <div id="rentBody"></div>
+    <div class="rentpop-actions">
+      <button type="submit" class="btn btn-blue-pill rentpop-send">Envoyer</button>
+      <button type="button" class="btn rentpop-close" id="rentPopClose">Fermer</button>
+    </div>
+  </form>
+</div>
+
 <script src="assets/js/wca-api.js"></script>
 <script>
 /* Machines publiées depuis la gestion (opt-in : materiel.visible_site === true).
-   Tant qu'aucune machine n'est publiée, on garde le contenu curé ci-dessus (repli). */
+   Le bouton « Louer cette borne » ouvre une popup avec le formulaire de contact. */
 (async function(){
   var main=document.getElementById('machMain'); if(!main||!window.WCA) return;
-  function btnHtml(b, fallbackLabel){
+  var contactCfg=null, machCfg=null;
+
+  /* ---------- Popup formulaire de contact ---------- */
+  var pop=document.getElementById('rentPop');
+  function buildForm(borne){
+    var fields=(contactCfg&&contactCfg.fields&&contactCfg.fields.length)?contactCfg.fields:[
+      {key:'nom',label:'Nom',type:'text',required:true},
+      {key:'email',label:'Email',type:'email',required:true},
+      {key:'message',label:'Message',type:'textarea',required:true}
+    ];
+    var meta=fields.map(function(f){return {key:f.key,label:f.label,type:f.type,required:!!f.required};});
+    meta.unshift({key:'borne',label:'Borne souhaitée',type:'text',required:false});
+    var html='<div class="cf-field"><label>Borne souhaitée</label><input type="text" name="borne" value="'+WCA.esc(borne)+'" readonly></div>';
+    fields.forEach(function(f){
+      var req=f.required?' required':'';
+      var lbl='<label>'+WCA.esc(f.label||'')+(f.required?' *':'')+'</label>';
+      if(f.type==='textarea') html+='<div class="cf-field">'+lbl+'<textarea name="'+WCA.esc(f.key)+'"'+req+'></textarea></div>';
+      else if(f.type==='select'){ var opts=(f.options||[]).map(function(o){return '<option value="'+WCA.esc(o)+'">'+WCA.esc(o)+'</option>';}).join(''); html+='<div class="cf-field">'+lbl+'<select name="'+WCA.esc(f.key)+'"'+req+'><option value="">— Choisir —</option>'+opts+'</select></div>'; }
+      else { var ty=f.type==='email'?'email':(f.type==='tel'?'tel':'text'); html+='<div class="cf-field">'+lbl+'<input type="'+ty+'" name="'+WCA.esc(f.key)+'"'+req+'></div>'; }
+    });
+    document.getElementById('rentBody').innerHTML=html;
+    document.getElementById('rentFields').value=JSON.stringify(meta);
+  }
+  function openRent(borne){
+    document.getElementById('rentPopTitle').textContent = borne ? ('Louer : '+borne) : 'Louer cette borne';
+    buildForm(borne||'');
+    pop.classList.add('open');
+    document.body.style.overflow='hidden';
+  }
+  // Fermeture UNIQUEMENT par le bouton rouge « Fermer »
+  document.getElementById('rentPopClose').addEventListener('click',function(){ pop.classList.remove('open'); document.body.style.overflow=''; });
+  // Clic sur un bouton « Louer » (statique ou dynamique)
+  main.addEventListener('click',function(e){ var b=e.target.closest('.js-rent-pop'); if(!b) return; e.preventDefault(); openRent(b.dataset.titre||''); });
+  // message de retour (?sent=) après envoi
+  (function(){ var p=new URLSearchParams(location.search).get('sent'); if(p===null) return; var box=document.getElementById('rentMsg'); /* le retour se fait sur contact.html, ici on ne montre rien */ })();
+
+  function moreBtnHtml(b){
     if(!b || b.enabled===false) return '';
-    var label=b.label||fallbackLabel, url=b.url||'contact.html';
+    var label=b.label||'Voir plus', url=b.url||'#';
     var color=b.color?' style="background:'+WCA.esc(b.color)+'"':'';
     var tgt=b.target==='_blank'?' target="_blank" rel="noopener"':'';
     var ic=b.icon?WCA.iconHTML(b.icon_type,b.icon)+' ':'';
     return '<a class="btn btn-rent"'+color+' href="'+WCA.esc(url)+'"'+tgt+'>'+ic+WCA.esc(label)+'</a>';
   }
-  var cfg=null;
-  // Bannière (haut de page) + récup config boutons
+  function rentBtnHtml(b,titre){
+    if(b && b.enabled===false) return '';
+    var label=(b&&b.label)||'Louer cette borne';
+    var color=(b&&b.color)?' style="background:'+WCA.esc(b.color)+'"':'';
+    var ic=(b&&b.icon)?WCA.iconHTML(b.icon_type,b.icon)+' ':'';
+    return '<a class="btn btn-rent js-rent-pop"'+color+' href="#" data-titre="'+WCA.esc(titre)+'">'+ic+WCA.esc(label)+'</a>';
+  }
+
+  // Récup config (bannière + boutons + formulaire de contact)
   try{
     var home=await WCA.getJSON('home');
-    cfg=home&&home.machines_page?home.machines_page:null;
-    if(cfg&&cfg.banner&&cfg.banner.enabled&&cfg.banner.image){
-      var b=cfg.banner;
-      var imgTag='<img src="'+WCA.esc(b.image)+'" alt="">';
+    machCfg=home&&home.machines_page?home.machines_page:null;
+    contactCfg=home&&home.contact_page?home.contact_page:null;
+    if(machCfg&&machCfg.banner&&machCfg.banner.enabled&&machCfg.banner.image){
+      var bn=machCfg.banner;
+      var imgTag='<img src="'+WCA.esc(bn.image)+'" alt="">';
       var bann=document.createElement('div'); bann.className='mach-banner';
-      bann.innerHTML=b.url?('<a href="'+WCA.esc(b.url)+'"'+(b.target==='_blank'?' target="_blank" rel="noopener"':'')+'>'+imgTag+'</a>'):imgTag;
+      bann.innerHTML=bn.url?('<a href="'+WCA.esc(bn.url)+'"'+(bn.target==='_blank'?' target="_blank" rel="noopener"':'')+'>'+imgTag+'</a>'):imgTag;
       main.parentNode.insertBefore(bann, main);
     }
   }catch(e){}
+
   // Liste des machines (ordre piloté depuis la gestion)
   try{
     var list=await WCA.getJSON('machines');
-    if(!list.length) return; // aucune machine publiée → on conserve la vitrine actuelle
-    var rent=cfg?cfg.btn_rent:null, more=cfg?cfg.btn_more:null;
-    main.innerHTML=list.map(function(m,i){
-      var sens=m.sens||'auto';
-      var rev = sens==='image-texte' ? true : sens==='texte-image' ? false : (i%2===0);
-      var titre=m.titre||m.denomination||'';
-      var img=m.photo?'<div class="mimg"><img src="'+WCA.esc(m.photo)+'" alt="'+WCA.esc(titre)+'"></div>':'<div class="mimg"></div>';
-      var sub=m.sous_titre?'<div class="sub">'+WCA.esc(m.sous_titre)+'</div>':(m.categorie?'<div class="sub">'+WCA.esc(m.categorie)+'</div>':'');
-      var desc=m.description?'<div class="mdesc">'+m.description+'</div>':'';
-      var btns = cfg ? (btnHtml(rent,'Louer cette borne')+btnHtml(more,'Voir plus')) : '<a class="btn btn-rent" href="contact.html">Louer cette borne</a>';
-      var cta='<div class="mbtns">'+btns+'</div>';
-      var block='<div class="mrow'+(rev?' rev':'')+'"><div class="mtext"><h2>'+WCA.esc(titre)+'</h2>'+sub+desc+cta+'</div>'+img+'</div>';
-      return block+(i<list.length-1?'<hr class="mdiv">':'');
-    }).join('');
+    if(list.length){
+      var rent=machCfg?machCfg.btn_rent:null, more=machCfg?machCfg.btn_more:null;
+      main.innerHTML=list.map(function(m,i){
+        var sens=m.sens||'auto';
+        var rev = sens==='image-texte' ? true : sens==='texte-image' ? false : (i%2===0);
+        var titre=m.titre||m.denomination||'';
+        var img=m.photo?'<div class="mimg"><img src="'+WCA.esc(m.photo)+'" alt="'+WCA.esc(titre)+'"></div>':'<div class="mimg"></div>';
+        var sub=m.sous_titre?'<div class="sub">'+WCA.esc(m.sous_titre)+'</div>':(m.categorie?'<div class="sub">'+WCA.esc(m.categorie)+'</div>':'');
+        var desc=m.description?'<div class="mdesc">'+m.description+'</div>':'';
+        var btns=rentBtnHtml(rent,titre)+moreBtnHtml(more);
+        var cta='<div class="mbtns">'+btns+'</div>';
+        var block='<div class="mrow'+(rev?' rev':'')+'"><div class="mtext"><h2>'+WCA.esc(titre)+'</h2>'+sub+desc+cta+'</div>'+img+'</div>';
+        return block+(i<list.length-1?'<hr class="mdiv">':'');
+      }).join('');
+    }
   }catch(err){ /* API indisponible → on garde la vitrine curée */ }
+
+  // Met à niveau les boutons « Louer » statiques (repli) pour qu'ils ouvrent aussi la popup
+  main.querySelectorAll('a.btn-rent:not(.js-rent-pop)').forEach(function(a){
+    if((a.textContent||'').toLowerCase().indexOf('louer')>=0){
+      a.classList.add('js-rent-pop'); a.setAttribute('href','#');
+      var row=a.closest('.mrow'); var h2=row?row.querySelector('h2'):null;
+      a.dataset.titre=h2?h2.textContent:'';
+    }
+  });
 })();
 </script>
 </body>

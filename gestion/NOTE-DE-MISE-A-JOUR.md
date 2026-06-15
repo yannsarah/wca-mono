@@ -2,6 +2,13 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.20 — 15 juin 2026**
+## Nos machines : « Louer cette borne » ouvre le formulaire en popup
+- Sur la page **Nos Machines**, le bouton **« Louer cette borne »** ouvre une **popup** avec le **formulaire de contact** (les champs réglés dans Site internet › Contact), joliment mis en page, avec la **borne pré-remplie**.
+- La popup ne se ferme qu'avec un **bouton « Fermer » rouge**, à côté du bouton **« Envoyer »**.
+
+---
+
 **Version 2.8.19 — 15 juin 2026**
 ## Nos salons : reprise automatique de l'ancienne page
 - Bouton **« Importer les salons de l'ancienne page »** : reprend en un clic le **titre**, la **description** et les **11 salons** (année, titre, sous-titre, image) de l'ancienne page statique — plus besoin de tout ressaisir.
