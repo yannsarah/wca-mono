@@ -23,6 +23,10 @@ function readJSON(f) {
   catch (e) { console.error('Lecture', f, 'impossible :', e.message); return null; }
 }
 
+// Date de dernière synchro mémoire ↔ fichier (pour gérer plusieurs processus Node / Passenger).
+let lastMtime = 0;
+function fileMtime() { try { return fs.statSync(FILE).mtimeMs; } catch { return 0; } }
+
 export function load() {
   const d = readJSON(FILE);
   if (d) Object.assign(data, d);
@@ -33,11 +37,20 @@ export function load() {
   if (!Array.isArray(data.logins)) data.logins = [];
   if (!data.presence || typeof data.presence !== 'object') data.presence = {};
   if (!Array.isArray(data.activity)) data.activity = [];
+  lastMtime = fileMtime();
+}
+
+// Recharge depuis le disque si le fichier a été modifié par un AUTRE processus.
+// Évite que des workers Passenger servent des données périmées (modif « non prise en compte »).
+export function reloadIfChanged() {
+  const m = fileMtime();
+  if (m && m !== lastMtime) load();
 }
 
 export function save() {
   try {
     fs.writeFileSync(FILE, JSON.stringify(data));
+    lastMtime = fileMtime();
   } catch (e) {
     console.error('Écriture de la base impossible :', e.message);
     try { fs.appendFileSync(path.join(__dirname, 'wca-error.log'), `[${new Date().toISOString()}] save: ${e.stack || e}\n`); } catch {}

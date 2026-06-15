@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { db, save, nextId, setData } from './store.js';
+import { db, save, nextId, setData, reloadIfChanged } from './store.js';
 import { handlePublic } from './MODULES/public-api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1841,7 +1841,7 @@ http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const pathname = url.pathname;
     // API publique (lecture seule, CORS) pour le site — AVANT l'authentification.
-    if (pathname.startsWith('/api/public/') || pathname === '/api/public') return handlePublic(req, res, pathname, url.searchParams);
+    if (pathname.startsWith('/api/public/') || pathname === '/api/public') { try { reloadIfChanged(); } catch {} return handlePublic(req, res, pathname, url.searchParams); }
     if (!pathname.startsWith('/api/')) return serveStatic(req, res, pathname);
     const query = {};
     for (const [k, v] of url.searchParams) query[k] = v;
@@ -1851,6 +1851,7 @@ http.createServer((req, res) => {
       try {
         let body = {};
         if (raw) { try { body = JSON.parse(raw); } catch { return send(res, 400, { error: 'JSON invalide.' }); } }
+        try { reloadIfChanged(); } catch {} // synchronise la mémoire avec le fichier (multi-process Passenger)
         const user = currentUser(req);
         if (user) touchPresence(user); // présence best-effort (sauvegardée à la prochaine écriture)
         const open = OPEN_ROUTES.some(([m, pth]) => m === req.method && pth === pathname);
