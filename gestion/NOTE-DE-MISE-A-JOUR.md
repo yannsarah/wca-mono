@@ -2,6 +2,15 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.18 — 15 juin 2026**
+## Page « Nos salons » dynamique
+- Nouvel onglet **Nos salons** dans Site internet (à côté de Nos machines).
+- Modifiable : le **titre** et la **description** (texte enrichi) de la page.
+- **Frise (timeline)** des salons : ajouter / modifier / supprimer / afficher-masquer / **réordonner au glisser-déposer**. Chaque salon : année, titre, sous-titre, image (médiathèque), contenu de la **popup** (texte enrichi) et lien optionnel vers un événement existant.
+- Sur le site, la page **Nos salons** affiche tout ça dans l'ordre choisi, et le bouton ouvre une **popup** (image, date, titre, sous-titre, contenu) — fermable au clic, en dehors ou avec Échap, responsive.
+
+---
+
 **Version 2.8.17 — 15 juin 2026**
 ## Module Asso : suivi des cotisations plus clair
 - Colonne **Cotisation** : badge **✅ À jour / ❌ Non cotisé**, **cliquable** pour basculer le paiement d'un clic (et **case à cocher « à jour »** dans la fiche du membre).

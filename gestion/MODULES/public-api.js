@@ -169,6 +169,19 @@ export function handlePublic(req, res, pathname, searchParams) {
     }), true;
   }
 
+  // ----- Page « Nos salons » (titre, description, timeline) -----
+  if (pathname === '/api/public/salons') {
+    const sp = (d.settings && d.settings.site && d.settings.site.salons_page) || {};
+    const items = (Array.isArray(sp.items) ? sp.items : [])
+      .filter(it => it && it.actif !== false)
+      .sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+      .map(it => ({
+        id: it.id, annee: it.annee || '', titre: it.titre || '', sous_titre: it.sous_titre || '',
+        image: it.image || '', popup_html: it.popup_html || '', event_id: it.event_id || null,
+      }));
+    return sendJSON(res, 200, { title: sp.title || '', description: sp.description || '', items }), true;
+  }
+
   // ----- Contenu de la page d'accueil (hero, photos asso, équipe) -----
   if (pathname === '/api/public/home') {
     const s = (d.settings && d.settings.site) || {};

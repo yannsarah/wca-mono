@@ -28,6 +28,17 @@
  .ev:nth-child(odd) .dot,.ev:nth-child(even) .dot{left:9px;right:auto;}
  .intro h1{font-size:30px;}
 }
+/* Popup salon */
+.salpop-ov{position:fixed;inset:0;z-index:9000;background:rgba(10,15,25,.72);display:none;align-items:center;justify-content:center;padding:18px;}
+.salpop-ov.open{display:flex;}
+.salpop{position:relative;background:#fff;max-width:560px;width:100%;border-radius:14px;overflow:hidden;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.salpop>img,.salpop .imgwrap img{width:100%;max-height:300px;object-fit:cover;display:block;}
+.salpop .pad{padding:20px 22px;overflow:auto;}
+.salpop .yr{font-family:var(--poppins);font-weight:700;color:var(--blue);font-size:14px;}
+.salpop h3{font-family:var(--poppins);font-weight:700;font-size:24px;color:var(--navy);margin:4px 0 6px;}
+.salpop .sub{color:#5d6b85;margin-bottom:12px;}
+.salpop .body{color:var(--text);line-height:1.6;}
+.salpop .x{position:absolute;top:12px;right:14px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:50%;width:36px;height:36px;font-size:22px;line-height:1;cursor:pointer;z-index:2;}
 </style>
 </head>
 <body>
@@ -40,12 +51,14 @@
 <a class="logo-link" href="index.html"><img src="img/Logo-WCA-intro-350px.png" alt="WCA"></a></div></header>
 
 <section class="intro">
-  <h1>L'histoire West Coast Arcades</h1>
+  <h1 id="salTitle">L'histoire West Coast Arcades</h1>
+  <div id="salDesc">
   <p><b>West Coast Arcades</b> est une association qui a été créée en 2014 par Julien et Maxime sur une idée simple : rassembler les passionnés des jeux d'arcades. Rapidement l'association est rejointe par Cédric qui va apporter aux passionnés de bornes d'arcades les mordus de flippers. L'association s'agrandit pour compter 10 membres majeurs et organise son 1er salon le Freeplay qui se déroule à la Romagne dans une modeste salle de 190 m². Suivront 4 salons toujours à la Romagne jusqu'en 2018 pour accueillir 2000 visiteurs dans une salle de 400 m². L'année 2019 arrive et les évènements associatifs avec le public sont très compliqués à organiser, et l'asso passe en veille.</p>
   <p>Sortie de cette période de confinement, la présidence de l'asso change, mais l'envie de partager, de faire et de transmettre cette passion est plus grande que jamais. L'association se concentre sur ses valeurs : jouer, partager et prendre du plaisir autour du jeu, bornes d'arcades, flippers et rétrogaming. La machine est relancée en 2023 en collaboration avec le parc des expositions de Cholet. Le Games in Cholet voit le jour pour sa première édition en 2023 sur 2500 m² et accueille plus de 4000 visiteurs. Fort de ce succès, le Games in Cholet revient à la Meilleraie les 3 et 4 mai 2025, cette fois sur plus de 5000 m², pour encore plus de jeux et de fun.</p>
+  </div>
 </section>
 
-<div class="tl">
+<div class="tl" id="salTimeline">
   <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>Salon du Livre et du Jeu de Briançon</h3><p>Édition les 22 et 23 Novembre 2025</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/salon-du-livre-et-du-jeux-2025-chateau-de-briancon-westcoastarcades.fr_.webp" alt=""></div>
   <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>La BIF</h3><p>Édition les 3, 4 et 5 Octobre 2025</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/la-bif-2025-westcoastarcades.fr_.jpg" alt=""></div>
   <div class="ev"><span class="dot"></span><div class="yr">2025</div><h3>Boc and Geek</h3><p>Édition les 20 et 21 Septembre 2025</p><a class="btn btn-rent" href="#">Voir la page Évènement</a><br><br><img src="img/boc_n_geek___2025.webp" alt=""></div>
@@ -60,6 +73,60 @@
 </div>
 
 <section class="need"><div class="container"><h2>Vous souhaitez organiser un évènement autour de l'arcade et des flippers ?</h2><a class="btn btn-orange" href="contact.html">Contactez-nous !</a></div></section>
+
+<!-- Popup salon -->
+<div class="salpop-ov" id="salPop" role="dialog" aria-modal="true" aria-label="Détail du salon">
+  <div class="salpop">
+    <button class="x" id="salPopX" aria-label="Fermer">&times;</button>
+    <div class="imgwrap" id="salPopImg"></div>
+    <div class="pad">
+      <div class="yr" id="salPopYr"></div>
+      <h3 id="salPopTitle"></h3>
+      <div class="sub" id="salPopSub"></div>
+      <div class="body" id="salPopBody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/wca-api.js"></script>
+<script>
+/* Page « Nos salons » pilotée depuis la gestion (Site internet → Nos salons).
+   Tant que rien n'est configuré, on garde le contenu statique ci-dessus. */
+(function(){
+  var pop=document.getElementById('salPop');
+  function closePop(){ pop.classList.remove('open'); }
+  document.getElementById('salPopX').addEventListener('click',closePop);
+  pop.addEventListener('click',function(e){ if(e.target===pop) closePop(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closePop(); });
+  function openPop(it){
+    document.getElementById('salPopImg').innerHTML=it.image?'<img src="'+WCA.esc(it.image)+'" alt="">':'';
+    document.getElementById('salPopYr').textContent=it.annee||'';
+    document.getElementById('salPopTitle').textContent=it.titre||'';
+    document.getElementById('salPopSub').textContent=it.sous_titre||'';
+    document.getElementById('salPopBody').innerHTML=it.popup_html||(it.sous_titre?'':'');
+    pop.classList.add('open');
+  }
+  if(!window.WCA) return;
+  (async function(){
+    var cfg; try{ cfg=await WCA.getJSON('salons'); }catch(e){ return; }
+    if(!cfg) return;
+    if(cfg.title){ var t=document.getElementById('salTitle'); if(t) t.textContent=cfg.title; document.title=cfg.title+' - West Coast Arcades'; }
+    if(cfg.description){ var d=document.getElementById('salDesc'); if(d) d.innerHTML=cfg.description; }
+    var items=cfg.items||[];
+    if(items.length){
+      var tl=document.getElementById('salTimeline');
+      if(tl){
+        tl.innerHTML=items.map(function(it,i){
+          var img=it.image?'<br><br><img src="'+WCA.esc(it.image)+'" alt="'+WCA.esc(it.titre)+'">':'';
+          var sub=it.sous_titre?'<p>'+WCA.esc(it.sous_titre)+'</p>':'';
+          return '<div class="ev"><span class="dot"></span><div class="yr">'+WCA.esc(it.annee)+'</div><h3>'+WCA.esc(it.titre)+'</h3>'+sub+'<a class="btn btn-rent js-salon-btn" data-i="'+i+'" href="#">Voir la page Évènement</a>'+img+'</div>';
+        }).join('');
+        tl.addEventListener('click',function(e){ var b=e.target.closest('.js-salon-btn'); if(!b) return; e.preventDefault(); var it=items[+b.dataset.i]; if(it) openPop(it); });
+      }
+    }
+  })();
+})();
+</script>
 <div class="foot-copy">© 2026 Tous droits réservés</div>
 <div class="foot-legal"><a class="btn btn-legal" href="politique-de-confidentialite.html">Politique de confidentialité</a><a class="btn btn-legal" href="rgpd.html">RGPD</a></div>
 <script>(function(){var ov=document.getElementById('sfmOverlay'),pn=document.getElementById('sfmPanel');document.getElementById('burger').onclick=function(){pn.classList.add('open');ov.classList.add('open');};document.getElementById('sfmClose').onclick=ov.onclick=function(){pn.classList.remove('open');ov.classList.remove('open');};})();</script>

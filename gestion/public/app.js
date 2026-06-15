@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.17'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.18'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2184,6 +2184,7 @@ const SI_TAB_DEFS = [
   {k:'blog', l:()=>`${icon('doc')} Blog`},
   {k:'affichage', l:()=>`${icon('globe')} Affichage du site`},
   {k:'machines', l:()=>`🕹 Nos machines`},
+  {k:'salons', l:()=>`🎪 Nos salons`},
   {k:'modules', l:()=>`${icon('box')} Accueil`},
   {k:'contact', l:()=>`✉️ Contact`},
 ];
@@ -2204,6 +2205,7 @@ async function renderSiteInternet(){
   if(SITE_TAB==='blog') await renderBlogTab();
   else if(SITE_TAB==='affichage') await renderAffichageTab();
   else if(SITE_TAB==='machines') await renderMachinesTab();
+  else if(SITE_TAB==='salons') await renderSalonsTab();
   else if(SITE_TAB==='contact') await renderContactTab();
   else await renderModulesTab();
 }
@@ -2448,6 +2450,85 @@ function vitrineModal(m){
     try{ await put({ photo, titre_site:$('#vit-titre').value.trim(), sous_titre_site:$('#vit-sous').value.trim(), sens_site:$('#vit-sens').value, visible_site:$('#vit-vis').value==='1' }); closeModal(); toast('Fiche vitrine enregistrée'); renderAffichageTab(); }catch(e){ toast(e.message); }
   });
   $('#vit-del').addEventListener('click',()=>{ confirmModal('Vider la fiche vitrine de cette borne et la retirer du site ? (la photo de l’inventaire est conservée)', async()=>{ try{ await put({ titre_site:'', sous_titre_site:'', sens_site:'auto', visible_site:false }); closeModal(); toast('Fiche vitrine vidée'); renderAffichageTab(); }catch(e){ toast(e.message); } }); });
+}
+
+/* ============ Onglet NOS SALONS : page nos-salons.html (titre + description + timeline) ============ */
+async function renderSalonsTab(){
+  const body=$('#si-body');
+  try{ SITE_CONTENT = await api('/api/site'); }catch{ SITE_CONTENT=SITE_CONTENT||{}; }
+  const sp = SITE_CONTENT.salons_page || {};
+  let items = (Array.isArray(sp.items)?sp.items:[]).map((x,i)=>({...x, id:x.id||(Date.now()+i), ordre:x.ordre!=null?x.ordre:i}));
+  items.sort((a,b)=>(a.ordre||0)-(b.ordre||0));
+  let evs=[]; try{ evs=await api('/api/evenements'); }catch{}
+  body.innerHTML = bubbleCSS()
+   + `<p class="help" style="margin-bottom:10px">Page « Nos salons » du site : titre, description, et la frise (timeline) des salons. Glisse ⠿ pour réordonner.</p>`
+   + bubble('📝','Titre & description','Haut de la page Nos salons',
+      `<label class="field"><span>Titre de la page</span><input id="sp-title" value="${esc(sp.title||'')}" placeholder="ex. L'histoire West Coast Arcades"></label>
+       <div class="field"><span>Description (texte enrichi)</span>
+        <div class="wysi-toolbar" id="sp-desc-tools" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px">
+          <button type="button" class="btn small grey" data-cmd="bold" title="Gras"><b>G</b></button>
+          <button type="button" class="btn small grey" data-cmd="italic" title="Italique"><i>I</i></button>
+          <button type="button" class="btn small grey" data-cmd="insertUnorderedList" title="Liste">• Liste</button>
+          <button type="button" class="btn small grey" data-cmd="removeFormat" title="Effacer la mise en forme">${icon('x')}</button>
+        </div>
+        <div id="sp-desc" contenteditable="true" style="min-height:140px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${sp.description||''}</div></div>`, {open:true})
+   + bubble('🎪','Salons (frise / timeline)','Ajoute, réordonne, active/désactive chaque salon', `<div id="sp-items"></div><button type="button" class="btn small grey" id="sp-add" style="margin-top:6px">${icon('plus')} Ajouter un salon</button>`)
+   + `<div class="buttons" style="margin-top:8px"><button class="btn" id="sp-save">${icon('check')} Enregistrer la page Nos salons</button></div>`;
+  { const ed=$('#sp-desc'); $$('#sp-desc-tools [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); })); }
+  function drawItems(){
+    const box=$('#sp-items');
+    box.innerHTML = items.length ? items.map((it,i)=>`<div class="il-row" draggable="true" data-i="${i}" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card);${it.actif===false?'opacity:.55':''}">
+        <span style="cursor:grab;color:var(--muted)">⠿</span>
+        ${it.image?`<img src="${esc(it.image)}" style="width:54px;height:40px;object-fit:cover;border-radius:6px">`:'<span style="width:54px;height:40px;display:inline-block;border-radius:6px;background:var(--line)"></span>'}
+        <span style="flex:1;min-width:0"><strong style="color:var(--navy)">${esc(it.annee||'')} ${esc(it.titre||'(sans titre)')}</strong><span class="mini" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.sous_titre||'')}</span></span>
+        <span class="toggle-oui-non ${it.actif!==false?'on':'off'} sp-act" data-i="${i}" style="cursor:pointer"><span class="t-oui">Affiché</span><span class="t-non">Masqué</span></span>
+        <button type="button" class="iconbtn ghost sp-edit" data-i="${i}" title="Modifier">${icon('edit')}</button>
+        <button type="button" class="iconbtn ghost sp-del" data-i="${i}" title="Supprimer" style="color:#e23b3b">${icon('trash')}</button>
+      </div>`).join('') : '<p class="mini">Aucun salon. Clique « Ajouter un salon ».</p>';
+    box.querySelectorAll('.sp-act').forEach(t=>t.addEventListener('click',()=>{ items[+t.dataset.i].actif = !(items[+t.dataset.i].actif!==false); drawItems(); }));
+    box.querySelectorAll('.sp-edit').forEach(b=>b.addEventListener('click',()=>salonItemModal(items[+b.dataset.i],evs,saved=>{ items[+b.dataset.i]=saved; drawItems(); })));
+    box.querySelectorAll('.sp-del').forEach(b=>b.addEventListener('click',()=>{ items.splice(+b.dataset.i,1); drawItems(); }));
+    wireDnd(box,'.il-row',items,drawItems);
+  }
+  drawItems();
+  $('#sp-add').addEventListener('click',()=>salonItemModal(null,evs,saved=>{ items.push(saved); drawItems(); }));
+  $('#sp-save').addEventListener('click',async()=>{
+    items.forEach((it,i)=>it.ordre=i);
+    const payload={ salons_page:{ title:$('#sp-title').value.trim(), description:$('#sp-desc').innerHTML.trim(), items } };
+    try{ await api('/api/site',{method:'PUT',body:JSON.stringify(payload)}); SITE_CONTENT.salons_page=payload.salons_page; toast('Page Nos salons enregistrée'); renderSalonsTab(); }catch(e){ toast(e.message); }
+  });
+}
+function salonItemModal(it, evs, onSave){
+  const isNew=!it; it = it ? {...it} : {id:Date.now(),annee:'',titre:'',sous_titre:'',image:'',popup_html:'',event_id:null,actif:true,ordre:9999};
+  let img=it.image||'';
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1250';
+  ov.innerHTML=`<div class="modal modal-wide"><h3>${isNew?'Nouveau salon':'Modifier le salon'}</h3>
+    <div class="row2"><label class="field"><span>Année / date (gros texte)</span><input class="si-annee" value="${esc(it.annee||'')}" placeholder="ex. 2025"></label>
+      <label class="field"><span>Lier à un événement (optionnel)</span><select class="si-event"><option value="">— Aucun —</option>${evs.map(e=>`<option value="${e.id}" ${String(it.event_id)===String(e.id)?'selected':''}>${esc(e.nom)}</option>`).join('')}</select></label></div>
+    <label class="field"><span>Titre</span><input class="si-titre" value="${esc(it.titre||'')}" placeholder="ex. Games in Cholet"></label>
+    <label class="field"><span>Sous-titre / dates</span><input class="si-sous" value="${esc(it.sous_titre||'')}" placeholder="ex. Édition les 3 et 4 mai 2025"></label>
+    <div class="field"><span>Image / affiche</span>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <div class="si-prev" style="width:120px;height:84px;border-radius:8px;background:#0b0b0d center/cover no-repeat;border:1px solid var(--line);${img?`background-image:url('${img}')`:''}"></div>
+        ${mediaBtn('si-pick','Choisir')}<button type="button" class="btn small red si-clear">${icon('trash')} Retirer</button>
+      </div></div>
+    <div class="field"><span>Contenu de la popup (texte enrichi, optionnel)</span>
+      <div class="wysi-toolbar si-pop-tools" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px"><button type="button" class="btn small grey" data-cmd="bold"><b>G</b></button><button type="button" class="btn small grey" data-cmd="italic"><i>I</i></button><button type="button" class="btn small grey" data-cmd="insertUnorderedList">• Liste</button></div>
+      <div class="si-pop" contenteditable="true" style="min-height:110px;border:1px solid var(--line);border-radius:8px;padding:10px;background:#ffffff;color:#1a1a1a;line-height:1.6;overflow:auto">${it.popup_html||''}</div></div>
+    <label class="mini" style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" class="si-actif" ${it.actif!==false?'checked':''}> Affiché sur le site</label>
+    <div class="buttons" style="margin-top:12px"><button type="button" class="btn grey si-cancel">Annuler</button><button type="button" class="btn si-ok">Valider</button></div></div>`;
+  document.body.appendChild(ov);
+  const sel=s=>ov.querySelector(s); const close=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  sel('.si-cancel').addEventListener('click',close);
+  wireMedia('si-pick',url=>{ img=url; sel('.si-prev').style.backgroundImage=`url('${url}')`; });
+  sel('.si-clear').addEventListener('click',()=>{ img=''; sel('.si-prev').style.backgroundImage=''; });
+  { const ed=sel('.si-pop'); ov.querySelectorAll('.si-pop-tools [data-cmd]').forEach(b=>b.addEventListener('click',()=>{ ed.focus(); document.execCommand(b.dataset.cmd,false,null); })); }
+  sel('.si-event').addEventListener('change',e=>{ const ev=evs.find(x=>String(x.id)===e.target.value); if(ev){ if(!sel('.si-titre').value) sel('.si-titre').value=ev.nom||''; if(!img && (ev.affiche||ev.photo)){ img=ev.affiche||ev.photo; sel('.si-prev').style.backgroundImage=`url('${img}')`; } } });
+  sel('.si-ok').addEventListener('click',()=>{
+    onSave({ id:it.id, annee:sel('.si-annee').value.trim(), titre:sel('.si-titre').value.trim(), sous_titre:sel('.si-sous').value.trim(), image:img, popup_html:sel('.si-pop').innerHTML.trim(), event_id:sel('.si-event').value||null, actif:sel('.si-actif').checked, ordre:it.ordre });
+    close();
+  });
 }
 
 /* ============ Onglet CONTACT : formulaire de la page contact.html (dynamique) ============ */
