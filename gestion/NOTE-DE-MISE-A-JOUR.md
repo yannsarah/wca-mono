@@ -2,6 +2,15 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.24 — 15 juin 2026**
+## Médiathèque : vrai module avec dossiers
+- Nouveau module **Médiathèque** dans Administration (entre Module Asso et Menus & modules).
+- **Dossiers et sous-dossiers** (ex. Évènements / Games in Cholet 2025 / Photos) : créer, **renommer**, **déplacer** (renommer déplace aussi le contenu), **supprimer** (avec avertissement si le dossier contient des fichiers).
+- Navigation par **arborescence** à gauche + **fil d'Ariane**. Pour chaque fichier : **importer** (bouton ou glisser-déposer, plusieurs à la fois), **renommer**, **déplacer**, **copier le lien**, **télécharger**, **supprimer** (avec confirmation), **rechercher**.
+- Les images restent réutilisables partout via « Choisir une image ».
+
+---
+
 **Version 2.8.23 — 15 juin 2026**
 ## Salons : vraie page détail (façon affiche événement)
 - Nouvelle **page détail** d'un salon sur le site (sombre, style arcade) : grand visuel en hero, titre, dates, contenu riche, billetterie, et boutons « Retour à nos salons / Voir les autres événements / Nous contacter ».

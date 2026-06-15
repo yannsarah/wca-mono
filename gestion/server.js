@@ -1255,7 +1255,7 @@ add('POST', '/api/medias', (req, res, p, body, query, user) => {
   try {
     const r = saveMediaFile(body.data, body.name);
     let size = 0; try { size = fs.statSync(path.join(MEDIA_DIR, r.file)).size; } catch {}
-    const media = { id: r.id, file: r.file, url: mediaUrl(req, r.file), name: body.name || r.file, folder: '', size, date: new Date().toISOString() };
+    const media = { id: r.id, file: r.file, url: mediaUrl(req, r.file), name: body.name || r.file, folder: normFolderPath(body.folder), size, date: new Date().toISOString() };
     db().medias.push(media); logActivity(user, 'create', 'medias', media.name); save();
     send(res, 200, media);
   } catch (e) { send(res, 400, { error: e.message }); }
@@ -1290,6 +1290,45 @@ add('POST', '/api/medias/migrate', (req, res, p, body, query, user) => {
   if (s.blog) { n += migrateImageField(s.blog, 'banner', req, 'Bannière blog'); if (s.blog.pub) n += migrateImageField(s.blog.pub, 'media', req, 'Encart pub'); }
   n += migrateImageField(s, 'blog_hero', req, 'Hero blog');
   save(); send(res, 200, { migrated: n });
+});
+
+/* ---- Dossiers de la médiathèque (chemins imbriqués, ex. « Évènements/Games in Cholet 2025/Photos ») ---- */
+function normFolderPath(p) { return String(p || '').split('/').map(x => x.trim()).filter(Boolean).join('/'); }
+function mediaFoldersArr() { const s = db().settings; if (!Array.isArray(s.media_folders)) s.media_folders = []; return s.media_folders; }
+add('GET', '/api/media-folders', (req, res, p, body, query, user) => {
+  if (!requireView(user, res)) return;
+  const set = new Set(mediaFoldersArr());
+  (db().medias || []).forEach(m => { if (m.folder) { const parts = String(m.folder).split('/'); for (let i = 1; i <= parts.length; i++) set.add(parts.slice(0, i).join('/')); } });
+  send(res, 200, [...set].filter(Boolean).sort((a, b) => a.localeCompare(b)));
+});
+add('POST', '/api/media-folders', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const path0 = normFolderPath(body.path); if (!path0) return send(res, 400, { error: 'Nom de dossier invalide.' });
+  const fs0 = mediaFoldersArr(); const parts = path0.split('/');
+  for (let i = 1; i <= parts.length; i++) { const pp = parts.slice(0, i).join('/'); if (!fs0.includes(pp)) fs0.push(pp); }
+  save(); send(res, 200, { ok: true, path: path0 });
+});
+add('PUT', '/api/media-folders', (req, res, p, body, query, user) => { // renommer / déplacer un dossier
+  if (!requireAdmin(user, res)) return;
+  const from = normFolderPath(body.from), to = normFolderPath(body.to);
+  if (!from || !to) return send(res, 400, { error: 'Chemin invalide.' });
+  const s = db().settings;
+  s.media_folders = mediaFoldersArr().map(f => f === from ? to : (f.startsWith(from + '/') ? to + f.slice(from.length) : f));
+  const parts = to.split('/'); for (let i = 1; i <= parts.length; i++) { const pp = parts.slice(0, i).join('/'); if (!s.media_folders.includes(pp)) s.media_folders.push(pp); }
+  (db().medias || []).forEach(m => { if (m.folder === from) m.folder = to; else if (m.folder && m.folder.startsWith(from + '/')) m.folder = to + m.folder.slice(from.length); });
+  save(); send(res, 200, { ok: true });
+});
+add('DELETE', '/api/media-folders', (req, res, p, body, query, user) => {
+  if (!requireAdmin(user, res)) return;
+  const path0 = normFolderPath(body.path); if (!path0) return send(res, 400, { error: 'Chemin invalide.' });
+  const d = db();
+  const inFolder = (d.medias || []).filter(m => m.folder === path0 || (m.folder && m.folder.startsWith(path0 + '/')));
+  if (inFolder.length && !body.force) return send(res, 409, { error: 'non-empty', files: inFolder.length });
+  inFolder.forEach(m => { try { fs.unlinkSync(path.join(MEDIA_DIR, m.file)); } catch {} });
+  const delIds = new Set(inFolder.map(m => m.id));
+  d.medias = (d.medias || []).filter(m => !delIds.has(m.id));
+  d.settings.media_folders = mediaFoldersArr().filter(f => !(f === path0 || f.startsWith(path0 + '/')));
+  save(); send(res, 200, { ok: true, deleted: inFolder.length });
 });
 
 /* ---- Nettoyage médiathèque : références d'images dans toute la base ----

@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.23'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.24'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -263,7 +263,7 @@ function render(){
   const nv=NAV.find(n=>n.id===state.view);
   if(nv && nv.mod && !moduleOn(nv.mod)){ state.view='accueil'; }
   const map={ accueil:renderAccueil, inventaire:renderInventaire, devis:renderDevis, evenements:renderEvenements,
-    projets:renderProjets, reparations:renderReparations, ventes:renderVentes, prets:renderPrets, site:renderSiteInternet, users:renderUsers, reglages:renderReglages, asso:renderAsso };
+    projets:renderProjets, reparations:renderReparations, ventes:renderVentes, prets:renderPrets, site:renderSiteInternet, users:renderUsers, reglages:renderReglages, asso:renderAsso, mediatheque:renderMediatheque };
   (map[state.view]||renderAccueil)();
 }
 
@@ -3326,6 +3326,99 @@ function userPwModal(id){
   $('#pw-code-gen').addEventListener('click',async()=>{ try{ const r=await api(`/api/users/${id}/reset-code`,{method:'POST',body:JSON.stringify({})}); $('#pw-code-box').innerHTML=`<div class="recap" style="font-size:18px;letter-spacing:2px;text-align:center;font-weight:800">${esc(r.code)}</div><p class="help">Identifiant : <strong>${esc(r.login)}</strong> · valable 24h, usage unique.</p>`; toast('Code généré'); }catch(e){ toast(e.message); } });
 }
 
+/* ============================== MÉDIATHÈQUE (module complet, dossiers imbriqués) ============================== */
+let MED_FOLDER='', MED_Q='';
+function medCopyLink(url){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(()=>toast('Lien copié')).catch(()=>window.prompt('Lien du fichier :',url)); } else window.prompt('Lien du fichier :',url); }
+function folderPickDialog(folders, onPick){
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1300';
+  ov.innerHTML=`<div class="modal"><h3>Déplacer vers…</h3><div style="max-height:50vh;overflow:auto;margin:8px 0;border:1px solid var(--line);border-radius:8px;padding:6px">
+      <div class="med-pick-row" data-f="" style="padding:9px;border-radius:8px;cursor:pointer">📁 Racine (médiathèque)</div>
+      ${folders.map(f=>`<div class="med-pick-row" data-f="${esc(f)}" style="padding:9px 9px 9px ${9+f.split('/').length*14}px;border-radius:8px;cursor:pointer">📁 ${esc(f.split('/').pop())}</div>`).join('')}
+    </div><div class="buttons"><button class="btn grey mp-cancel">Annuler</button></div></div>`;
+  document.body.appendChild(ov); const close=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  ov.querySelector('.mp-cancel').addEventListener('click',close);
+  ov.querySelectorAll('.med-pick-row').forEach(r=>{ r.addEventListener('mouseenter',()=>r.style.background='var(--line)'); r.addEventListener('mouseleave',()=>r.style.background=''); r.addEventListener('click',()=>{ onPick(r.dataset.f); close(); }); });
+}
+async function renderMediatheque(){
+  setTopbar('Médiathèque', `<button class="btn outline small" id="med-back">← Administration</button>`);
+  let folders=[], medias=[];
+  try{ folders=await api('/api/media-folders'); }catch{}
+  try{ medias=await api('/api/medias'); }catch{}
+  if(MED_FOLDER && !folders.includes(MED_FOLDER)) MED_FOLDER='';
+  const admin=isAdminUser();
+  const fname=p=>p.split('/').pop();
+  const parentOf=p=>{ const a=p.split('/'); a.pop(); return a.join('/'); };
+  const children=parent=>folders.filter(f=>parentOf(f)===parent);
+  const countIn=p=>medias.filter(m=>m.folder===p||(m.folder&&m.folder.startsWith(p+'/'))).length;
+  const GW='display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:14px';
+  function treeHtml(){
+    let rows=`<div class="med-folder-row" data-f="" style="padding:7px 8px;border-radius:8px;cursor:pointer;font-weight:700;${MED_FOLDER===''?'background:var(--line)':''}">📁 Médiathèque <span class="mini" style="color:var(--faint)">(${medias.length})</span></div>`;
+    folders.forEach(f=>{ const depth=f.split('/').length; rows+=`<div class="med-folder-row" data-f="${esc(f)}" style="padding:6px 8px 6px ${8+depth*14}px;border-radius:8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${MED_FOLDER===f?'background:var(--line)':''}">📁 ${esc(fname(f))} <span class="mini" style="color:var(--faint)">(${countIn(f)})</span></div>`; });
+    return rows;
+  }
+  function crumbs(){ let acc=''; let html=`<a class="med-crumb" data-f="" style="color:var(--teal-d);cursor:pointer">Médiathèque</a>`; (MED_FOLDER?MED_FOLDER.split('/'):[]).forEach(part=>{ acc=acc?acc+'/'+part:part; html+=` <span style="color:var(--muted)">/</span> <a class="med-crumb" data-f="${esc(acc)}" style="color:var(--teal-d);cursor:pointer">${esc(part)}</a>`; }); return html; }
+  function fileCard(m){ return `<div class="med-card" data-id="${m.id}" style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)">
+      <img src="${esc(m.url)}" class="med-thumb" style="width:100%;height:96px;object-fit:cover;display:block;cursor:pointer">
+      <div style="padding:5px 7px">
+        <div class="mini" title="${esc(m.name)}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.name)}</div>
+        <div class="mini" style="color:var(--faint)">${fmtSize(m.size)}${MED_Q?(' · '+esc(m.folder||'racine')):''}</div>
+        <div style="display:flex;gap:1px;margin-top:3px">
+          ${admin?`<button class="iconbtn ghost med-ren" data-id="${m.id}" title="Renommer" style="width:24px;height:24px">${icon('edit')}</button>
+          <button class="iconbtn ghost med-mv" data-id="${m.id}" title="Déplacer" style="width:24px;height:24px">📁</button>`:''}
+          <button class="iconbtn ghost med-link" data-id="${m.id}" title="Copier le lien" style="width:24px;height:24px">🔗</button>
+          <a class="iconbtn ghost" href="${esc(m.url)}" download="${esc(m.name)}" target="_blank" title="Télécharger" style="width:24px;height:24px">${icon('download')}</a>
+          ${admin?`<button class="iconbtn ghost med-del" data-id="${m.id}" title="Supprimer" style="width:24px;height:24px;color:#e23b3b">${icon('trash')}</button>`:''}
+        </div>
+      </div></div>`; }
+  view().innerHTML = `<div style="display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start">
+      <div class="tablecard" style="padding:12px">
+        ${admin?`<button class="btn small" id="med-newfolder" style="width:100%;margin-bottom:8px">${icon('plus')} Nouveau dossier</button>`:''}
+        <div id="med-tree" style="max-height:64vh;overflow:auto">${treeHtml()}</div>
+      </div>
+      <div>
+        <div class="toolbar" style="gap:10px;flex-wrap:wrap;align-items:center">
+          <div class="search${MED_Q?' has-val':''}" style="flex:1;min-width:180px">${icon('search')}<input id="med-q" value="${esc(MED_Q)}" placeholder="Rechercher un fichier…"><button type="button" class="search-clear" tabindex="-1">×</button></div>
+          ${admin?`<label class="btn" style="cursor:pointer">${icon('plus')} Importer des fichiers<input type="file" id="med-import" accept="image/*" multiple style="display:none"></label>`:''}
+        </div>
+        <div id="med-crumb" style="margin:8px 2px;font-weight:600">${crumbs()}</div>
+        ${admin&&MED_FOLDER?`<div style="margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn small grey" id="med-ren-folder">${icon('edit')} Renommer le dossier</button><button class="btn small grey" id="med-del-folder" style="color:#e23b3b">${icon('trash')} Supprimer le dossier</button></div>`:''}
+        <div id="med-drop" style="border:2px dashed var(--line);border-radius:12px;padding:14px;min-height:220px"><div id="med-grid"></div></div>
+        ${admin?`<p class="help" style="margin-top:6px">Glisse-dépose des images ici pour les importer dans ${MED_FOLDER?('« '+esc(MED_FOLDER)+' »'):'la racine'}.</p>`:''}
+      </div>
+    </div>`;
+  $('#med-back').addEventListener('click',()=>setView('reglages'));
+  function go(f){ MED_FOLDER=f; MED_Q=''; renderMediatheque(); }
+  $$('#med-tree .med-folder-row').forEach(r=>r.addEventListener('click',()=>go(r.dataset.f)));
+  $$('#med-crumb .med-crumb').forEach(a=>a.addEventListener('click',()=>go(a.dataset.f)));
+  $('#med-q').addEventListener('input',e=>{ MED_Q=e.target.value; drawGrid(); });
+  function drawGrid(){
+    const grid=$('#med-grid'); const q=MED_Q.trim().toLowerCase();
+    if(q){ const res=medias.filter(m=>(m.name||'').toLowerCase().includes(q)); grid.innerHTML = res.length?`<div style="${GW}">${res.map(fileCard).join('')}</div>`:'<p class="mini">Aucun fichier trouvé.</p>'; }
+    else{
+      const subs=children(MED_FOLDER); const files=medias.filter(m=>(m.folder||'')===MED_FOLDER);
+      let html='';
+      if(subs.length) html+=`<div style="${GW}">${subs.map(f=>`<div class="med-folder-card" data-f="${esc(f)}" style="cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:18px 10px;text-align:center;background:var(--card);font-weight:600;color:var(--navy)"><div style="font-size:30px">📁</div>${esc(fname(f))}<div class="mini" style="color:var(--faint)">${countIn(f)} fichier(s)</div></div>`).join('')}</div>`;
+      html+= files.length?`<div style="${GW}">${files.map(fileCard).join('')}</div>`:(subs.length?'':'<p class="mini" style="padding:20px;text-align:center">Dossier vide. Importe des images ou crée un sous-dossier.</p>');
+      grid.innerHTML=html;
+    }
+    $$('#med-grid .med-folder-card').forEach(c=>c.addEventListener('click',()=>go(c.dataset.f)));
+    $$('#med-grid .med-thumb').forEach(im=>im.addEventListener('click',()=>{ const m=medias.find(x=>x.id===+im.closest('.med-card').dataset.id); if(m) window.open(m.url,'_blank'); }));
+    $$('.med-ren').forEach(b=>b.addEventListener('click',async()=>{ const m=medias.find(x=>x.id===+b.dataset.id); const nv=window.prompt('Nom du fichier :', m.name); if(nv==null) return; try{ await api('/api/medias/'+m.id,{method:'PUT',body:JSON.stringify({name:nv})}); toast('Fichier renommé'); renderMediatheque(); }catch(e){ toast(e.message); } }));
+    $$('.med-mv').forEach(b=>b.addEventListener('click',()=>folderPickDialog(folders, async dest=>{ try{ await api('/api/medias/'+b.dataset.id,{method:'PUT',body:JSON.stringify({folder:dest})}); toast('Fichier déplacé'); renderMediatheque(); }catch(e){ toast(e.message); } })));
+    $$('.med-link').forEach(b=>b.addEventListener('click',()=>{ const m=medias.find(x=>x.id===+b.dataset.id); medCopyLink(m.url); }));
+    $$('.med-del').forEach(b=>b.addEventListener('click',()=>{ const m=medias.find(x=>x.id===+b.dataset.id); confirmModal('Supprimer le fichier « '+(m.name||'')+' » ?', async()=>{ try{ await api('/api/medias/'+m.id,{method:'DELETE'}); toast('Fichier supprimé'); renderMediatheque(); }catch(e){ toast(e.message); } }); }));
+  }
+  drawGrid();
+  $('#med-newfolder')?.addEventListener('click',async()=>{ const nm=window.prompt('Nom du nouveau dossier'+(MED_FOLDER?(' (dans « '+MED_FOLDER+' »)'):'')+' :'); if(!nm||!nm.trim()) return; const path0=MED_FOLDER?MED_FOLDER+'/'+nm.trim():nm.trim(); try{ await api('/api/media-folders',{method:'POST',body:JSON.stringify({path:path0})}); toast('Dossier créé'); renderMediatheque(); }catch(e){ toast(e.message); } });
+  $('#med-ren-folder')?.addEventListener('click',async()=>{ const nm=window.prompt('Nouveau nom du dossier :', fname(MED_FOLDER)); if(!nm||!nm.trim()) return; const par=parentOf(MED_FOLDER); const to=par?par+'/'+nm.trim():nm.trim(); try{ await api('/api/media-folders',{method:'PUT',body:JSON.stringify({from:MED_FOLDER,to})}); MED_FOLDER=to; toast('Dossier renommé'); renderMediatheque(); }catch(e){ toast(e.message); } });
+  $('#med-del-folder')?.addEventListener('click',()=>{ const doDel=async(force)=>{ await api('/api/media-folders',{method:'DELETE',body:JSON.stringify({path:MED_FOLDER,force})}); MED_FOLDER=parentOf(MED_FOLDER); toast('Dossier supprimé'); renderMediatheque(); }; doDel(false).catch(e=>{ if(e.status===409){ confirmChoice('Ce dossier contient '+(e.data&&e.data.files||'des')+' fichier(s). Les supprimer définitivement avec le dossier ?','Tout supprimer','Annuler',async()=>{ try{ await doDel(true); }catch(e2){ toast(e2.message); } }); } else toast(e.message); }); });
+  function doUpload(files){ files=[...files].filter(f=>f.type.startsWith('image/')); if(!files.length){ toast('Seules les images sont acceptées pour le moment.'); return; } toast('Import en cours…'); let done=0; files.forEach(f=>compressImage(f,async data=>{ try{ await api('/api/medias',{method:'POST',body:JSON.stringify({data,name:f.name,folder:MED_FOLDER})}); }catch(e){ toast(e.message); } if(++done===files.length){ toast(files.length+' fichier(s) importé(s)'); renderMediatheque(); } },1600,300*1024)); }
+  $('#med-import')?.addEventListener('change',e=>{ if(e.target.files.length) doUpload(e.target.files); e.target.value=''; });
+  const drop=$('#med-drop');
+  if(drop&&admin){ ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{ e.preventDefault(); drop.style.borderColor='var(--teal-d)'; })); ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{ e.preventDefault(); drop.style.borderColor='var(--line)'; })); drop.addEventListener('drop',e=>{ if(e.dataTransfer.files.length) doUpload(e.dataTransfer.files); }); }
+}
+
 /* ============================== MODULE ASSO (loi 1901) ============================== */
 let ASSO_TAB='membres', ASSO_YEAR='';
 function frDate(iso){ if(!iso) return ''; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso); return m?`${m[3]}/${m[2]}/${m[1]}`:esc(iso); }
@@ -3673,12 +3766,15 @@ async function renderReglages(){
   if(isAdmin) ADMIN_SECS.asso=()=>bubble('🏛','Module Asso','Membres, cotisations, assemblées générales (loi 1901)',
         `<p class="help" style="margin:0 0 10px">Identité de l'association, <strong>membres & cotisations</strong>, <strong>assemblées générales</strong> et génération des courriers/PV en PDF.</p>
         <button class="btn" id="open-asso">${icon('users')} Ouvrir le module Asso</button>`, {dragIndex:ADMIN_I++});
+  if(isAdmin) ADMIN_SECS.mediatheque=()=>bubble('🖼','Médiathèque','Organiser images et fichiers en dossiers',
+        `<p class="help" style="margin:0 0 10px">Range tes images en <strong>dossiers et sous-dossiers</strong>, importe, renomme, déplace — et réutilise-les partout via « Choisir une image ».</p>
+        <button class="btn" id="open-media">🖼 Ouvrir la médiathèque</button>`, {dragIndex:ADMIN_I++});
   if(canActivite) ADMIN_SECS.activite=()=>bubble('📊','Activité de l’équipe','Connexions, présence et contributions',
         `<div id="act-box"><p class="mini">Chargement…</p></div>`, {dragIndex:ADMIN_I++});
   ADMIN_SECS.apropos=()=>bubble('ℹ️','À propos','Informations & déconnexion',
         `<strong>West Coast Arcades — Gestion</strong><p class="help">Inventaire, devis, événements, réparations, ventes et prêts. <a href="https://www.westcoastarcades.fr" target="_blank" style="color:var(--teal-d);font-weight:700">westcoastarcades.fr</a></p>
         <button class="btn small red" id="me-logout" style="margin-top:10px">${icon('logout')} Se déconnecter</button>`, {dragIndex:ADMIN_I++});
-  const ADMIN_DEFAULT=['moncompte','apparence','motdepasse','asso','menus','sauvegarde','activite','apropos'].filter(k=>ADMIN_SECS[k]);
+  const ADMIN_DEFAULT=['moncompte','apparence','motdepasse','asso','mediatheque','menus','sauvegarde','activite','apropos'].filter(k=>ADMIN_SECS[k]);
   let adOrder; try{ adOrder=JSON.parse(localStorage.getItem('wca_admin_order')||'[]'); }catch{ adOrder=[]; }
   adOrder=adOrder.filter(k=>ADMIN_SECS[k]); ADMIN_DEFAULT.forEach(k=>{ if(!adOrder.includes(k)) adOrder.push(k); });
   view().innerHTML = bubbleCSS()
@@ -3695,6 +3791,7 @@ async function renderReglages(){
   $('#me-pw').addEventListener('click',async()=>{ try{ await api('/api/me/password',{method:'POST',body:JSON.stringify({current:$('#me-cur').value,new:$('#me-new').value})}); toast('Mot de passe modifié'); $('#me-cur').value='';$('#me-new').value=''; }catch(e){ toast(e.message); } });
   $('#me-logout').addEventListener('click',doLogout);
   $('#open-asso')?.addEventListener('click',()=>setView('asso'));
+  $('#open-media')?.addEventListener('click',()=>setView('mediatheque'));
   if(isAdmin){
     $$('.js-mod').forEach(t=>t.addEventListener('click',async()=>{ const k=t.dataset.k; const v=!moduleOn(k); try{ await api('/api/config',{method:'PUT',body:JSON.stringify({modules:{[k]:v}})}); MODULES_ENABLED[k]=v; toast(v?'Module activé':'Module désactivé'); buildNav(); renderReglages(); }catch(e){ toast(e.message); } }));
     $$('.js-navvis').forEach(s=>s.addEventListener('change',async()=>{ const id=s.dataset.id, v=s.value; try{ await api('/api/config',{method:'PUT',body:JSON.stringify({nav_visibility:{[id]:v}})}); NAV_VIS[id]=v; toast('Affichage du menu mis à jour'); buildNav(); }catch(e){ toast(e.message); } }));
