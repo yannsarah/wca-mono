@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.33'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.34'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -769,7 +769,7 @@ function materielModal(m, dup){
   quickAddSelect($('#f-etat'), $('#f-etat-add'), { placeholder:'Nouvel état…', create: async txt=>{ await api('/api/etats',{method:'POST',body:JSON.stringify({label:txt})}); if(!ETATS.some(x=>x.label===txt)) ETATS.push({label:txt,bloque:false}); return {value:txt,label:txt}; } });
   quickAddSelect($('#f-prop'), $('#f-prop-add'), { placeholder:'Nouveau propriétaire…', create: async txt=>{ await api('/api/proprietaires',{method:'POST',body:JSON.stringify({value:txt})}); if(!PROPRIETAIRES.includes(txt)) PROPRIETAIRES.push(txt); return {value:txt,label:txt}; } });
   $('#f-save').addEventListener('click',async()=>{
-    const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').value==='1', description_site:$('#f-descsite-rt').innerHTML.trim(), a_vendre:$('#f-avendre').value==='1', prix_vente:$('#f-prixvente').value.trim() };
+    const body={ denomination:$('#f-denom').value.trim(), categorie:$('#f-cat').value, numero_serie:$('#f-serie').value.trim(), emplacement:$('#f-empl').value.trim(), valeur:$('#f-val').value, notes:$('#f-notes').value.trim(), fonctionnel:$('#f-fonc').value==='1', etat:$('#f-etat').value, proprietaire:$('#f-prop').value, proprietaire_nom:$('#f-propnom').value.trim(), photo:photoData, visible_site:$('#f-vissite').value==='1', description_site:cleanRich($('#f-descsite-rt').innerHTML), a_vendre:$('#f-avendre').value==='1', prix_vente:$('#f-prixvente').value.trim() };
     if(!body.denomination){ toast('La dénomination est obligatoire.'); return; }
     if(isEdit && baseModifLe) body.base_modif_le = baseModifLe;
     const doSave = async(force)=>{ if(force) body.force=true; await api(isEdit?'/api/materiel/'+m.id:'/api/materiel',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast(dup?'Copie créée':'Enregistré'); loadMatList(); };
@@ -2436,7 +2436,7 @@ function articleModal(a){
   wireMedia('art-ban-pick', url=>{ banner=url; $('#art-ban-prev').style.backgroundImage=`url('${url}')`; });
   $('#art-ban-clear').addEventListener('click',()=>{ banner=''; $('#art-ban-prev').style.backgroundImage=''; });
   $('#art-save').addEventListener('click',async()=>{
-    const body={ titre:$('#art-titre').value.trim(), date:$('#art-date').value, auteur:$('#art-auteur').value.trim(), extrait:$('#art-extrait').value.trim(), contenu:$('#art-contenu').innerHTML.trim(), image:cover, banniere:banner, visible_site:$('#art-vis').checked, categorie:$('#art-cat').value.trim(), partenaires_ids:[...document.querySelectorAll('.art-pt:checked')].map(x=>+x.value) };
+    const body={ titre:$('#art-titre').value.trim(), date:$('#art-date').value, auteur:$('#art-auteur').value.trim(), extrait:$('#art-extrait').value.trim(), contenu:cleanRich($('#art-contenu').innerHTML), image:cover, banniere:banner, visible_site:$('#art-vis').checked, categorie:$('#art-cat').value.trim(), partenaires_ids:[...document.querySelectorAll('.art-pt:checked')].map(x=>+x.value) };
     if(!body.titre){ toast('Le titre est obligatoire.'); return; }
     try{ await api(isEdit?'/api/articles/'+a.id:'/api/articles',{method:isEdit?'PUT':'POST',body:JSON.stringify(body)}); closeModal(); toast('Enregistré'); renderBlogTab(); }catch(e){ toast(e.message); }
   });
@@ -2556,7 +2556,7 @@ async function renderSalonsTab(){
   drawItems();
   async function saveSalons(silent){
     items.forEach((it,i)=>it.ordre=i);
-    const payload={ salons_page:{ title:$('#sp-title').value.trim(), description:$('#sp-desc').innerHTML.trim(), items } };
+    const payload={ salons_page:{ title:$('#sp-title').value.trim(), description:cleanRich($('#sp-desc').innerHTML), items } };
     await api('/api/site',{method:'PUT',body:JSON.stringify(payload)});
     SITE_CONTENT.salons_page=payload.salons_page;
     if(!silent) toast('Page Nos salons enregistrée');
@@ -2750,7 +2750,7 @@ function salonItemModal(it, evs, onSave){
   function collect(){
     return { id:it.id, annee:sel('.si-annee').value.trim(), titre:sel('.si-titre').value.trim(), sous_titre:sel('.si-sous').value.trim(),
       date_debut:sel('.si-dd').value, heure_debut:sel('.si-hd').value.trim(), date_fin:sel('.si-df').value, heure_fin:sel('.si-hf').value.trim(),
-      image:img, popup_html:ed.innerHTML.trim(), event_id:sel('.si-event').value||null, template_key:sel('.si-tpl').value, template_color:sel('.si-color').value, as_page:sel('.si-aspage').checked, actif:sel('.si-actif').checked, ordre:it.ordre,
+      image:img, popup_html:cleanRich(ed.innerHTML), event_id:sel('.si-event').value||null, template_key:sel('.si-tpl').value, template_color:sel('.si-color').value, as_page:sel('.si-aspage').checked, actif:sel('.si-actif').checked, ordre:it.ordre,
       ticketing:{ enabled:sel('.si-tk-on').checked, label:sel('.si-tk-label').value.trim(), url:sel('.si-tk-url').value.trim(), intro:sel('.si-tk-intro').value.trim(), status:sel('.si-tk-status').value } };
   }
   sel('.si-preview').addEventListener('click',()=>salonPreview(collect()));
@@ -4296,6 +4296,20 @@ function ideesRenderThread(id){
     try{ await api('/api/idees/'+id,{method:'DELETE'}); toast('Supprimé'); IDEES_CACHE=IDEES_CACHE.filter(x=>x.id!==id); ideesRenderList(); }catch(e){ toast(e.message); }
   });
 }
+
+/* --- Éditeurs de texte : produire des paragraphes <p> propres (au lieu de <div> imbriqués) --- */
+try{ document.execCommand('defaultParagraphSeparator', false, 'p'); }catch(e){}
+/* Nettoie le HTML d'un champ enrichi (contenteditable) avant enregistrement :
+   convertit les <div> de retour à la ligne en <p> et retire les paragraphes vides en trop. */
+function cleanRich(html){
+  let s = String(html||'');
+  s = s.replace(/<div><br\s*\/?><\/div>/gi, '<p><br></p>');
+  s = s.replace(/<div(\s[^>]*)?>/gi, '<p>').replace(/<\/div>/gi, '</p>');
+  s = s.replace(/^(?:\s*<p>(?:<br\s*\/?>|&nbsp;|\s)*<\/p>)+/i, '');
+  s = s.replace(/(?:<p>(?:<br\s*\/?>|&nbsp;|\s)*<\/p>\s*)+$/i, '');
+  return s.trim();
+}
+window.cleanRich = cleanRich;
 
 /* ------------------------------- Démarrage ------------------------------- */
 applyTheme(currentTheme());
