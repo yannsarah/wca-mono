@@ -300,6 +300,9 @@ textarea{min-height:68px;resize:vertical}
 .modal-overlay{position:fixed;inset:0;background:rgba(14,42,82,.45);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto}
 .modal{background:#fff;border-radius:20px;padding:22px;max-width:580px;width:100%;margin-top:24px;box-shadow:var(--shadow-lg)}
 .modal.modal-wide{max-width:min(1040px,95vw);width:min(1040px,95vw);resize:both;overflow:auto;max-height:90vh;min-width:340px;min-height:300px}
+/* Croix de fermeture visible (blanc gras sur pastille sombre) — aperçus/prévisualisations */
+.modal-x{position:absolute;top:10px;right:10px;z-index:6;width:40px;height:40px;border-radius:50%;border:0;background:rgba(10,14,22,.62);color:#fff;font-weight:800;font-size:24px;line-height:1;cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 14px -4px rgba(0,0,0,.5)}
+.modal-x:hover{background:rgba(10,14,22,.88);transform:scale(1.05)}
 .modal h3{margin:0 0 14px;font-size:19px;color:var(--navy)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{background:var(--teal-l);color:var(--teal-d);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}

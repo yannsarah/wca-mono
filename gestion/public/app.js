@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.34'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.35'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2771,19 +2771,23 @@ function salonPreview(it){
   const acc=/^#([0-9a-f]{6})$/i.test(it.template_color||'')?it.template_color:'#467ff7';
   const tkHtml = (tk.enabled && tk.status!=='desactivee') ? `<div style="margin-top:16px;padding:14px;border:1px solid ${dark?'rgba(255,255,255,.15)':'var(--line)'};border-radius:10px">${tk.intro?`<p style="margin:0 0 8px">${esc(tk.intro)}</p>`:''}${tk.status==='complete'?'<strong>🎟️ Complet</strong>':tk.status==='terminee'?'<strong>Événement terminé</strong>':tk.status==='bientot'?'<strong>Billetterie bientôt disponible</strong>':`<a href="${esc(tk.url||'#')}" target="_blank" style="display:inline-block;background:${acc};color:#fff;text-decoration:none;font-weight:700;padding:11px 22px;border-radius:100px">${esc(tk.label||'Réserver')}</a>`}</div>` : '';
   const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1350';
-  ov.innerHTML=`<div class="modal modal-wide" style="padding:0;overflow:hidden;${dark?'background:#0d1018;color:#e8ecf4':''}">
-    ${it.image?`<img src="${esc(it.image)}" style="width:100%;max-height:280px;object-fit:cover;display:block">`:''}
-    <div style="padding:22px 24px">
-      <div style="color:${acc};font-weight:700">${esc(it.annee||'')}</div>
-      <h3 style="margin:4px 0 4px;${dark?'color:#fff':''}">${esc(it.titre||'')}</h3>
-      <div style="color:${dark?'rgba(255,255,255,.6)':'var(--muted)'};margin-bottom:12px">${esc(it.sous_titre||'')}</div>
-      <div style="line-height:1.6;--acc:${acc}">${it.popup_html||''}</div>
-      ${tkHtml}
-      <div class="buttons" style="margin-top:16px"><button type="button" class="btn grey sp-prev-close">Fermer l'aperçu</button></div>
+  ov.innerHTML=`<div class="modal modal-wide" style="position:relative;padding:0;overflow:hidden;max-height:90vh;display:flex;flex-direction:column;${dark?'background:#0d1018;color:#e8ecf4':''}">
+    <button type="button" class="modal-x sp-prev-close" aria-label="Fermer l'aperçu" title="Fermer">×</button>
+    <div style="overflow:auto">
+      ${it.image?`<img src="${esc(it.image)}" style="width:100%;max-height:280px;object-fit:cover;display:block">`:''}
+      <div style="padding:22px 24px">
+        <div style="color:${acc};font-weight:700">${esc(it.annee||'')}</div>
+        <h3 style="margin:4px 0 4px;${dark?'color:#fff':''}">${esc(it.titre||'')}</h3>
+        <div style="color:${dark?'rgba(255,255,255,.6)':'var(--muted)'};margin-bottom:12px">${esc(it.sous_titre||'')}</div>
+        <div style="line-height:1.6;--acc:${acc}">${it.popup_html||''}</div>
+        ${tkHtml}
+        <div class="buttons" style="margin-top:16px"><button type="button" class="btn grey sp-prev-close">Fermer l'aperçu</button></div>
+      </div>
     </div></div>`;
   document.body.appendChild(ov); const close=()=>ov.remove();
   ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
-  ov.querySelector('.sp-prev-close').addEventListener('click',close);
+  ov.querySelectorAll('.sp-prev-close').forEach(b=>b.addEventListener('click',close));
+  document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ close(); document.removeEventListener('keydown',esc); } });
 }
 
 /* ============ Onglet CONTACT : formulaire de la page contact.html (dynamique) ============ */
@@ -3898,12 +3902,13 @@ function agModal(g){
 /* ---- Aperçu + génération PDF (impression / téléchargement) ---- */
 function pdfDialog(html, filename){
   const ov=document.createElement('div'); ov.className='modal-overlay'; ov.style.zIndex='1300';
-  ov.innerHTML=`<div class="modal modal-wide"><h3>Aperçu du document</h3>
+  ov.innerHTML=`<div class="modal modal-wide" style="position:relative"><button type="button" class="modal-x pd-close" aria-label="Fermer" title="Fermer">×</button><h3>Aperçu du document</h3>
     <div style="background:#5b6472;padding:14px;border-radius:10px;max-height:62vh;overflow:auto"><div class="pdf-dialog-doc">${html}</div></div>
     <div class="buttons" style="margin-top:12px;flex-wrap:wrap"><button class="btn grey pd-close">Fermer</button><button class="btn pd-print">🖨 Imprimer / Enregistrer en PDF</button><button class="btn grey pd-dl">⬇️ Télécharger</button></div></div>`;
   document.body.appendChild(ov);
-  ov.querySelector('.pd-close').addEventListener('click',()=>ov.remove());
+  ov.querySelectorAll('.pd-close').forEach(b=>b.addEventListener('click',()=>ov.remove()));
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ ov.remove(); document.removeEventListener('keydown',esc); } });
   ov.querySelector('.pd-print').addEventListener('click',()=>pdfPrint(html, filename));
   ov.querySelector('.pd-dl').addEventListener('click',()=>{ const node=ov.querySelector('.pdf-dialog-doc').firstElementChild; if(node) pdfDownloadNode(node, filename.replace(/[^a-z0-9-]+/gi,'-')+'.pdf'); });
 }
