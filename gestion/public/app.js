@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.32'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.33'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -2547,11 +2547,11 @@ async function renderSalonsTab(){
         <button type="button" class="iconbtn ghost sp-dup" data-i="${i}" title="Dupliquer">${icon('copy')}</button>
         <button type="button" class="iconbtn ghost sp-del" data-i="${i}" title="Supprimer" style="color:#e23b3b">${icon('trash')}</button>
       </div>`).join('') : '<p class="mini">Aucun salon. Clique « Ajouter un salon ».</p>';
-    box.querySelectorAll('.sp-act').forEach(t=>t.addEventListener('click',()=>{ items[+t.dataset.i].actif = !(items[+t.dataset.i].actif!==false); drawItems(); }));
-    box.querySelectorAll('.sp-edit').forEach(b=>b.addEventListener('click',()=>salonItemModal(items[+b.dataset.i],evs,saved=>{ items[+b.dataset.i]=saved; drawItems(); })));
-    box.querySelectorAll('.sp-dup').forEach(b=>b.addEventListener('click',()=>{ const src=items[+b.dataset.i]; const copy=JSON.parse(JSON.stringify(src)); copy.id=Date.now(); copy.titre='Copie de '+(src.titre||''); copy.actif=false; if(copy.ticketing) copy.ticketing.enabled=false; items.splice(+b.dataset.i+1,0,copy); drawItems(); toast('Salon dupliqué (en brouillon, masqué)'); }));
-    box.querySelectorAll('.sp-del').forEach(b=>b.addEventListener('click',()=>{ items.splice(+b.dataset.i,1); drawItems(); }));
-    wireDnd(box,'.il-row',items,drawItems);
+    box.querySelectorAll('.sp-act').forEach(t=>t.addEventListener('click',()=>{ items[+t.dataset.i].actif = !(items[+t.dataset.i].actif!==false); drawItems(); autoSaveSalons(); }));
+    box.querySelectorAll('.sp-edit').forEach(b=>b.addEventListener('click',()=>salonItemModal(items[+b.dataset.i],evs,saved=>{ items[+b.dataset.i]=saved; drawItems(); autoSaveSalons('Salon enregistré ✅'); })));
+    box.querySelectorAll('.sp-dup').forEach(b=>b.addEventListener('click',()=>{ const src=items[+b.dataset.i]; const copy=JSON.parse(JSON.stringify(src)); copy.id=Date.now(); copy.titre='Copie de '+(src.titre||''); copy.actif=false; if(copy.ticketing) copy.ticketing.enabled=false; items.splice(+b.dataset.i+1,0,copy); drawItems(); autoSaveSalons('Salon dupliqué (masqué)'); }));
+    box.querySelectorAll('.sp-del').forEach(b=>b.addEventListener('click',()=>confirmModal('Supprimer ce salon ?',()=>{ items.splice(+b.dataset.i,1); drawItems(); autoSaveSalons('Salon supprimé'); })));
+    wireDnd(box,'.il-row',items,()=>{ drawItems(); autoSaveSalons('Ordre enregistré ✅'); });
   }
   drawItems();
   async function saveSalons(silent){
@@ -2561,6 +2561,8 @@ async function renderSalonsTab(){
     SITE_CONTENT.salons_page=payload.salons_page;
     if(!silent) toast('Page Nos salons enregistrée');
   }
+  // Enregistrement automatique après chaque action sur la frise (modif, dup, suppr, ordre, affiché/masqué).
+  async function autoSaveSalons(msg){ try{ await saveSalons(true); toast(msg||'Enregistré ✅'); }catch(e){ toast('Erreur d\'enregistrement : '+e.message); } }
   // Ajout d'un salon : on le place à sa position chronologique puis on enregistre tout de suite.
   $('#sp-add').addEventListener('click',()=>salonItemModal(null,evs,async saved=>{
     insertSalonByDate(items,saved); drawItems();

@@ -2,6 +2,14 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.33 — 16 juin 2026**
+## Correctif : modifs de salons non enregistrées
+- Dans **Site internet → Nos salons → frise/timeline**, **modifier**, **dupliquer**, **supprimer**, **réordonner** ou **afficher/masquer** un salon est désormais **enregistré automatiquement** (avant, seul l'ajout l'était — il fallait cliquer « Enregistrer la page »). Du coup, une **image changée** apparaît bien sur le site.
+- Suppression d'un salon : confirmation ajoutée.
+- (Rappel : la page d'accueil V2 affiche déjà salons et événements en direct depuis la gestion.)
+
+---
+
 **Version 2.8.32 — 16 juin 2026**
 ## Projets : type « Restauration » (avant / après)
 - Dans **Projets**, nouvel onglet **🛠️ Restauration** entre *Actifs* et *Archivés*.
