@@ -1046,8 +1046,17 @@ function dateMinusMonths(iso, n) {
   dt.setMonth(dt.getMonth() - n);
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 }
+// Fin de période = même date un an plus tard, moins 1 jour (gère les années bissextiles).
+function addYearMinusDay(iso) {
+  if (!iso) return '';
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!y || !m || !d) return '';
+  const dt = new Date(y + 1, m - 1, d);
+  dt.setDate(dt.getDate() - 1);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
 // --- Campagnes de cotisation (réglages annuels, base des lettres) ---
-const CAMP_FIELDS = ['annee', 'montant', 'ag_date', 'periode_debut', 'periode_fin', 'echeance', 'echeance2', 'rappel', 'mode_paiement', 'statut_article'];
+const CAMP_FIELDS = ['annee', 'montant', 'ag_date', 'periode_debut', 'periode_fin', 'echeance', 'echeance2', 'rappel', 'rappel_debut', 'rappel_fin', 'mode_paiement', 'statut_article'];
 add('GET', '/api/asso/campagnes', (req, res, p, body, query, user) => {
   if (!requireView(user, res)) return;
   send(res, 200, Array.isArray(db().settings.cotisation_campagnes) ? db().settings.cotisation_campagnes : []);
@@ -1059,9 +1068,13 @@ add('POST', '/api/asso/campagnes', (req, res, p, body, query, user) => {
   let c = s.cotisation_campagnes.find(x => String(x.annee) === annee);
   if (!c) { c = { annee }; s.cotisation_campagnes.push(c); }
   CAMP_FIELDS.forEach(k => { if (body[k] !== undefined) c[k] = body[k]; });
-  // Relance = 2 mois avant l'AG. Filet de sécurité : si la date d'AG est connue
-  // mais que la relance n'a pas été fixée à la main, on la (re)calcule.
-  if (c.ag_date && !c.rappel) c.rappel = dateMinusMonths(c.ag_date, 2);
+  // Filets de sécurité (si non fournis par l'interface) :
+  // - fin de période = début + 1 an − 1 jour
+  if (c.periode_debut && !c.periode_fin) c.periode_fin = addYearMinusDay(c.periode_debut);
+  // - relance basée sur l'AG : du (AG − 2 mois) au jour de l'AG
+  if (c.ag_date && !c.rappel_debut) c.rappel_debut = dateMinusMonths(c.ag_date, 2);
+  if (c.ag_date && !c.rappel_fin) c.rappel_fin = c.ag_date;
+  if (!c.rappel && c.rappel_debut) c.rappel = c.rappel_debut; // compat ancien champ
   s.cotisation_campagnes.sort((a, b) => String(b.annee).localeCompare(String(a.annee)));
   save(); send(res, 200, c);
 });

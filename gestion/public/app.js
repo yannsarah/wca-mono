@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.35'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.36'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -109,6 +109,8 @@ const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août'
 function dateShort(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-').map(Number); return `${d} ${MOIS[m-1]} ${y}`; }
 function dateTimeShort(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return dateShort((iso+'').slice(0,10)); return `${dateShort((iso+'').slice(0,10))} à ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 function dateMinusMonths(iso,n){ if(!iso) return ''; const [y,m,d]=iso.split('-').map(Number); if(!y||!m) return ''; const dt=new Date(y,m-1,d||1); dt.setMonth(dt.getMonth()-n); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
+// Fin de période = même date un an plus tard, moins 1 jour (gère les années bissextiles).
+function addYearMinusDay(iso){ if(!iso) return ''; const [y,m,d]=String(iso).split('-').map(Number); if(!y||!m||!d) return ''; const dt=new Date(y+1,m-1,d); dt.setDate(dt.getDate()-1); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
 function esc(s){ return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function euros(n){ return (Number(n)||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR'}); }
 async function api(url, opts){ const r=await fetch(url,{headers:{'Content-Type':'application/json'},credentials:'same-origin',...opts}); if(r.status===401){ if(typeof showLogin==='function'){ CURRENT_USER=null; showLogin(); } throw new Error('Session expirée, reconnectez-vous.'); } if(!r.ok){const e=await r.json().catch(()=>({}));const err=new Error(e.error||'Erreur serveur');err.status=r.status;err.data=e;throw err;} return r.status===204?null:r.json(); }
@@ -3724,23 +3726,33 @@ async function renderAssoIdentite(){
     box.innerHTML = camps.length ? camps.map(c=>`<div class="tablecard" data-an="${esc(c.annee)}" style="box-shadow:none;border:1px solid var(--line);padding:12px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>Année ${esc(c.annee)}</strong><button class="iconbtn ghost camp-del" data-an="${esc(c.annee)}" style="color:#e23b3b" title="Supprimer">${icon('trash')}</button></div>
         <div class="row2"><label class="field"><span>Montant (€)</span><input class="cf-montant" value="${esc(c.montant||'')}"></label><label class="field"><span>Date de l'AG</span><input class="cf-ag" type="date" value="${esc(c.ag_date||'')}"></label></div>
-        <div class="row2"><label class="field"><span>Période du</span><input class="cf-pd" type="date" value="${esc(c.periode_debut||'')}"></label><label class="field"><span>au</span><input class="cf-pf" type="date" value="${esc(c.periode_fin||'')}"></label></div>
-        <label class="field"><span>Relance / renouvellement <span class="mini" style="color:var(--muted)">— quand prévenir les membres</span></span><input class="cf-rappel" type="date" value="${esc(c.rappel||'')}" data-touched="${c.rappel?'1':''}"><span class="help" style="margin-top:4px">📅 Calculée automatiquement à <strong>2 mois avant l'AG</strong>. Modifiez-la si besoin ; elle se recalcule tant que vous n'y avez pas touché.</span></label>
+        <div class="row2"><label class="field"><span>Période du</span><input class="cf-pd" type="date" value="${esc(c.periode_debut||'')}"></label><label class="field"><span>au</span><input class="cf-pf" type="date" value="${esc(c.periode_fin||'')}" data-touched="${c.periode_fin?'1':''}"></label></div>
+        <span class="help" style="display:block;margin:-4px 0 10px">📅 La <strong>date de fin</strong> se calcule automatiquement (1 an − 1 jour, années bissextiles gérées). Modifiable.</span>
+        <label class="field" style="margin-bottom:2px"><span>Relance / renouvellement <span class="mini" style="color:var(--muted)">— quand prévenir les membres par mail</span></span></label>
+        <div class="row2"><label class="field"><span>du</span><input class="cf-rd" type="date" value="${esc(c.rappel_debut||c.rappel||'')}" data-touched="${(c.rappel_debut||c.rappel)?'1':''}"></label><label class="field"><span>au</span><input class="cf-rf" type="date" value="${esc(c.rappel_fin||'')}" data-touched="${c.rappel_fin?'1':''}"></label></div>
+        <span class="help" style="display:block;margin:-4px 0 10px">📅 Calculée automatiquement : <strong>du</strong> = 2 mois avant l'AG, <strong>au</strong> = jour de l'AG. Modifiable ; se recalcule tant que vous n'y avez pas touché.</span>
         <button class="btn small camp-save" data-an="${esc(c.annee)}">${icon('check')} Enregistrer ${esc(c.annee)}</button>
       </div>`).join('') : '<p class="mini">Aucune campagne. Ajoute une année ci-dessous.</p>';
-    // Relance auto = AG − 2 mois (recalcul tant que l'admin n'a pas saisi la relance à la main).
+    // Recalculs auto (tant que le champ n'a pas été saisi à la main) :
+    //  - fin de période = début + 1 an − 1 jour
+    //  - relance : du = AG − 2 mois, au = jour de l'AG
     box.querySelectorAll('[data-an]').forEach(card=>{
-      const ag=card.querySelector('.cf-ag'), rap=card.querySelector('.cf-rappel');
-      if(!ag||!rap) return;
-      const recalc=()=>{ if(rap.dataset.touched) return; rap.value = ag.value ? dateMinusMonths(ag.value,2) : ''; };
-      if(!rap.value && ag.value) recalc();
-      ag.addEventListener('change',recalc); ag.addEventListener('input',recalc);
-      rap.addEventListener('input',()=>{ rap.dataset.touched = rap.value ? '1' : ''; });
+      const ag=card.querySelector('.cf-ag'), pd=card.querySelector('.cf-pd'), pf=card.querySelector('.cf-pf'), rd=card.querySelector('.cf-rd'), rf=card.querySelector('.cf-rf');
+      const recalcPf=()=>{ if(pf.dataset.touched) return; pf.value = pd.value ? addYearMinusDay(pd.value) : ''; };
+      const recalcRel=()=>{ if(!rd.dataset.touched) rd.value = ag.value ? dateMinusMonths(ag.value,2) : ''; if(!rf.dataset.touched) rf.value = ag.value || ''; };
+      if(pd&&pf){ if(!pf.value && pd.value) recalcPf(); pd.addEventListener('change',recalcPf); pd.addEventListener('input',recalcPf); pf.addEventListener('input',()=>{ pf.dataset.touched = pf.value ? '1' : ''; }); }
+      if(ag&&rd&&rf){ if((!rd.value||!rf.value) && ag.value) recalcRel(); ag.addEventListener('change',recalcRel); ag.addEventListener('input',recalcRel); rd.addEventListener('input',()=>{ rd.dataset.touched = rd.value ? '1' : ''; }); rf.addEventListener('input',()=>{ rf.dataset.touched = rf.value ? '1' : ''; }); }
     });
     box.querySelectorAll('.camp-save').forEach(b=>b.addEventListener('click',async()=>{
       const card=b.closest('[data-an]');
-      const obj={ annee:b.dataset.an, montant:card.querySelector('.cf-montant').value.trim(), ag_date:card.querySelector('.cf-ag').value, periode_debut:card.querySelector('.cf-pd').value, periode_fin:card.querySelector('.cf-pf').value, rappel:card.querySelector('.cf-rappel').value };
-      try{ await api('/api/asso/campagnes',{method:'POST',body:JSON.stringify(obj)}); camps=await api('/api/asso/campagnes'); drawCamps(); toast('Campagne enregistrée'); }catch(e){ toast(e.message); }
+      const obj={ annee:b.dataset.an, montant:card.querySelector('.cf-montant').value.trim(), ag_date:card.querySelector('.cf-ag').value, periode_debut:card.querySelector('.cf-pd').value, periode_fin:card.querySelector('.cf-pf').value, rappel_debut:card.querySelector('.cf-rd').value, rappel_fin:card.querySelector('.cf-rf').value };
+      try{
+        const saved=await api('/api/asso/campagnes',{method:'POST',body:JSON.stringify(obj)});
+        const i=camps.findIndex(x=>String(x.annee)===String(saved.annee));
+        if(i>=0) camps[i]=saved; else camps.push(saved);
+        camps.sort((a,b)=>String(b.annee).localeCompare(String(a.annee)));
+        drawCamps(); toast('Campagne enregistrée ✅');
+      }catch(e){ toast('Erreur : '+e.message); }
     }));
     box.querySelectorAll('.camp-del').forEach(b=>b.addEventListener('click',()=>confirmModal('Supprimer la campagne '+b.dataset.an+' ?',async()=>{ try{ await api('/api/asso/campagnes/'+b.dataset.an,{method:'DELETE'}); camps=await api('/api/asso/campagnes'); drawCamps(); }catch(e){ toast(e.message); } })));
   }
@@ -3764,7 +3776,7 @@ async function renderAssoMembres(){
   const paidCount=membres.filter(m=>{ const c=cotisOf(m,ASSO_YEAR); return c&&c.paye; }).length;
   const camp=camps.find(x=>String(x.annee)===String(ASSO_YEAR));
   const summary = camp
-    ? `<div class="card" style="margin-bottom:10px;padding:10px 14px;background:var(--teal-l,#e7f6f7);border-color:#b6e3e8"><strong>Cotisation ${esc(ASSO_YEAR)}</strong> : ${camp.montant?'<strong>'+esc(camp.montant)+' €</strong>':'<em>montant non défini</em>'}${camp.periode_debut?` · période du <strong>${frDate(camp.periode_debut)}</strong> au <strong>${frDate(camp.periode_fin)}</strong>`:''}${camp.ag_date?` · AG le <strong>${frDate(camp.ag_date)}</strong>`:''}${camp.rappel?` · relance le <strong>${frDate(camp.rappel)}</strong>`:''} <span class="mini" style="color:var(--muted)">— réglages dans l'onglet Association</span></div>`
+    ? `<div class="card" style="margin-bottom:10px;padding:10px 14px;background:var(--teal-l,#e7f6f7);border-color:#b6e3e8"><strong>Cotisation ${esc(ASSO_YEAR)}</strong> : ${camp.montant?'<strong>'+esc(camp.montant)+' €</strong>':'<em>montant non défini</em>'}${camp.periode_debut?` · période du <strong>${frDate(camp.periode_debut)}</strong> au <strong>${frDate(camp.periode_fin)}</strong>`:''}${camp.ag_date?` · AG le <strong>${frDate(camp.ag_date)}</strong>`:''}${(camp.rappel_debut||camp.rappel)?` · relance du <strong>${frDate(camp.rappel_debut||camp.rappel)}</strong>${camp.rappel_fin?` au <strong>${frDate(camp.rappel_fin)}</strong>`:''}`:''} <span class="mini" style="color:var(--muted)">— réglages dans l'onglet Association</span></div>`
     : `<div class="card" style="margin-bottom:10px;padding:10px 14px;background:var(--amber-l,#fdf3da);border-color:#f0dca6"><span class="mini">Aucune campagne définie pour ${esc(ASSO_YEAR)} — règle le montant et les dates dans l'onglet <strong>Association</strong>.</span></div>`;
   const statutBadge=m=>(m.statut_membre==='passif'
     ? '<span class="tag" style="background:var(--line);color:var(--muted)">Passif</span>'
