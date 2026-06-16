@@ -1965,8 +1965,16 @@ function serveStatic(req, res, pathname) {
   if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end('Forbidden'); }
   fs.readFile(file, (err, dataBuf) => {
     if (err) { res.writeHead(404); return res.end('Not found'); }
+    let out = dataBuf;
+    // Cache-busting auto : on remplace __VER__ par la date de modif de app.js/styles.css.
+    // Ainsi chaque déploiement change l'URL des assets et force le rechargement (fini les versions figées en cache).
+    if (file.endsWith('index.html')) {
+      let tok = '';
+      try { tok = String(Math.floor(Math.max(fs.statSync(path.join(PUBLIC, 'app.js')).mtimeMs, fs.statSync(path.join(PUBLIC, 'styles.css')).mtimeMs))); } catch {}
+      out = Buffer.from(String(dataBuf).replace(/__VER__/g, tok || String(Date.now())));
+    }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache, must-revalidate' });
-    res.end(dataBuf);
+    res.end(out);
   });
 }
 
