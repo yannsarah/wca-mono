@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.37'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.38'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -3736,7 +3736,7 @@ async function renderAssoIdentite(){
     // Recalculs auto (tant que le champ n'a pas été saisi à la main) :
     //  - fin de période = début + 1 an − 1 jour
     //  - relance : du = AG − 2 mois, au = jour de l'AG
-    box.querySelectorAll('[data-an]').forEach(card=>{
+    box.querySelectorAll('.tablecard[data-an]').forEach(card=>{
       const ag=card.querySelector('.cf-ag'), pd=card.querySelector('.cf-pd'), pf=card.querySelector('.cf-pf'), rd=card.querySelector('.cf-rd'), rf=card.querySelector('.cf-rf');
       const recalcPf=()=>{ if(pf.dataset.touched) return; pf.value = pd.value ? addYearMinusDay(pd.value) : ''; };
       const recalcRel=()=>{ if(!rd.dataset.touched) rd.value = ag.value ? dateMinusMonths(ag.value,2) : ''; if(!rf.dataset.touched) rf.value = ag.value || ''; };
@@ -3744,7 +3744,7 @@ async function renderAssoIdentite(){
       if(ag&&rd&&rf){ if((!rd.value||!rf.value) && ag.value) recalcRel(); ag.addEventListener('change',recalcRel); ag.addEventListener('input',recalcRel); rd.addEventListener('input',()=>{ rd.dataset.touched = rd.value ? '1' : ''; }); rf.addEventListener('input',()=>{ rf.dataset.touched = rf.value ? '1' : ''; }); }
     });
     box.querySelectorAll('.camp-save').forEach(b=>b.addEventListener('click',async()=>{
-      const card=b.closest('[data-an]');
+      const card=b.closest('.tablecard');
       const obj={ annee:b.dataset.an, montant:card.querySelector('.cf-montant').value.trim(), ag_date:card.querySelector('.cf-ag').value, periode_debut:card.querySelector('.cf-pd').value, periode_fin:card.querySelector('.cf-pf').value, rappel_debut:card.querySelector('.cf-rd').value, rappel_fin:card.querySelector('.cf-rf').value };
       try{
         const saved=await api('/api/asso/campagnes',{method:'POST',body:JSON.stringify(obj)});
