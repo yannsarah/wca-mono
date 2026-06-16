@@ -4,6 +4,7 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
 /* ------------------------------- Icônes SVG ------------------------------- */
 const ICONS = {
+  bank:'<path d="M3 10l9-6 9 6"/><path d="M4 10h16"/><path d="M6 10v8M10 10v8M14 10v8M18 10v8"/><path d="M3 21h18"/>',
   globe:'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
   home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
   box:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/>',
@@ -61,7 +62,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.38'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.39'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -100,6 +101,7 @@ const NAV = [
   { id:'prets', label:'Prêts', icon:'share', mod:'prets' },
   { id:'site', label:'Site internet', icon:'globe', mod:'site' },
   { id:'users', label:'Utilisateurs', icon:'users' },
+  { id:'asso', label:'Asso', icon:'bank', admin:true },
   { id:'reglages', label:'Administration', icon:'settings' },
 ];
 
@@ -3680,10 +3682,9 @@ let ASSO_TAB='membres', ASSO_YEAR='';
 function frDate(iso){ if(!iso) return ''; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso); return m?`${m[3]}/${m[2]}/${m[1]}`:esc(iso); }
 function todayFR(){ const d=new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; }
 async function renderAsso(){
-  setTopbar('Module Asso', `<button class="btn outline small" id="asso-back">← Administration</button>`);
+  setTopbar('Asso', '');
   const tabs=[{k:'asso',l:'🏛 Association'},{k:'membres',l:'👥 Membres & cotisations'},{k:'ag',l:'📋 Assemblées générales'}];
   view().innerHTML=`<div class="tabs-row" id="asso-tabs">`+tabs.map(t=>`<button class="${ASSO_TAB===t.k?'active':''}" data-t="${t.k}">${t.l}</button>`).join('')+`</div><div id="asso-body"><p class="help" style="padding:16px">Chargement…</p></div>`;
-  $('#asso-back').addEventListener('click',()=>setView('reglages'));
   $$('#asso-tabs button').forEach(b=>b.addEventListener('click',()=>{ ASSO_TAB=b.dataset.t; renderAsso(); }));
   if(ASSO_TAB==='asso') return renderAssoIdentite();
   if(ASSO_TAB==='ag') return renderAssoAG();
@@ -3710,6 +3711,7 @@ async function renderAssoIdentite(){
        <div class="row2">${F('as-rna','N° RNA (W…)',a.rna)}${F('as-siret','SIRET',a.siret)}</div>
        <div class="row2">${F('as-iban','IBAN',a.iban)}${F('as-bic','BIC',a.bic)}</div>
        ${F('as-mode','Mode de paiement (cotisation)',a.mode_paiement,'virement bancaire')}
+       ${F('as-drive','Dossier Google Drive (documents de l\'association)',a.drive_url,'https://drive.google.com/...')}
        <div class="row2">${F('as-pres','Président·e',a.president_nom)}${F('as-tres','Trésorier·ère',a.tresorier_nom)}</div>
        <div class="row2">${F('as-sec','Secrétaire',a.secretaire_nom)}${F('as-lieu','Lieu (pour signature)',a.lieu,'Saint Christophe Du Bois')}</div>
        ${F('as-art','Article des statuts (cotisation)',a.statut_article,'07')}
@@ -3718,7 +3720,7 @@ async function renderAssoIdentite(){
   wireMedia('asso-logo-pick',url=>{ logo=url; $('#asso-logo-prev').style.backgroundImage=`url('${url}')`; });
   $('#asso-logo-clear').addEventListener('click',()=>{ logo=''; $('#asso-logo-prev').style.backgroundImage=''; });
   $('#asso-save').addEventListener('click',async()=>{
-    const obj={ nom:$('#as-nom').value.trim(), objet:$('#as-objet').value.trim(), adresse:$('#as-adresse').value.trim(), code_postal:$('#as-cp').value.trim(), ville:$('#as-ville').value.trim(), telephone:$('#as-tel').value.trim(), email:$('#as-email').value.trim(), site:$('#as-site').value.trim(), rna:$('#as-rna').value.trim(), siret:$('#as-siret').value.trim(), iban:$('#as-iban').value.trim(), bic:$('#as-bic').value.trim(), mode_paiement:$('#as-mode').value.trim(), president_nom:$('#as-pres').value.trim(), tresorier_nom:$('#as-tres').value.trim(), secretaire_nom:$('#as-sec').value.trim(), lieu:$('#as-lieu').value.trim(), statut_article:$('#as-art').value.trim(), logo };
+    const obj={ nom:$('#as-nom').value.trim(), objet:$('#as-objet').value.trim(), adresse:$('#as-adresse').value.trim(), code_postal:$('#as-cp').value.trim(), ville:$('#as-ville').value.trim(), telephone:$('#as-tel').value.trim(), email:$('#as-email').value.trim(), site:$('#as-site').value.trim(), rna:$('#as-rna').value.trim(), siret:$('#as-siret').value.trim(), iban:$('#as-iban').value.trim(), bic:$('#as-bic').value.trim(), mode_paiement:$('#as-mode').value.trim(), drive_url:$('#as-drive').value.trim(), president_nom:$('#as-pres').value.trim(), tresorier_nom:$('#as-tres').value.trim(), secretaire_nom:$('#as-sec').value.trim(), lieu:$('#as-lieu').value.trim(), statut_article:$('#as-art').value.trim(), logo };
     try{ await api('/api/asso',{method:'PUT',body:JSON.stringify(obj)}); toast('Identité enregistrée'); }catch(e){ toast(e.message); }
   });
   function drawCamps(){
@@ -3876,12 +3878,14 @@ function agModal(g){
   const e=g||{}; const isEdit=!!(g&&g.id);
   let resolutions=(e.resolutions||[]).map(r=>({...r}));
   let documents=(e.documents||[]).map(d=>({...d}));
+  const toArr=v=>Array.isArray(v)?v.slice():(v?String(v).split(/\s*,\s*/).filter(Boolean):[]);
+  let presents=toArr(e.presents), representes=toArr(e.representes);
   openModal(`<h3>${isEdit?'Modifier l\'assemblée':'Nouvelle assemblée générale'}</h3>
     <div class="row2"><label class="field"><span>Date *</span><input id="ag-date" type="date" value="${esc(e.date||new Date().toISOString().slice(0,10))}"></label>
       <label class="field"><span>Type</span><select id="ag-type">${['AGO','AGE','CA','Mixte'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></label></div>
     <label class="field"><span>Titre</span><input id="ag-titre" value="${esc(e.titre||'')}" placeholder="ex. Assemblée générale ordinaire ${new Date().getFullYear()}"></label>
     <div class="row2"><label class="field"><span>Lieu</span><input id="ag-lieu" value="${esc(e.lieu||'')}"></label><label class="field"><span>Heure</span><input id="ag-heure" value="${esc(e.heure||'')}" placeholder="ex. 18h30"></label></div>
-    <div class="row2"><label class="field"><span>Présents</span><input id="ag-pres" value="${esc(e.presents||'')}"></label><label class="field"><span>Représentés</span><input id="ag-rep" value="${esc(e.representes||'')}"></label></div>
+    <div class="row2" style="align-items:flex-start"><div class="field"><span>Présents</span><div id="ag-pres-box"></div><button type="button" class="btn small grey" id="ag-pres-add" style="margin-top:6px">${icon('plus')} Ajouter un présent</button></div><div class="field"><span>Représentés</span><div id="ag-rep-box"></div><button type="button" class="btn small grey" id="ag-rep-add" style="margin-top:6px">${icon('plus')} Ajouter un représenté</button></div></div>
     <div class="row2"><label class="field"><span>Président de séance</span><input id="ag-ps" value="${esc(e.president_seance||'')}"></label><label class="field"><span>Secrétaire de séance</span><input id="ag-ss" value="${esc(e.secretaire_seance||'')}"></label></div>
     <label class="field"><span>Ordre du jour (une ligne par point)</span><textarea id="ag-odj" rows="4">${esc(e.ordre_du_jour||'')}</textarea></label>
     <div class="section-title" style="margin-top:6px">Résolutions / votes</div>
@@ -3889,7 +3893,8 @@ function agModal(g){
     <label class="field" style="margin-top:10px"><span>Décisions / compte-rendu</span><textarea id="ag-dec" rows="4">${esc(e.decisions||'')}</textarea></label>
     <div class="section-title" style="margin-top:6px">Documents (PV, convocation, comptes…)</div>
     <div id="ag-docs"></div>
-    <div class="add-row" style="margin-top:6px;flex-wrap:wrap"><label class="btn small grey" style="cursor:pointer">${icon('plus')} Joindre un fichier<input type="file" id="ag-doc-file" style="display:none"></label><button type="button" class="btn small grey" id="ag-doc-link">🔗 Ajouter un lien</button></div>
+    <div class="add-row" style="margin-top:6px;flex-wrap:wrap"><label class="btn small grey" style="cursor:pointer">${icon('plus')} Joindre un fichier<input type="file" id="ag-doc-file" style="display:none"></label><button type="button" class="btn small grey" id="ag-doc-link">🔗 Ajouter un lien</button><button type="button" class="btn small grey" id="ag-doc-drive">📁 Drive de l'association</button></div>
+    <p class="mini" style="color:var(--muted);margin:4px 0 0">Astuce : stockez les documents sur le Google Drive de l'association, puis collez le lien de partage via « Ajouter un lien ». Le dossier Drive se règle dans l'onglet Association.</p>
     <div class="buttons" style="margin-top:12px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="ag-save">Enregistrer</button></div>`, {wide:true});
   function drawRes(){ const box=$('#ag-res'); box.innerHTML=resolutions.length?resolutions.map((r,i)=>`<div class="tablecard" data-i="${i}" style="box-shadow:none;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px"><input class="agr-texte" data-i="${i}" value="${esc(r.texte||'')}" placeholder="Texte de la résolution" style="margin-bottom:6px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="mini">Pour <input class="agr-pour" data-i="${i}" type="number" min="0" value="${esc(r.pour||0)}" style="max-width:64px"></label><label class="mini">Contre <input class="agr-contre" data-i="${i}" type="number" min="0" value="${esc(r.contre||0)}" style="max-width:64px"></label><label class="mini">Abst. <input class="agr-abst" data-i="${i}" type="number" min="0" value="${esc(r.abstention||0)}" style="max-width:64px"></label><button type="button" class="iconbtn ghost agr-del" data-i="${i}" style="color:#e23b3b;margin-left:auto">${icon('trash')}</button></div></div>`).join(''):'<p class="mini">Aucune résolution.</p>';
     box.querySelectorAll('.agr-texte').forEach(x=>x.addEventListener('input',ev=>resolutions[+ev.target.dataset.i].texte=ev.target.value));
@@ -3902,10 +3907,24 @@ function agModal(g){
   function drawDocs(){ const box=$('#ag-docs'); box.innerHTML=documents.length?documents.map((d,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px"><span>${d.kind==='link'?'🔗':'📄'}</span><a href="${esc(d.url)}" target="_blank" rel="noopener" style="flex:1;color:var(--teal-d);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.nom||d.url)}</a><button type="button" class="iconbtn ghost agd-del" data-i="${i}" style="color:#e23b3b">${icon('trash')}</button></div>`).join(''):'<p class="mini">Aucun document.</p>';
     box.querySelectorAll('.agd-del').forEach(b=>b.addEventListener('click',()=>{ documents.splice(+b.dataset.i,1); drawDocs(); })); }
   drawDocs();
+  // Listes dynamiques Présents / Représentés (autant de champs que nécessaire)
+  function nameList(boxSel, arr, addSel, ph){
+    const box=$(boxSel);
+    const draw=()=>{
+      box.innerHTML = arr.length ? arr.map((v,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px"><input class="nl-inp" data-i="${i}" value="${esc(v)}" placeholder="${esc(ph)}" style="flex:1"><button type="button" class="iconbtn ghost nl-del" data-i="${i}" style="color:#e23b3b">${icon('trash')}</button></div>`).join('') : '<p class="mini" style="color:var(--muted)">Aucun pour l\'instant.</p>';
+      box.querySelectorAll('.nl-inp').forEach(x=>x.addEventListener('input',ev=>{ arr[+ev.target.dataset.i]=ev.target.value; }));
+      box.querySelectorAll('.nl-del').forEach(b=>b.addEventListener('click',()=>{ arr.splice(+b.dataset.i,1); draw(); }));
+    };
+    draw();
+    $(addSel).addEventListener('click',()=>{ arr.push(''); draw(); const inps=box.querySelectorAll('.nl-inp'); if(inps.length) inps[inps.length-1].focus(); });
+  }
+  nameList('#ag-pres-box', presents, '#ag-pres-add', 'Nom du présent');
+  nameList('#ag-rep-box', representes, '#ag-rep-add', 'Nom du représenté (et par qui)');
+  $('#ag-doc-drive').addEventListener('click',async()=>{ try{ const a=await api('/api/asso'); if(a&&a.drive_url){ window.open(a.drive_url,'_blank','noopener'); } else { toast('Renseignez le dossier Google Drive dans l\'onglet Association.'); } }catch(err){ toast(err.message); } });
   $('#ag-doc-file').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; ev.target.value=''; if(f.size>8*1024*1024){ toast('Fichier trop lourd (8 Mo max).'); return; } const rd=new FileReader(); rd.onload=async()=>{ toast('Envoi…'); try{ const r=await api('/api/docs',{method:'POST',body:JSON.stringify({data:rd.result,name:f.name})}); documents.push({kind:'file',url:r.url,nom:r.name,file:r.file}); drawDocs(); toast('Document joint'); }catch(e){ toast(e.message); } }; rd.readAsDataURL(f); });
   $('#ag-doc-link').addEventListener('click',()=>{ const url=window.prompt('Adresse du lien (https://…)'); if(!url) return; const nom=window.prompt('Nom du document :', url)||url; documents.push({kind:'link',url,nom}); drawDocs(); });
   $('#ag-save').addEventListener('click',async()=>{
-    const obj={ date:$('#ag-date').value, type:$('#ag-type').value, titre:$('#ag-titre').value.trim(), lieu:$('#ag-lieu').value.trim(), heure:$('#ag-heure').value.trim(), presents:$('#ag-pres').value.trim(), representes:$('#ag-rep').value.trim(), president_seance:$('#ag-ps').value.trim(), secretaire_seance:$('#ag-ss').value.trim(), ordre_du_jour:$('#ag-odj').value, resolutions, decisions:$('#ag-dec').value, documents };
+    const obj={ date:$('#ag-date').value, type:$('#ag-type').value, titre:$('#ag-titre').value.trim(), lieu:$('#ag-lieu').value.trim(), heure:$('#ag-heure').value.trim(), presents:presents.map(s=>String(s).trim()).filter(Boolean), representes:representes.map(s=>String(s).trim()).filter(Boolean), president_seance:$('#ag-ps').value.trim(), secretaire_seance:$('#ag-ss').value.trim(), ordre_du_jour:$('#ag-odj').value, resolutions, decisions:$('#ag-dec').value, documents };
     if(!obj.date){ toast('La date est obligatoire.'); return; }
     try{ await api(isEdit?'/api/ag/'+g.id:'/api/ag',{method:isEdit?'PUT':'POST',body:JSON.stringify(obj)}); closeModal(); toast('Assemblée enregistrée'); renderAssoAG(); }catch(e){ toast(e.message); }
   });
@@ -3984,8 +4003,8 @@ function agPvHTML(g,a){
     <p style="text-align:center;color:#555;margin-bottom:20px">${esc(g.type||'')}${g.titre?` — ${esc(g.titre)}`:''}</p>
     <p>Le <strong>${frDate(g.date)||'…'}</strong>${g.heure?` à <strong>${esc(g.heure)}</strong>`:''}${g.lieu?`, à <strong>${esc(g.lieu)}</strong>`:''}, les membres de l'association <strong>${esc(a.nom||'')}</strong> se sont réunis en assemblée générale.</p>
     <table style="border-collapse:collapse;font-size:13.5px;margin:10px 0 16px">
-      ${g.presents?`<tr><td style="font-weight:600;padding:3px 16px 3px 0;color:#555">Membres présents</td><td>${esc(g.presents)}</td></tr>`:''}
-      ${g.representes?`<tr><td style="font-weight:600;padding:3px 16px 3px 0;color:#555">Représentés</td><td>${esc(g.representes)}</td></tr>`:''}
+      ${(g.presents&&g.presents.length)?`<tr><td style="font-weight:600;padding:3px 16px 3px 0;color:#555">Membres présents</td><td>${esc(Array.isArray(g.presents)?g.presents.join(', '):g.presents)}</td></tr>`:''}
+      ${(g.representes&&g.representes.length)?`<tr><td style="font-weight:600;padding:3px 16px 3px 0;color:#555">Représentés</td><td>${esc(Array.isArray(g.representes)?g.representes.join(', '):g.representes)}</td></tr>`:''}
       ${g.president_seance?`<tr><td style="font-weight:600;padding:3px 16px 3px 0;color:#555">Président de séance</td><td>${esc(g.president_seance)}</td></tr>`:''}
       ${g.secretaire_seance?`<tr><td style="font-weight:600;padding:3px 16px 3px 0;color:#555">Secrétaire de séance</td><td>${esc(g.secretaire_seance)}</td></tr>`:''}
     </table>
@@ -4038,9 +4057,6 @@ async function renderReglages(){
           <button class="btn small navy" id="bk-export">${icon('download')} Télécharger la sauvegarde</button>
           <label class="btn small grey" style="cursor:pointer">${icon('share')} Restaurer<input type="file" id="bk-file" accept="application/json" style="display:none"></label>
         </div>`, {dragIndex:ADMIN_I++});
-  if(isAdmin) ADMIN_SECS.asso=()=>bubble('🏛','Module Asso','Membres, cotisations, assemblées générales (loi 1901)',
-        `<p class="help" style="margin:0 0 10px">Identité de l'association, <strong>membres & cotisations</strong>, <strong>assemblées générales</strong> et génération des courriers/PV en PDF.</p>
-        <button class="btn" id="open-asso">${icon('users')} Ouvrir le module Asso</button>`, {dragIndex:ADMIN_I++});
   if(isAdmin) ADMIN_SECS.mediatheque=()=>bubble('🖼','Médiathèque','Organiser images et fichiers en dossiers',
         `<p class="help" style="margin:0 0 10px">Range tes images en <strong>dossiers et sous-dossiers</strong>, importe, renomme, déplace — et réutilise-les partout via « Choisir une image ».</p>
         <button class="btn" id="open-media">🖼 Ouvrir la médiathèque</button>`, {dragIndex:ADMIN_I++});
@@ -4049,7 +4065,7 @@ async function renderReglages(){
   ADMIN_SECS.apropos=()=>bubble('ℹ️','À propos','Informations & déconnexion',
         `<strong>West Coast Arcades — Gestion</strong><p class="help">Inventaire, devis, événements, réparations, ventes et prêts. <a href="https://www.westcoastarcades.fr" target="_blank" style="color:var(--teal-d);font-weight:700">westcoastarcades.fr</a></p>
         <button class="btn small red" id="me-logout" style="margin-top:10px">${icon('logout')} Se déconnecter</button>`, {dragIndex:ADMIN_I++});
-  const ADMIN_DEFAULT=['moncompte','apparence','motdepasse','asso','mediatheque','menus','sauvegarde','activite','apropos'].filter(k=>ADMIN_SECS[k]);
+  const ADMIN_DEFAULT=['moncompte','apparence','motdepasse','mediatheque','menus','sauvegarde','activite','apropos'].filter(k=>ADMIN_SECS[k]);
   let adOrder; try{ adOrder=JSON.parse(localStorage.getItem('wca_admin_order')||'[]'); }catch{ adOrder=[]; }
   adOrder=adOrder.filter(k=>ADMIN_SECS[k]); ADMIN_DEFAULT.forEach(k=>{ if(!adOrder.includes(k)) adOrder.push(k); });
   view().innerHTML = bubbleCSS()
@@ -4065,7 +4081,6 @@ async function renderReglages(){
   $('#me-save').addEventListener('click',async()=>{ try{ const r=await api('/api/me',{method:'PUT',body:JSON.stringify({nom:$('#me-nom').value,prenom:$('#me-prenom').value,photo:mePhoto})}); CURRENT_USER=r.user; updateUserbox(); toast('Enregistré'); }catch(e){ toast(e.message); } });
   $('#me-pw').addEventListener('click',async()=>{ try{ await api('/api/me/password',{method:'POST',body:JSON.stringify({current:$('#me-cur').value,new:$('#me-new').value})}); toast('Mot de passe modifié'); $('#me-cur').value='';$('#me-new').value=''; }catch(e){ toast(e.message); } });
   $('#me-logout').addEventListener('click',doLogout);
-  $('#open-asso')?.addEventListener('click',()=>setView('asso'));
   $('#open-media')?.addEventListener('click',()=>setView('mediatheque'));
   if(isAdmin){
     $$('.js-mod').forEach(t=>t.addEventListener('click',async()=>{ const k=t.dataset.k; const v=!moduleOn(k); try{ await api('/api/config',{method:'PUT',body:JSON.stringify({modules:{[k]:v}})}); MODULES_ENABLED[k]=v; toast(v?'Module activé':'Module désactivé'); buildNav(); renderReglages(); }catch(e){ toast(e.message); } }));

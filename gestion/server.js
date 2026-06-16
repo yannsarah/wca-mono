@@ -1025,7 +1025,7 @@ add('DELETE', '/api/pdf-history/:id', (req, res, p, body, query, user) => {
 
 /* =============================== MODULE ASSO (loi 1901) =============================== */
 // --- Identité de l'association ---
-const ASSO_FIELDS = ['nom', 'objet', 'adresse', 'code_postal', 'ville', 'telephone', 'email', 'site', 'logo', 'rna', 'siret', 'iban', 'bic', 'mode_paiement', 'president_nom', 'tresorier_nom', 'secretaire_nom', 'lieu', 'statut_article'];
+const ASSO_FIELDS = ['nom', 'objet', 'adresse', 'code_postal', 'ville', 'telephone', 'email', 'site', 'logo', 'rna', 'siret', 'iban', 'bic', 'mode_paiement', 'president_nom', 'tresorier_nom', 'secretaire_nom', 'lieu', 'statut_article', 'drive_url'];
 add('GET', '/api/asso', (req, res, p, body, query, user) => {
   if (!requireView(user, res)) return;
   send(res, 200, (db().settings && db().settings.asso) || {});
