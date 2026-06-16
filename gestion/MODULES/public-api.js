@@ -83,15 +83,29 @@ export function handlePublic(req, res, pathname, searchParams) {
     return sendJSON(res, 200, list), true;
   }
 
-  // ----- Projets (publiés) -----
+  // ----- Projets (publiés, hors restaurations) -----
   if (pathname === '/api/public/projets') {
     const list = (d.projets || [])
-      .filter(shown)
+      .filter(p => shown(p) && p.type !== 'restauration')
       .sort((a, b) => (b.date_debut || '').localeCompare(a.date_debut || ''))
       .map(p => ({
         id: p.id, nom: p.nom, description: p.description || '',
         photo: p.photo || '', date_debut: p.date_debut || '',
         partenaires: partnersOf(d, p.partenaires_ids),
+      }));
+    return sendJSON(res, 200, list), true;
+  }
+
+  // ----- Restaurations (projets de type « restauration », avant / après) -----
+  if (pathname === '/api/public/restaurations') {
+    const list = (d.projets || [])
+      .filter(p => shown(p) && p.type === 'restauration')
+      .sort((a, b) => (b.date_debut || '').localeCompare(a.date_debut || ''))
+      .map(p => ({
+        id: p.id, nom: p.nom, description: p.description || '',
+        etat_avant: p.etat_avant || '', travaux: p.travaux || '', resultat: p.resultat || '',
+        photo_avant: p.photo_avant || '', photo: p.photo || '', date_debut: p.date_debut || '',
+        etapes: (p.taches || []).map(t => ({ texte: t.texte || '', fait: !!t.fait })),
       }));
     return sendJSON(res, 200, list), true;
   }

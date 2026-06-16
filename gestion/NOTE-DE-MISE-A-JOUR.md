@@ -2,6 +2,15 @@
 
 > Versionnage du **dépôt unique** : on repart à **V1.1**, +0.1 à chaque mise à jour.
 
+**Version 2.8.32 — 16 juin 2026**
+## Projets : type « Restauration » (avant / après)
+- Dans **Projets**, nouvel onglet **🛠️ Restauration** entre *Actifs* et *Archivés*.
+- À la création (« Nouveau projet »), on choisit **Projet classique** ou **Projet de restauration**. Un projet de restauration ajoute : **état avant**, **travaux réalisés**, **résultat final**, **photo « avant »** (la photo de présentation sert de photo « après »), et les **tâches** servent d'étapes. Tout le reste (intervenants, sessions, fichiers…) reste disponible.
+- La fiche projet affiche le **avant / après** (photos + textes).
+- Côté site : nouvelle route publique **`/api/public/restaurations`** (les restaurations sont retirées de `/api/public/projets`) → alimentera la section **Restauration** du site V2.
+
+---
+
 **Version 2.8.31 — 16 juin 2026**
 ## API publique : autoriser le sous-domaine V2 (CORS)
 - L'API publique (lue par le site) autorise désormais **`v2.westcoastarcades.fr`** et **tout sous-domaine** de westcoastarcades.fr (preprod, etc.) à charger les données. Sans ça, le nouveau site V2 affichait des sections vides (« Aucune machine ») alors que les données étaient bien publiées.

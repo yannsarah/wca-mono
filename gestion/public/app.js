@@ -61,7 +61,7 @@ const LOGO_SVG = `<svg viewBox="0 0 48 48" width="42" height="42" xmlns="http://
 function logoSVG() { const span = document.createElement('span'); span.innerHTML = LOGO_SVG; return span.firstElementChild; }
 window.logoSVG = logoSVG;
 let CURRENT_USER = null;
-const APP_VERSION = '2.8.31'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
+const APP_VERSION = '2.8.32'; // Versionnage : +0.0.1 à chaque mise à jour ; récap .MD toutes les 5 versions.
 /* ------------------------------- Thèmes ------------------------------- */
 const THEMES = [
   { key:'classic', label:'Classique', desc:'Thème par défaut, clair et net' },
@@ -1780,15 +1780,21 @@ async function wipperModal(materielId, denom){
 
 /* ============================== PROJETS ============================== */
 let PROJ_ALL=[];
+let PROJ_TAB='actifs'; // actifs | restauration | archives
 let PJ_VIEW = (()=>{ try{ return localStorage.getItem('wca_pjview')||'cards'; }catch{ return 'cards'; } })();
 async function renderProjets(){
   await loadPeople();
   setTopbar('Projets', `<button class="btn" id="add-pj">${icon('plus')} Nouveau projet</button>`);
-  $('#add-pj')?.addEventListener('click',()=>projetModal());
+  $('#add-pj')?.addEventListener('click',()=>projetModal(null, PROJ_TAB==='restauration'?'restauration':'classique'));
   view().innerHTML = `<div class="ev-listhead"><div class="section-title" style="margin:0">Projets</div>
       <div class="ev-viewtog"><button class="${PJ_VIEW==='cards'?'active':''}" id="pjv-cards" title="Vue cartes">${icon('box')}</button><button class="${PJ_VIEW==='rows'?'active':''}" id="pjv-rows" title="Vue liste">${icon('doc')}</button></div>
-    </div>${segArchHtml('projets')}<div id="pj-list"></div>`;
-  wireSegArch('projets',()=>renderProjets());
+    </div>
+    <div class="seg arch-seg" id="pj-seg" style="margin-bottom:14px">
+      <button class="${PROJ_TAB==='actifs'?'active':''}" data-pt="actifs">Actifs</button>
+      <button class="${PROJ_TAB==='restauration'?'active':''}" data-pt="restauration">🛠️ Restauration</button>
+      <button class="${PROJ_TAB==='archives'?'active':''}" data-pt="archives">${icon('archive','ic')} Archivés</button>
+    </div><div id="pj-list"></div>`;
+  $$('#pj-seg button').forEach(b=>b.addEventListener('click',()=>{ PROJ_TAB=b.dataset.pt; renderProjets(); }));
   const setPjView=v=>{ PJ_VIEW=v; try{ localStorage.setItem('wca_pjview',v); }catch{} $('#pjv-cards').classList.toggle('active',v==='cards'); $('#pjv-rows').classList.toggle('active',v==='rows'); loadProjets(); };
   $('#pjv-cards').addEventListener('click',()=>setPjView('cards'));
   $('#pjv-rows').addEventListener('click',()=>setPjView('rows'));
@@ -1796,9 +1802,14 @@ async function renderProjets(){
 }
 async function loadProjets(){
   try{ PROJ_ALL = await api('/api/projets'); }catch(e){ $('#pj-list').innerHTML=`<div class="empty-state">${esc(e.message)}</div>`; return; }
-  const list=archFilter(PROJ_ALL,'projets');
+  const list=PROJ_ALL.filter(p=>{
+    if(PROJ_TAB==='archives') return p.archive;
+    if(p.archive) return false;
+    if(PROJ_TAB==='restauration') return p.type==='restauration';
+    return p.type!=='restauration';
+  });
   $('#pj-list').className = 'ev-list-'+PJ_VIEW;
-  if(!list.length){ $('#pj-list').innerHTML=`<div class="empty-state" style="grid-column:1/-1">${ARCH.projets?'Aucun projet archivé.':'Aucun projet en cours. Cliquez sur « Nouveau projet ».'}</div>`; return; }
+  if(!list.length){ const msg=PROJ_TAB==='archives'?'Aucun projet archivé.':(PROJ_TAB==='restauration'?'Aucun projet de restauration. Cliquez sur « Nouveau projet » puis choisissez « Projet de restauration ».':'Aucun projet en cours. Cliquez sur « Nouveau projet ».'); $('#pj-list').innerHTML=`<div class="empty-state" style="grid-column:1/-1">${msg}</div>`; return; }
   const today=todayISO();
   const actionsHtml = p => `<div class="row-actions"><button class="iconbtn ghost js-pj-edit" data-id="${p.id}" title="Modifier">${icon('edit')}</button><button class="iconbtn ghost js-arch" data-type="projets" data-id="${p.id}" data-ar="${p.archive?1:0}" title="${p.archive?'Désarchiver':'Archiver'}">${icon(p.archive?'undo':'archive')}</button><button class="iconbtn ghost js-pj-del" data-id="${p.id}" title="Supprimer">${icon('trash')}</button></div>`;
   $('#pj-list').innerHTML = list.map(p=>{
@@ -1847,6 +1858,14 @@ function projetFiche(p){
     <h3 style="margin-bottom:2px">${esc(p.nom)}${pct===100&&tks.length?' <span class="tag green">✓ Terminé</span>':''}</h3>
     <div class="ef-meta">${p.date_debut?'📅 '+dateShort(p.date_debut):''}${p.budget?' · 💶 '+euros(p.budget):''}${p.cree_par?' · '+esc(p.cree_par):''}</div>
     ${p.description?`<div class="ef-section"><h4>Descriptif</h4><p class="ef-text">${nl2br(p.description)}</p></div>`:''}
+    ${p.type==='restauration'?`<div class="ef-section"><h4>🛠️ Restauration</h4>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+        ${p.photo_avant?`<div style="text-align:center"><span class="mini">AVANT</span><img src="${p.photo_avant}" alt="" style="width:160px;height:120px;object-fit:cover;border-radius:8px;display:block"></div>`:''}
+        ${p.photo?`<div style="text-align:center"><span class="mini">APRÈS</span><img src="${p.photo}" alt="" style="width:160px;height:120px;object-fit:cover;border-radius:8px;display:block"></div>`:''}
+      </div>
+      ${p.etat_avant?`<p class="ef-text"><strong>Avant :</strong> ${nl2br(p.etat_avant)}</p>`:''}
+      ${p.travaux?`<p class="ef-text"><strong>Travaux :</strong> ${nl2br(p.travaux)}</p>`:''}
+      ${p.resultat?`<p class="ef-text"><strong>Résultat :</strong> ${nl2br(p.resultat)}</p>`:''}</div>`:''}
     ${p.consignes?`<div class="ef-section"><h4>Consignes</h4><p class="ef-text">${nl2br(p.consignes)}</p></div>`:''}
     ${(p.intervenants||[]).length?`<div class="ef-section"><h4>Intervenants</h4><div class="pj-people">${p.intervenants.map(n=>`<span class="gelule">${esc(n)}</span>`).join('')}</div></div>`:''}
     ${(p.ressources||[]).length?`<div class="ef-section"><h4>Ressources nécessaires</h4><div class="blocks-list">${p.ressources.map(r=>`<span class="tag gray">${esc(r)}</span>`).join('')}</div></div>`:''}
@@ -1866,9 +1885,11 @@ function projetFiche(p){
     try{ await api('/api/projets/'+p.id,{method:'PUT',body:JSON.stringify({taches:p.taches})}); if(state.view==='projets') loadProjets(); }catch(err){ toast(err.message); cb.checked=!cb.checked; }
   }));
 }
-async function projetModal(pj){
+async function projetModal(pj, defaultType){
   await loadPeople();
   const e=pj||{};
+  let type=(e.type==='restauration'||defaultType==='restauration')?'restauration':'classique';
+  let pjAvant=e.photo_avant||'';
   let intervenants=(e.intervenants||[]).slice();
   let ressources=(e.ressources||[]).slice();
   let fichiers=(e.fichiers||[]).slice();
@@ -1877,6 +1898,10 @@ async function projetModal(pj){
   let pjPhoto=e.photo||'';
   let pjChamps=(e.champs||[]).map(c=>({label:c.label||'',valeur:c.valeur||''}));
   openModal(`<h3>${pj?'Modifier le projet':'Nouveau projet'}</h3>
+    <div class="seg" id="pj-type-seg" style="margin-bottom:12px">
+      <button type="button" class="${type==='classique'?'active':''}" data-ty="classique">Projet classique</button>
+      <button type="button" class="${type==='restauration'?'active':''}" data-ty="restauration">🛠️ Projet de restauration</button>
+    </div>
     <label class="field"><span>Nom du projet *</span><input id="pj-nom" value="${esc(e.nom)}" placeholder="ex. Rénovation borne Daytona"></label>
     <label class="field"><span>Photo de présentation</span>
       <div class="photo-edit">
@@ -1889,6 +1914,16 @@ async function projetModal(pj){
       </div></label>
     <div class="row2"><label class="field"><span>Date de début</span><input id="pj-deb" type="date" value="${esc(e.date_debut)||todayISO()}"></label>
       <label class="field"><span>Budget estimé (€, optionnel)</span><input id="pj-budget" type="number" min="0" step="0.01" value="${esc(e.budget)}"></label></div>
+    <div id="pj-resto" style="display:${type==='restauration'?'block':'none'}">
+      <div class="section-title">Restauration — avant / après</div>
+      <label class="field"><span>État avant restauration</span><textarea id="pj-avant" rows="2" placeholder="État de la machine reçue : pannes, usure, pièces manquantes…">${esc(e.etat_avant)}</textarea></label>
+      <label class="field"><span>Travaux réalisés</span><textarea id="pj-travaux" rows="3" placeholder="Démontage, réparations, remplacement de pièces, peinture…">${esc(e.travaux)}</textarea></label>
+      <label class="field"><span>Résultat final</span><textarea id="pj-resultat" rows="2" placeholder="État après restauration, ce qui a été obtenu…">${esc(e.resultat)}</textarea></label>
+      <label class="field"><span>Photo « avant »</span>
+        <div class="photo-edit"><div class="photo-prev" id="pj-avant-prev">${pjAvant?`<img src="${pjAvant}" alt="">`:`<span class="ph">${icon('image','ic')}</span>`}</div>
+          <div class="photo-btns">${mediaBtn('pj-avant-pick','Choisir')}<button type="button" class="btn small red" id="pj-avant-clear">${icon('trash')} Retirer</button>
+          <span class="help">La « photo de présentation » ci-dessus sert de photo « après ». Les « tâches » plus bas servent d'étapes de restauration.</span></div></div></label>
+    </div>
     <label class="field"><span>Descriptif complet</span><textarea id="pj-desc" rows="4" placeholder="Objectif du projet, contexte, étapes clés…">${esc(e.description)}</textarea></label>
     <label class="field"><span>Consignes</span><textarea id="pj-consignes" rows="3" placeholder="Sécurité, méthode, points d'attention…">${esc(e.consignes)}</textarea></label>
     <label class="field"><span>Partenaires participants (encart sur le site)</span><div id="pj-parts" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:4px"><span class="mini">Chargement…</span></div></label>
@@ -1914,6 +1949,9 @@ async function projetModal(pj){
     <p class="help">Max ~4 Mo par fichier (images, PDF, plans…).</p>
     <div class="buttons" style="margin-top:10px"><button class="btn grey" onclick="closeModal()">Annuler</button><button class="btn" id="pj-save">Enregistrer</button></div>`);
   renderPeoplePicker($('#pj-int-box'), intervenants, PEOPLE);
+  $$('#pj-type-seg button').forEach(b=>b.addEventListener('click',()=>{ type=b.dataset.ty; $$('#pj-type-seg button').forEach(x=>x.classList.toggle('active',x===b)); const r=$('#pj-resto'); if(r) r.style.display=type==='restauration'?'block':'none'; }));
+  wireMedia('pj-avant-pick', url=>{ pjAvant=url; $('#pj-avant-prev').innerHTML=`<img src="${url}" alt="">`; });
+  $('#pj-avant-clear')?.addEventListener('click',()=>{ pjAvant=''; $('#pj-avant-prev').innerHTML=`<span class="ph">${icon('image','ic')}</span>`; });
   function renderTaches(){
     $('#pj-tach-box').innerHTML = taches.length? taches.map((s,i)=>`<div class="step-row"><input type="checkbox" class="js-tk-fait" data-i="${i}" ${s.fait?'checked':''}><input class="js-tk-txt ${s.fait?'done':''}" data-i="${i}" value="${esc(s.texte)}" placeholder="Tâche à accomplir…"><button class="iconbtn ghost js-tk-del" data-i="${i}" type="button">${icon('x')}</button></div>`).join('') : '<p class="mini">Aucune tâche.</p>';
     $$('.js-tk-fait').forEach(c=>c.addEventListener('change',()=>{ taches[+c.dataset.i].fait=c.checked; renderTaches(); }));
@@ -1965,6 +2003,11 @@ async function projetModal(pj){
   $('#pj-save').addEventListener('click',async()=>{
     const body={ nom:$('#pj-nom').value.trim(), date_debut:$('#pj-deb').value, budget:$('#pj-budget').value, notes:$('#pj-notes').value.trim(),
       description:$('#pj-desc').value.trim(), consignes:$('#pj-consignes').value.trim(), photo:pjPhoto,
+      type,
+      etat_avant: type==='restauration'?($('#pj-avant')?.value.trim()||''):'',
+      travaux: type==='restauration'?($('#pj-travaux')?.value.trim()||''):'',
+      resultat: type==='restauration'?($('#pj-resultat')?.value.trim()||''):'',
+      photo_avant: type==='restauration'?pjAvant:'',
       partenaires_ids:[...document.querySelectorAll('.pj-pt:checked')].map(x=>+x.value),
       champs:pjChamps.map(c=>({label:(c.label||'').trim(),valeur:(c.valeur||'').trim()})).filter(c=>c.label||c.valeur),
       intervenants, ressources:ressources.map(x=>(x||'').trim()).filter(Boolean), fichiers,

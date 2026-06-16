@@ -1611,7 +1611,7 @@ add('GET', '/api/projets', (req, res) => {
   const list = [...(db().projets || [])].sort((a, b) => (a.date_debut || '').localeCompare(b.date_debut || ''));
   send(res, 200, list.map(enrichProjet));
 });
-const PJF = ['nom', 'date_debut', 'budget', 'notes', 'description', 'consignes', 'photo', 'visible_site', 'partenaires_ids'];
+const PJF = ['nom', 'date_debut', 'budget', 'notes', 'description', 'consignes', 'photo', 'visible_site', 'partenaires_ids', 'type', 'etat_avant', 'travaux', 'resultat', 'photo_avant'];
 add('POST', '/api/projets', (req, res, p, body, query, user) => {
   if (!body.nom) return send(res, 400, { error: 'Le nom du projet est obligatoire.' });
   const row = {
